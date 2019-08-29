@@ -1,0 +1,32 @@
+Note that we used shifted version
+of the Landolt filters: -31.484, +8.485, +2.667, +21.609, +11.283 (all
+in A). Alex can explain the origin of these shifts. They have the same
+BDmags as the Bessell filters.
+
+
+sux_bessel90.dat
+sb_bessel90.dat
+si_bessel90.dat
+sr_bessel90.dat
+sv_bessel90.dat
+
+are from Bessel M. S., PASP 102, 1181-119 (1990), table 2
+
+Following a footnote of Suntzeff et al (1999), and since we
+use transmissions in units of ADUs/photon (and not ADU/energy, see README in base directory),
+all the previous transmissions were divided by the wavelenght to obtain :
+
+sux.dat
+sb.dat
+si.dat
+sr.dat
+sv.dat
+
+Those are the ones used in the FilterWheel.
+
+
+
+
+ 
+
+
