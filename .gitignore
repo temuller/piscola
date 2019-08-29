@@ -1,3 +1,6 @@
 data
+!data/sn2001cz.dat
 obj
 test_files
+filters
+!filters/Bessell/*
