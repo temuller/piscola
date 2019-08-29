@@ -1,0 +1,12 @@
+Conda environment
+=================
+
+It is recommended to create a conda environment with the necessary packages:
+
+.. code::
+
+        conda config --add channels conda-forge
+
+	conda create -n <env> matplotlib pandas lmfit peakutils george extinction multiprocess
+
+However, ``sfdmap`` would need to be installed manually with ``pip``.

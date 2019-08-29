@@ -1,0 +1,9 @@
+description: Hsiao 2008 ir SEDs with Conley templates, log/arb filts and I, Shifted Landolt filts, French phot
+specfilename: snflux_1a.dat
+lcfilename: lc_template.dat
+errorsnake: error_snake_rms.dat
+filter_order: ARB0B ARB1B ARB2B B-shift LOG5 LOG6 LOG7 LOG8 I-shift
+defining_filter: B-shift
+uses_stretchcolour: N
+sntype: Ia
+photsys: 1
