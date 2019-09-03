@@ -1,7 +1,0 @@
-README.md
-setup.py
-piscola.egg-info/PKG-INFO
-piscola.egg-info/SOURCES.txt
-piscola.egg-info/dependency_links.txt
-piscola.egg-info/requires.txt
-piscola.egg-info/top_level.txt
