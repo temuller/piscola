@@ -4,8 +4,6 @@ import numpy as np
 def fit_spline(x_data, y_data, yerr_data=0.0, x_edges=None):
     """Fits data with a spline.
     
-    NOTE: this function does not return the correct standard deviation
-    
     Parameters
     ----------
     x_data : array
@@ -35,13 +33,18 @@ def fit_spline(x_data, y_data, yerr_data=0.0, x_edges=None):
     yerr_min = np.sqrt(yerr[0]**2 + yerr[1]**2)
     yerr_max = np.sqrt(yerr[-1]**2 + yerr[-2]**2)
     yerr = np.r_[yerr_min, yerr, yerr_max] 
-    
-    spl = UnivariateSpline(x, y, w=1/yerr, s=0)
-    
+
     step = 10
     t = np.arange(x.min(), x.max()+step, step)
+    Y = [np.random.normal(y, yerr) for i in range(1000)]
+    splines_list = list()
     
-    mu = spl(t)
-    std = mu*0.03
+    for y_spline in Y:
+        spl = UnivariateSpline(x, y_spline, s=0, k=2)
+        splines_list.append(spl(t))
+        
+    splines_array = np.asarray(splines_list)
+    mu = np.average(splines_array, axis=0)
+    std = np.std(splines_array, axis=0)
     
     return t, mu, std
