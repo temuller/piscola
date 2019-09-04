@@ -11,7 +11,6 @@ Dependencies:
   - george 0.3.1
   - extinction 0.4.0
   - sfdmap 0.1.1
-  - multiprocess 0.70.7
   
 It is recommended to create a conda environment:
 
