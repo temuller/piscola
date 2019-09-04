@@ -30,5 +30,5 @@ setuptools.setup(
     #   "extinction",
     #   "sfdmap",
     #],
-    package_data={'piscola' : ["filters/*/*", "templates/*/*", "sfddata-master/*"]},
+    package_data={'piscola' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*", "sfddata-master/*"]},
 )
