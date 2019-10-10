@@ -4,21 +4,10 @@ build
 dist
 __pycache__
 # extra 
-data
-!data/sn2001cz.dat
-obj
-test_files
-filters
-!filters/Bessell/*
 *.egg-info
 # extra files
-*.ipynb
-!test_piscola.ipynb
-*.csv
-rcparams.pickle
+test_piscola.ipynb
 
 ### src ##
 src/*.egg-info
-src/piscola/filters
-!src/piscola/filters/Bessell/*
 src/piscola/__pycache__
