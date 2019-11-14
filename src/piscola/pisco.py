@@ -53,7 +53,7 @@ def initialise(file_name):
         sn_obj.data[band] = {'mjd':band_info['mjd'].values, 
                              'flux':band_info['flux'].values, 
                              'flux_err':band_info['flux_err'].values, 
-                             'zp':band_info['zp'].unique()[0],
+                             'zp':float(band_info['zp'].unique()[0]),
                              'mag_sys':band_info['mag_sys'].unique()[0],
                             }
     
@@ -192,7 +192,10 @@ class sn(object):
 
             for root, dirs, files in os.walk(path + '/filters/'):
                 if file in files:
-                    wave, transmission = np.loadtxt(os.path.join(root, file)).T
+                    wave0, transmission0 = np.loadtxt(os.path.join(root, file)).T
+                    # linearly interpolate filters
+                    wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max()-wave0.min()))
+                    transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
                     # to anchor the transmission function on the edges to 0.0
                     mask = np.nonzero(transmission)[0]  # could have negative transmission(?)
                     
@@ -216,7 +219,10 @@ class sn(object):
 
         for file_path in file_paths:
             band = os.path.basename(file_path).split('.')[0]
-            wave, transmission = np.loadtxt(file_path).T
+            wave0, transmission0 = np.loadtxt(file_path).T
+            # linearly interpolate filters
+            wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max()-wave0.min()))
+            transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
             # to anchor the transmission function on the edges to 0.0
             mask = np.nonzero(transmission)[0]  # could have negative transmission(?)
             
@@ -258,7 +264,10 @@ class sn(object):
             for file in os.listdir(path):
                 if file[-4:]=='.dat':
                     band = file.split('.')[0]
-                    wave, transmission = np.loadtxt(os.path.join(path, file)).T
+                    wave0, transmission0 = np.loadtxt(os.path.join(path, file)).T
+                    # linearly interpolate filters
+                    wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max()-wave0.min()))
+                    transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
                     # to anchor the transmission function on the edges to 0.0
                     mask = np.nonzero(transmission)[0]  # could have negative transmission(?)
                     
@@ -587,10 +596,12 @@ class sn(object):
         # indexes for the effective ranges of the bands
         range_indexes = {band:filter_effective_range(self.filters[band]['transmission']) for band in valid_bands}
 
-        blue_edges = [self.filters[band]['wave'][range_indexes[band][0]]/(1+self.z) for band in valid_bands]
-        red_edges = [self.filters[band]['wave'][range_indexes[band][1]]/(1+self.z) for band in valid_bands]
+        blue_edges = np.asarray([(self.filters[band]['wave'][range_indexes[band][0]:]/(1+self.z)).min() for band in valid_bands])
+        red_edges = np.asarray([(self.filters[band]['wave'][:range_indexes[band][1]]/(1+self.z)).max() for band in valid_bands])
 
-        if any(blue_edges <= self.filters['Bessell_B']['wave'][B_min:].min()) and any(red_edges >=self.filters['Bessell_B']['wave'][:B_max].max()):
+        # 200 Angstroms is the same tolerance given in GP for extrapolating
+        if (any(blue_edges-200 <= self.filters['Bessell_B']['wave'][B_min:].min()) and 
+            any(red_edges+200 >= self.filters['Bessell_B']['wave'][:B_max].max()) ):
             B_covarage = True
 
         assert B_covarage, 'Data need to have better B-band wavelength coverage!'
@@ -1134,7 +1145,9 @@ class sn(object):
                 
             # mangling function        
             ax.plot(x, y/opt_flux_ratios[index], 'green')  
-            ax.plot(eff_waves, opt_flux_ratios/opt_flux_ratios[index], 'sg')
+            indexes = [np.argmin(np.abs(x-wave_val)) for wave_val in eff_waves]
+            #ax.plot(eff_waves, opt_flux_ratios/opt_flux_ratios[index], 'sg')
+            ax.plot(eff_waves, y[indexes]/opt_flux_ratios[index], 'sg')
                 
             # initial sed and fluxes
             ax3.plot(init_sed_wave, init_sed_flux2*norm2, '--k')  # initial sed
@@ -1222,7 +1235,9 @@ class sn(object):
         for band in self.filters.keys():
             # check if the filter wavelength is within the permited SED wavelength range
             min_idx, max_idx = filter_effective_range(self.filters[band]['transmission'])
-            if ( self.sed['wave'].max() >= self.filters[band]['wave'][max_idx] ) and ( self.sed['wave'].min() <= self.filters[band]['wave'][min_idx] ):
+            if max_idx == len(self.filters[band]['wave']):
+                max_idx = -1  # to prevent indexing issues
+            if (self.sed['wave'].max() >= self.filters[band]['wave'][max_idx]) and (self.sed['wave'].min() <= self.filters[band]['wave'][min_idx]):
                 
                 if band in self.bands:
                     zp = self.data[band]['zp']
@@ -1269,7 +1284,7 @@ class sn(object):
             assert (mangle_kwargs['kernel']=='matern52' or mangle_kwargs['kernel']=='matern32'
                     or mangle_kwargs['kernel']=='squaredexp'or mangle_kwargs['kernel']==None), f'"{mangle_kwargs["kernel"]}" is not a valid kernel.'
             
-        print(f'Starting light curve correction for {self.name}...')
+        #print(f'Starting light curve correction for {self.name}...')
         for phase in self.lc_interp[self.pivot_band]['phase']:
                 
             self.phase = phase
@@ -1280,7 +1295,7 @@ class sn(object):
                 self.set_sed_epoch(set_eff_wave=False)  # reset SED with better estimation (from 1st mangling) of effective wavelengths...
                 self.mangle_sed(**mangle_kwargs)        # mangle again
             except: 
-                print(f'Warning, mangling in phase {phase} failed for {self.name}!')
+                #print(f'Warning, mangling in phase {phase} failed for {self.name}!')
                 if phase in self.mangling_results:
                     del self.mangling_results[phase]
             else:
@@ -1316,16 +1331,22 @@ class sn(object):
         phase, flux, _ = fit_gp(self.lc_correct[B_band]['phase'], self.lc_correct[B_band]['flux'], self.lc_correct[B_band]['flux_err'])
         
         try:
+            # use interpolated data
             peakidxs = peak.indexes(flux, thres=.3, min_dist=5//(phase[1]-phase[0]))
             # pick the index of the first peak in case some band has 2 peaks (like IR bands)
             idx_max = np.asarray([idx for idx in peakidxs if all(flux[:idx]<flux[idx])]).min()
             phase_max = phase[idx_max]  # this needs to be as close to zero as possible
+            
+            # use discrete data
+            #peakidxs = peak.indexes(self.lc_correct[B_band]['flux'], thres=.3, min_dist=5//(self.lc_correct[B_band]['phase'][1]-self.lc_correct[B_band]['phase'][0]))
+            #idx_max = np.asarray([idx for idx in peakidxs if all(self.lc_correct[B_band]['flux'][:idx]<self.lc_correct[B_band]['flux'][idx])]).min()
+            #phase_max = self.lc_correct[B_band]['phase'][idx_max]  # this needs to be as close to zero as possible
         except:
             raise ValueError(f'Unable to obtain an accurate B-band peak for {self.name}!')
             
         if (iter_num <= maxiter) and (np.abs(phase_max) > threshold):
             self.tmax += phase_max*(1+self.z) 
-            print(f'{self.name} iteration number {iter_num}')
+            #print(f'{self.name} iteration number {iter_num}')
             self.set_interp_data(restframe_phases=self.lc_correct[B_band]['phase'])  # set interpolated data with new tmax
             self.correct_light_curve(scaling=scaling, **mangle_kwargs)
             self.check_B_peak(threshold=threshold, iter_num=iter_num+1, maxiter=maxiter, scaling=scaling, **mangle_kwargs)

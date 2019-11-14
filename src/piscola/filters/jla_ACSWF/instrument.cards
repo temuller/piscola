@@ -1,0 +1,14 @@
+#Didn't include central obscuration or hole
+@MIRROR_AREA 4.52389
+
+# transmission of the optics included in filter
+@OPTICS_TRANS 1
+
+# reflectivity of the mirror included in filter
+@MIRROR_REFLECTIVITY 1
+
+# filters
+@FILTERS FilterWheel
+
+# QE of CCD's included in filter
+@QE 1

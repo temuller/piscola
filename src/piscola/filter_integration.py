@@ -25,13 +25,15 @@ def run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, respo
 
     #check filter response type
     if response_type == 'photon':
-        interp_response = np.interp(spectrum_wave, filter_wave, filter_response)
-        I1, I2 = np.trapz(spectrum_flux*interp_response*spectrum_wave, spectrum_wave), np.trapz(filter_response*filter_wave, filter_wave)
+        interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
+        I1 = np.trapz(spectrum_flux*interp_response*spectrum_wave, spectrum_wave)
+        I2 = np.trapz(filter_response*filter_wave, filter_wave)
         flux_filter = I1/I2
         
     elif response_type == 'energy':
-        interp_response = np.interp(spectrum_wave, filter_wave, filter_response)
-        I1, I2 = np.trapz(spectrum_flux*interp_response, spectrum_wave), np.trapz(filter_response, filter_wave)
+        interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
+        I1 = np.trapz(spectrum_flux*interp_response, spectrum_wave)
+        I2 = np.trapz(filter_response, filter_wave)
         flux_filter = I1/I2
         
     else:
@@ -63,13 +65,13 @@ def calc_eff_wave(spectrum_wave, spectrum__flux, filter_wave, filter_response, r
     """
     
     if response_type == 'photon':
-        interp_response = np.interp(spectrum_wave, filter_wave, filter_response)
+        interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
         I1 = np.trapz((spectrum_wave**2)*interp_response*spectrum__flux, spectrum_wave)
         I2 = np.trapz(spectrum_wave*interp_response*spectrum__flux, spectrum_wave)
         eff_wave = I1/I2
     
     elif response_type == 'energy':
-        interp_response = np.interp(spectrum_wave, filter_wave, filter_response)
+        interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
         I1 = np.trapz(spectrum_wave*interp_response*spectrum__flux, spectrum_wave)
         I2 = np.trapz(interp_response*spectrum__flux, spectrum_wave)
         eff_wave = I1/I2
@@ -154,15 +156,15 @@ def calc_zp_vega(filter_wave, filter_response, response_type='photon'):
     return zp_vega
 
 
-def filter_effective_range(filter_response, percent=99.9):
+def filter_effective_range(filter_response, percent=99.0):
     """Finds the min and max indexes which contain at least the desire percentage of the filter's 
-    response-function area, individually, i.e, [min:] contains the desire percentage as well as [:max]
+    response-function area.
     
     Parameters
     ----------
     filter_response : array
         Filter's response function.
-    percent : float, default '99.9'
+    percent : float, default '99.0'
         Percentage of the filter's area that wants to be kept.
         
     Returns
@@ -170,15 +172,16 @@ def filter_effective_range(filter_response, percent=99.9):
     Minimum and maximum indexes which contain the wanted area of the filter, independently.
     
     """
-    
+ 
     for min_index in range(len(filter_response)):
-        area = 100*np.trapz(filter_response[min_index:])/np.trapz(filter_response)
-        if area <= percent:
-            break
-            
-    for max_index in reversed(range(len(filter_response))):
-        area = 100*np.trapz(filter_response[:max_index])/np.trapz(filter_response)
-        if area <= percent:
+        max_index = len(filter_response) - min_index
+        area = 100*np.trapz(filter_response[min_index:max_index])/np.trapz(filter_response)
+        if area < percent:
             break
         
-    return min_index, max_index
+    # to prevent going beyond the edges of the array
+    if min_index == 0:
+        min_index += 1
+        max_index -= 1
+
+    return min_index-1, max_index+1

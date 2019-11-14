@@ -1,0 +1,14 @@
+Dan Scolnic did this from http://csp.obs.carnegiescience.edu/data/filters on April 27 2015
+
+Swope2 filters
+FILTER:  CSP-u/t              u_texas_WLcorr_atm.txt  10.51952
+FILTER:  CSP-B/u              B_texas_WLcorr_atm.txt  9.87643
+FILTER:  CSP-o/v              V_LC3009_texas_WLcorr_atm.txt  9.47663
+FILTER:  CSP-m/w              V_LC3014_texas_WLcorr_atm.txt  9.47128
+FILTER:  CSP-n/x              V_LC9844_texas_WLcorr_atm.txt  9.47748
+FILTER:  CSP-g/y              g_texas_WLcorr_atm.txt  9.64406
+FILTER:  CSP-r/z              r_texas_WLcorr_atm.txt  9.35160
+FILTER:  CSP-i/A              i_texas_WLcorr_atm.txt  9.25000
+
+
+csp_V is the same as csp_m, but I use this name for JLA instead of Pantheon and it is the only V filter I used in JLA (is it the correct one? -  Tomás Müller)

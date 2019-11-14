@@ -11,5 +11,5 @@ test_piscola.ipynb
 ### src ##
 src/*.egg-info
 src/piscola/__pycache__
-src/piscola/filters
-!src/piscola/filters/Bessell/*
+#src/piscola/filters
+#!src/piscola/filters/Bessell/*

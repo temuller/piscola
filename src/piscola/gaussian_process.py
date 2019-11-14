@@ -43,6 +43,8 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel='squaredexp', mangling=False, x
     
     if mangling:
         x_min, x_max = x_edges
+        x_min -= 200
+        x_max += 200
         pmin = np.polyfit(x[:2], y[:2], deg=1)
         pmax = np.polyfit(x[-2:], y[-2:], deg=1)
         
