@@ -2,7 +2,7 @@ import numpy as np
 import george
 import scipy
 
-def fit_gp(x_data, y_data, yerr_data=0.0, kernel='squaredexp', mangling=False, x_edges=None):
+def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, mangling=False, x_edges=None):
     """Fits data with gaussian process.
     
     The package 'george' is used for the gaussian process fit.
@@ -17,6 +17,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel='squaredexp', mangling=False, x
         Dependent value errors.
     kernel : str, default 'squaredexp'
         Kernel to be used with the gaussian process. Possible choices are: 'matern52', 'matern32', 'squaredexp'.
+        If left default, 'matern52' is used to fit light curves and 'squaredexp' for the mangling function.
     mangling: bool, default 'False'
         If 'True', the fit is set to adjust the mangling function.
     x_edges: array-like, default 'None'
@@ -37,7 +38,12 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel='squaredexp', mangling=False, x
     def grad_neg_ln_like(p):
         gp.set_parameter_vector(p)
         return -gp.grad_log_likelihood(y)
-    
+     
+    if kernel is None and mangling:
+        kernel = 'squaredexp'
+    elif kernel is None:
+        kernel = 'matern52'
+
     x, y, yerr = np.copy(x_data), np.copy(y_data), np.copy(yerr_data)    
     x_norm = 1
     
