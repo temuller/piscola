@@ -564,7 +564,6 @@ class sn(object):
         """
 
         bands_for_pivot = []  # bands with available peaks among which the pivot band will be selected
-        # Correct for time dilation for a better fit, but move the data back again in redshift
         for band in self.bands:
             time, flux, std = fit_gp(self.data[band]['mjd'], self.data[band]['flux'], 
                                      self.data[band]['flux_err'], kernel=kernel)
@@ -583,29 +582,19 @@ class sn(object):
 
         assert bands_for_pivot, 'Unable to find a peak! Not enough data around peak luminosity for any band!'
         
-        # Check if the available bands cover the B-band wavelength range
-        B_covarage = False
-        
-        self.calc_pivot(bands_for_pivot)
+        B_blue_coverage = B_red_coverage = False
         B_min, B_max = filter_effective_range(self.filters['Bessell_B']['transmission'])
-
-        # bands with coverage around pivot_band peak
-        valid_bands = [band for band in self.bands if any(self.lc_fits[band]['mjd'] < self.lc_fits[self.pivot_band]['tmax'])
-                                                   and any(self.lc_fits[band]['mjd'] > self.lc_fits[self.pivot_band]['tmax'])]
+        trim_Bwave = self.filters['Bessell_B']['wave'][B_min:B_max]
         
-        # indexes for the effective ranges of the bands
-        range_indexes = {band:filter_effective_range(self.filters[band]['transmission']) for band in valid_bands}
-
-        blue_edges = np.asarray([(self.filters[band]['wave'][range_indexes[band][0]:]/(1+self.z)).min() for band in valid_bands])
-        red_edges = np.asarray([(self.filters[band]['wave'][:range_indexes[band][1]]/(1+self.z)).max() for band in valid_bands])
-
-        # 200 Angstroms is the same tolerance given in GP for extrapolating
-        if (any(blue_edges-200 <= self.filters['Bessell_B']['wave'][B_min:].min()) and 
-            any(red_edges+200 >= self.filters['Bessell_B']['wave'][:B_max].max()) ):
-            B_covarage = True
-
-        assert B_covarage, 'Data need to have better B-band wavelength coverage!'
+        for band in bands_for_pivot:
+            # same 200 angstroms applied in the mangling function [CHECK REDSHIFT CORRECTION FOR THIS 200 ANGSTROMS]
+            if any(self.filters[band]['wave']/(1+self.z) - 200 <= trim_Bwave.min()):
+                B_blue_coverage = True
+            if any(self.filters[band]['wave']/(1+self.z) + 200 >= trim_Bwave.max()):
+                B_red_coverage = True
         
+        assert B_blue_coverage and B_red_coverage, 'Data need to have better B-band wavelength coverage!'
+        self.calc_pivot(bands_for_pivot)
         self.tmax = self.lc_fits[self.pivot_band]['tmax']                               
 
         
@@ -700,7 +689,7 @@ class sn(object):
     ####################### data ##########################
     #######################################################
     
-    def mask_data(self, band_list=None, mask_snr=True, snr=3, mask_phase=False, min_phase=-20, max_phase=40):
+    def mask_data(self, band_list=None, mask_phase=True, min_phase=-20, max_phase=40, mask_snr=False, snr=3):
         """Mask the data with the given S/N ratio and/or within the given range of days respect to maximum in B band.
         
         NOTE: Bands with less than 3 data points after mask is applied will be deleted.
@@ -708,11 +697,6 @@ class sn(object):
         Parameters
         ----------
         band_list : list, default 'None'
-            List of bands to mask. If 'None', the mask is applied to all bands in self.bands
-        mask_snr : bool, default 'True'
-            If 'True', keeps the flux values with S/N ratio greater or equal to the threshold 'snr'.
-        snr : float, default '3'
-            S/N ratio threshold applied to mask data.
         mask_phase : bool, default 'False'
             If 'True', keeps the flux values within the given phase range set by 'min_phase' and 'max_phase'.
             The light curves need to be fit first with 'fit_lcs()'.
@@ -720,21 +704,16 @@ class sn(object):
             Minimum phase threshold applied to mask data.
         max_phase : float, default '40'
             Maximum phase threshold applied to mask data.
+            List of bands to mask. If 'None', the mask is applied to all bands in self.bands
+        mask_snr : bool, default 'True'
+            If 'True', keeps the flux values with S/N ratio greater or equal to the threshold 'snr'.
+        snr : float, default '3'
+            S/N ratio threshold applied to mask data.
 
         """
         
         if band_list is None:
             band_list = self.bands
-            
-        if mask_snr:        
-            for band in band_list:
-                mask = np.where(np.abs(self.data[band]['flux']/self.data[band]['flux_err']) >= snr)
-                self.data[band]['mjd'] = self.data[band]['mjd'][mask]
-                self.data[band]['flux'] = self.data[band]['flux'][mask]
-                self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
-                
-                if len(self.data[band]['flux']) <= 2:
-                    self.delete_bands([band])  # delete bands with less than 3 data points after applying mask
         
         if mask_phase:   
             assert self.lc_fits, 'The light curves need to be fitted first!'
@@ -747,6 +726,16 @@ class sn(object):
                 self.data[band]['flux'] = self.data[band]['flux'][mask]
                 self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
         
+                if len(self.data[band]['flux']) <= 2:
+                    self.delete_bands([band])  # delete bands with less than 3 data points after applying mask
+
+        if mask_snr:        
+            for band in band_list:
+                mask = np.where(np.abs(self.data[band]['flux']/self.data[band]['flux_err']) >= snr)
+                self.data[band]['mjd'] = self.data[band]['mjd'][mask]
+                self.data[band]['flux'] = self.data[band]['flux'][mask]
+                self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
+                
                 if len(self.data[band]['flux']) <= 2:
                     self.delete_bands([band])  # delete bands with less than 3 data points after applying mask
                     
@@ -791,7 +780,7 @@ class sn(object):
         print(mags)
     
     
-    def plot_data(self, band_list=None, plot_type='mag', save=False, fig_name=None):
+    def plot_data(self, band_list=None, plot_type='flux', save=False, fig_name=None):
         """Plot the SN light curves.
         
         Negative fluxes are masked out if magnitudes are plotted.
@@ -879,7 +868,7 @@ class sn(object):
             self.data[band]['zp'] = zp
         
             
-    def delete_bands(self, bands, verbose=False):
+    def delete_bands(self, bands_list, verbose=False):
         """Delete chosen bands together with the data in it.
         
         Parameters
@@ -891,13 +880,14 @@ class sn(object):
             
         """
         
-        for band in bands:
-            try:
+        for band in bands_list:
+            if band in self.bands:
                 self.data.pop(band, None)
+                self.filters.pop(band, None)
                 self.bands.remove(band)
-            except: 
+            else:
                 if verbose:
-                    print('Warning, the chosen bands were not found!')
+                    print(f'Warning, {band} not found!')
                 
             
     def set_interp_data(self, restframe_phases):
@@ -1328,7 +1318,7 @@ class sn(object):
         """
         
         B_band = 'Bessell_B'
-        phase, flux, _ = fit_gp(self.lc_correct[B_band]['phase'], self.lc_correct[B_band]['flux'], self.lc_correct[B_band]['flux_err'])
+        phase, flux, flux_err = fit_gp(self.lc_correct[B_band]['phase'], self.lc_correct[B_band]['flux'],  self.lc_correct[B_band]['flux_err'])
         
         try:
             # use interpolated data
@@ -1336,23 +1326,26 @@ class sn(object):
             # pick the index of the first peak in case some band has 2 peaks (like IR bands)
             idx_max = np.asarray([idx for idx in peakidxs if all(flux[:idx]<flux[idx])]).min()
             phase_max = phase[idx_max]  # this needs to be as close to zero as possible
+            flux_max = flux[idx_max] 
+            flux_err_max = flux_err[idx_max] 
             
             # use discrete data
-            #peakidxs = peak.indexes(self.lc_correct[B_band]['flux'], thres=.3, min_dist=5//(self.lc_correct[B_band]['phase'][1]-self.lc_correct[B_band]['phase'][0]))
-            #idx_max = np.asarray([idx for idx in peakidxs if all(self.lc_correct[B_band]['flux'][:idx]<self.lc_correct[B_band]['flux'][idx])]).min()
-            #phase_max = self.lc_correct[B_band]['phase'][idx_max]  # this needs to be as close to zero as possible
+            idx_max = np.argmin(np.abs(phase_max - self.lc_correct[B_band]['phase']))
+            flux_max_disc = self.lc_correct[B_band]['flux'][idx_max]
+
         except:
             raise ValueError(f'Unable to obtain an accurate B-band peak for {self.name}!')
-            
-        if (iter_num <= maxiter) and (np.abs(phase_max) > threshold):
+        
+        if (iter_num <= maxiter) and ((np.abs(phase_max) > threshold) or (np.abs(flux_max_disc-flux_max) > flux_err_max)):
+        #if (iter_num <= maxiter) and (np.abs(phase_max) > threshold):
             self.tmax += phase_max*(1+self.z) 
             #print(f'{self.name} iteration number {iter_num}')
             self.set_interp_data(restframe_phases=self.lc_correct[B_band]['phase'])  # set interpolated data with new tmax
             self.correct_light_curve(scaling=scaling, **mangle_kwargs)
             self.check_B_peak(threshold=threshold, iter_num=iter_num+1, maxiter=maxiter, scaling=scaling, **mangle_kwargs)
             
-        elif iter_num == maxiter:
-            raise ValueError(f'Unable to constrain B-band peak for {self.name}!')
+        #elif iter_num == maxiter:
+        #    raise ValueError(f'Unable to constrain B-band peak for {self.name}!')
             
         else:
             self.lc_parameters['phase_max'] = phase_max
