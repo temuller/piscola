@@ -699,7 +699,7 @@ class sn(object):
         band_list : list, default 'None'
         mask_phase : bool, default 'False'
             If 'True', keeps the flux values within the given phase range set by 'min_phase' and 'max_phase'.
-            The light curves need to be fit first with 'fit_lcs()'.
+             An initial estimation of the peak is needed first (can be set manually).
         min_phase : float, default '-20'
             Minimum phase threshold applied to mask data.
         max_phase : float, default '40'
@@ -714,9 +714,11 @@ class sn(object):
         
         if band_list is None:
             band_list = self.bands
+
+        bands2delete = []
         
         if mask_phase:   
-            assert self.lc_fits, 'The light curves need to be fitted first!'
+            assert self.tmax, 'An initial estimation of the peak is needed first!'
             
             for band in band_list:
                 mask = np.where((self.data[band]['mjd'] - self.tmax >= min_phase*(1+self.z)) & 
@@ -727,7 +729,7 @@ class sn(object):
                 self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
         
                 if len(self.data[band]['flux']) <= 2:
-                    self.delete_bands([band])  # delete bands with less than 3 data points after applying mask
+                    bands2delete.append(band)
 
         if mask_snr:        
             for band in band_list:
@@ -737,8 +739,10 @@ class sn(object):
                 self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
                 
                 if len(self.data[band]['flux']) <= 2:
-                    self.delete_bands([band])  # delete bands with less than 3 data points after applying mask
-                    
+                    bands2delete.append(band)
+
+        self.delete_bands(bands2delete)  # delete bands with less than 3 data points after applying mask
+
                 
     # this function might not be necessary for the release of the code                            
     def integrate_filters(self, band_list=None, value_type='flux'):  
