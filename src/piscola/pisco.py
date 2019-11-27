@@ -4,6 +4,7 @@ from .gaussian_process import *
 from .spline import *
 from .extinction_correction import *
 from .mangling import *  
+from .util import *
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
@@ -196,15 +197,10 @@ class sn(object):
                     # linearly interpolate filters
                     wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max()-wave0.min()))
                     transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
-                    # to anchor the transmission function on the edges to 0.0
-                    mask = np.nonzero(transmission)[0]  # could have negative transmission(?)
+                    # remove long tails of zero values on both edges
+                    imin, imax = trim_filters(transmission)
+                    wave, transmission = wave[imin:imax], transmission[imin:imax]
                     
-                    if mask[-1]+1 in np.where(transmission>-99)[0]:
-                        mask = np.r_[mask, mask[-1]+1]
-                    if mask[0]-1 in np.where(transmission>-99)[0]:
-                        mask = np.r_[mask[0]-1, mask]
-                        
-                    wave, transmission = wave[mask], transmission[mask]
                     response_type = 'photon'
                     self.filters[band] = {'wave':wave, 
                                           'transmission':transmission, 
@@ -223,15 +219,10 @@ class sn(object):
             # linearly interpolate filters
             wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max()-wave0.min()))
             transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
-            # to anchor the transmission function on the edges to 0.0
-            mask = np.nonzero(transmission)[0]  # could have negative transmission(?)
+            # remove long tails of zero values on both edges
+            imin, imax = trim_filters(transmission)
+            wave, transmission = wave[imin:imax], transmission[imin:imax]
             
-            if mask[-1]+1 in np.where(transmission>-99)[0]:
-                mask = np.r_[mask, mask[-1]+1]
-            if mask[0]-1 in np.where(transmission>-99)[0]:
-                mask = np.r_[mask[0]-1, mask]
-                
-            wave, transmission = wave[mask], transmission[mask]
             response_type = 'energy'
             self.filters[band] = {'wave':wave, 
                                   'transmission':transmission, 
@@ -268,15 +259,10 @@ class sn(object):
                     # linearly interpolate filters
                     wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max()-wave0.min()))
                     transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
-                    # to anchor the transmission function on the edges to 0.0
-                    mask = np.nonzero(transmission)[0]  # could have negative transmission(?)
+                    # remove long tails of zero values on both edges
+                    imin, imax = trim_filters(transmission)
+                    wave, transmission = wave[imin:imax], transmission[imin:imax]
                     
-                    if mask[-1]+1 in np.where(transmission>-99)[0]:
-                        mask = np.r_[mask, mask[-1]+1]
-                    if mask[0]-1 in np.where(transmission>-99)[0]:
-                        mask = np.r_[mask[0]-1, mask]
-                        
-                    wave, transmission = wave[mask], transmission[mask]
                     self.filters[band] = {'wave':wave, 
                                           'transmission':transmission, 
                                           'eff_wave':calc_eff_wave(vega_wave, vega_flux, wave, transmission, 
@@ -292,19 +278,17 @@ class sn(object):
                 
                 for root, dirs, files in os.walk(path + '/filters/'):
                     if file in files:
-                        wave, transmission = np.loadtxt(os.path.join(root, file)).T
-                        # to anchor the transmission function on the edges to 0.0
-                        mask = np.nonzero(transmission)[0]  # could have negative transmission(?)
+                        wave0, transmission0 = np.loadtxt(os.path.join(root, file)).T
+                        # linearly interpolate filters
+                        wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max()-wave0.min()))
+                        transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
+                        # remove long tails of zero values on both edges
+                        imin, imax = trim_filters(transmission)
+                        wave, transmission = wave[imin:imax], transmission[imin:imax]
                         
-                        if mask[-1]+1 in np.where(transmission>-99)[0]:
-                            mask = np.r_[mask, mask[-1]+1]
-                        if mask[0]-1 in np.where(transmission>-99)[0]:
-                            mask = np.r_[mask[0]-1, mask]
-                            
-                        wave, transmission = wave[mask], transmission[mask]
                         self.filters[band] = {'wave':wave, 
                                               'transmission':transmission, 
-                                              'eff_wave':calc_eff_wave(ab_wave, ab_flux, wave, transmission, 
+                                              'eff_wave':calc_eff_wave(vega_wave, vega_flux, wave, transmission, 
                                                                        response_type=response_type),
                                               'pivot_wave':calc_pivot_wave(wave, transmission, 
                                                                            response_type=response_type),
@@ -527,8 +511,9 @@ class sn(object):
         for band in self.filters.keys():
             # check if the filter wavelength is within the permited SED wavelength range
             min_idx, max_idx = filter_effective_range(self.filters[band]['transmission'])
+            trunc_filt_wave = self.filters[band]['wave'][min_idx:max_idx]
             
-            if self.sed['wave'].max() >= self.filters[band]['wave'][max_idx] and self.sed['wave'].min() <= self.filters[band]['wave'][min_idx]: 
+            if (self.sed['wave'].max() >= trunc_filt_wave.max()) and (self.sed['wave'].min() <= trunc_filt_wave.min()): 
                 flux_band = run_filter(self.sed['wave'], self.sed['flux'], self.filters[band]['wave'], 
                                        self.filters[band]['transmission'], self.filters[band]['response_type'])
                 ax.plot(self.filters[band]['eff_wave'], flux_band, 'o', label=band)
@@ -1229,9 +1214,9 @@ class sn(object):
         for band in self.filters.keys():
             # check if the filter wavelength is within the permited SED wavelength range
             min_idx, max_idx = filter_effective_range(self.filters[band]['transmission'])
-            if max_idx == len(self.filters[band]['wave']):
-                max_idx = -1  # to prevent indexing issues
-            if (self.sed['wave'].max() >= self.filters[band]['wave'][max_idx]) and (self.sed['wave'].min() <= self.filters[band]['wave'][min_idx]):
+            trunc_filt_wave = self.filters[band]['wave'][min_idx:max_idx]
+            
+            if (self.sed['wave'].max() >= trunc_filt_wave.max()) and (self.sed['wave'].min() <= trunc_filt_wave.min()):
                 
                 if band in self.bands:
                     zp = self.data[band]['zp']
