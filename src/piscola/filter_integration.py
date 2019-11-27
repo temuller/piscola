@@ -22,7 +22,22 @@ def run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, respo
     Flux density.
     
     """
+    
+    # truncate the filter at both sides by the same amount if it is not not cover by most of the spectrum range
+    imax = np.argmin(np.abs(spectrum_wave.max() - filter_wave)) + 1
+    imin = np.argmin(np.abs(spectrum_wave.min() - filter_wave))
+    
+    if imax != len(filter_wave):
+        imin = len(filter_wave) - imax
+    elif imin != 0:
+        imax = len(filter_wave) - imin
 
+    min_index, max_index = filter_effective_range(filter_response)
+    assert (imin <= min_index) and (imax >= max_index), 'The spectrum does not cover enough range of the filter used.'
+    
+    filter_wave = filter_wave[imin:imax]
+    filter_response = filter_response[imin:imax]
+    
     #check filter response type
     if response_type == 'photon':
         interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
