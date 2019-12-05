@@ -18,6 +18,8 @@ def trim_filters(response):
     first = 0
     for i in response:
         if i != 0.:
+            if first == 0:
+                first += 1  # to avoid filters with non-zero edges
             break
         else:
             first = first + 1
@@ -25,8 +27,11 @@ def trim_filters(response):
     last = len(response)
     for i in response[::-1]:
         if i != 0.:
+            if last == len(response):
+                last -= 1  # to avoid filters with non-zero edges
             break
         else:
             last = last - 1
 
+    
     return first-1, last+1

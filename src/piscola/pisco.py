@@ -844,11 +844,11 @@ class sn(object):
                     
         for band in self.bands:
             mag_sys = self.data[band]['mag_sys']
-            if mag_sys=='VEGA':
+            if mag_sys.lower()=='vega':
                 zp = calc_zp_vega(self.filters[band]['wave'], 
                                   self.filters[band]['transmission'], 
                                   self.filters[band]['response_type'])
-            elif mag_sys=='AB':
+            elif mag_sys.lower()=='ab':
                 zp = calc_zp_ab(self.filters[band]['pivot_wave'])
                 
             self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(self.data[band]['zp'] - zp))
@@ -1130,11 +1130,11 @@ class sn(object):
                 
             # initial sed and fluxes
             ax3.plot(init_sed_wave, init_sed_flux2*norm2, '--k')  # initial sed
-            ax3.plot(eff_waves, sed_fluxes2*norm2, 'ok', label='Initial values', alpha=0.8, fillstyle='none')  # initial sed fluxes
+            ax3.plot(eff_waves, sed_fluxes2*norm2, 'ok', ms=12, label='Template values', alpha=0.8, fillstyle='none')  # initial sed fluxes
             
             # optimized sed and fluxes
             ax3.plot(mang_sed_wave, mang_sed_flux2*norm2, 'red')  # mangled sed
-            ax3.plot(eff_waves, obs_fluxes2*norm2,'*r', label='Observed values')  # observed fluxes
+            ax3.plot(eff_waves, obs_fluxes2*norm2,'*r', ms=12, label='Observed values')  # observed fluxes
 
             ax.set_xlabel(r'Observer-frame Wavelength [$\AA$]', fontsize=16, family='serif')
             ax.set_ylabel(r'Relative Mangling Function', fontsize=16, family='serif', color='g')
@@ -1244,7 +1244,7 @@ class sn(object):
         self.set_eff_wave()
 
                 
-    def correct_light_curve(self, scaling=0.86, **mangle_kwargs):
+    def correct_light_curve(self, threshold=0.2, iter_num=0, maxiter=5, scaling=0.86, verbose=False, **mangle_kwargs):
         """Applies correction to the light curves.
         
         Runs the 'mangle_sed()', 'correct_extinction()' and 'kcorrection()' functions on the SN data,
@@ -1252,6 +1252,12 @@ class sn(object):
         
         Parameters
         ----------
+        threshold : float, default '0.2'
+            Threshold for the difference between the initial B-band peak estimation and the new estimation.
+        iter_num : int, default '1'
+            This value counts the number of iteration for the light-curves correction process.
+        maxiter : int, default '5'
+            Maximum number of iterations.
         scaling : float, default '0.86'
             Check 'correct_extinction()' for more information.
         **mangle_kwargs : 
@@ -1263,18 +1269,21 @@ class sn(object):
             assert (mangle_kwargs['kernel']=='matern52' or mangle_kwargs['kernel']=='matern32'
                     or mangle_kwargs['kernel']=='squaredexp'or mangle_kwargs['kernel']==None), f'"{mangle_kwargs["kernel"]}" is not a valid kernel.'
             
-        #print(f'Starting light curve correction for {self.name}...')
+        if verbose and iter_num==0:
+            print(f'Starting light curve correction for {self.name}...')
+        
         for phase in self.lc_interp[self.pivot_band]['phase']:
                 
             self.phase = phase
             self.set_sed_epoch()
             
             try:
-                self.mangle_sed(**mangle_kwargs)        # first mangle to correct the effective wavelength estimation...
-                self.set_sed_epoch(set_eff_wave=False)  # reset SED with better estimation (from 1st mangling) of effective wavelengths...
+                #self.mangle_sed(**mangle_kwargs)        # first mangle to correct the effective wavelength estimation...
+                #self.set_sed_epoch(set_eff_wave=False)  # reset SED with better estimation (from 1st mangling) of effective wavelengths...
                 self.mangle_sed(**mangle_kwargs)        # mangle again
             except: 
-                #print(f'Warning, mangling in phase {phase} failed for {self.name}!')
+                if verbose:
+                    print(f'Warning, mangling in phase {phase} failed for {self.name}!')
                 if phase in self.mangling_results:
                     del self.mangling_results[phase]
             else:
@@ -1282,9 +1291,11 @@ class sn(object):
                 self.kcorrection()     
                 self.sed_results.update({self.phase:{'wave':self.sed['wave'], 'flux':self.sed['flux'], 
                                                                'flux_err':self.sed['flux_err']}})
+
+        self.check_B_peak(threshold=threshold, iter_num=iter_num, maxiter=maxiter, scaling=scaling, verbose=verbose, **mangle_kwargs)
                 
                         
-    def check_B_peak(self, threshold=0.2, iter_num=1, maxiter=5, scaling=0.86, **mangle_kwargs):
+    def check_B_peak(self, threshold=0.2, iter_num=0, maxiter=5, scaling=0.86, verbose=False, **mangle_kwargs):
         """Estimate the B-band peak from the corrected light curves.
         
         Finds B-band peak and compares it with the initial value. If they do not match within the given threshold, 
@@ -1327,14 +1338,17 @@ class sn(object):
         
         if (iter_num <= maxiter) and ((np.abs(phase_max) > threshold) or (np.abs(flux_max_disc-flux_max) > flux_err_max)):
         #if (iter_num <= maxiter) and (np.abs(phase_max) > threshold):
+            iter_num += 1
+            if verbose:
+                print(f'{self.name} iteration number {iter_num}')
             self.tmax += phase_max*(1+self.z) 
             #print(f'{self.name} iteration number {iter_num}')
             self.set_interp_data(restframe_phases=self.lc_correct[B_band]['phase'])  # set interpolated data with new tmax
-            self.correct_light_curve(scaling=scaling, **mangle_kwargs)
-            self.check_B_peak(threshold=threshold, iter_num=iter_num+1, maxiter=maxiter, scaling=scaling, **mangle_kwargs)
+            self.correct_light_curve(threshold=threshold, iter_num=iter_num, maxiter=maxiter, scaling=scaling, **mangle_kwargs)
+            #self.check_B_peak(threshold=threshold, iter_num=iter_num+1, maxiter=maxiter, scaling=scaling, **mangle_kwargs)
             
-        #elif iter_num == maxiter:
-        #    raise ValueError(f'Unable to constrain B-band peak for {self.name}!')
+        elif iter_num > maxiter:
+            raise ValueError(f'Unable to constrain B-band peak for {self.name}!')
             
         else:
             self.lc_parameters['phase_max'] = phase_max

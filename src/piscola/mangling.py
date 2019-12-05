@@ -101,27 +101,28 @@ def mangle(flux_ratio, flux_ratio_err, sed_wave, sed_flux, bands, filters, obs_f
 
     #### optimize values ####
     eff_waves = np.asarray([filters[band]['eff_wave'] for band in bands])
+    norm = flux_ratio.max()  # normalization avoids tiny numbers which cause problems with the minimization routine
     
     params = lmfit.Parameters()
-    # lmfit Parameters doesn't allow parameter names beginning with numbers all digits are deleted 
+    # lmfit Parameters doesn't allow parameter names beginning with numbers so all digits are deleted 
     # just in case and quotes (') and dots (.) as well.
     param_bands = [band.lstrip("0123456789\'.-").replace("'", "").replace(".", "") for band in bands]  
                                                                   
-    for val, band in zip(flux_ratio, param_bands):                
-        params.add(band, value=val, min=val*0)#.99, max=val*1.01)   # tighten this constrains for a smoother mangling
-         
-    args=(eff_waves, flux_ratio_err, sed_wave, sed_flux, obs_fluxes, obs_flux_err, bands, filters, kernel, method)
+    for val, band in zip(flux_ratio, param_bands):
+        params.add(band, value=val/norm, min=val*0)#.8, max=val*1.2)   # tighten this constrains for a smoother mangling
+    
+    args=(eff_waves, flux_ratio_err/norm, sed_wave, sed_flux*norm, obs_fluxes, obs_flux_err, bands, filters, kernel, method)
     result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args)
     
     #### use optimize results ####
-    opt_flux_ratio = np.asarray([result.params[band].value for band in param_bands])
+    opt_flux_ratio = np.asarray([result.params[band].value for band in param_bands]) * norm
     min_wave, max_wave = filters[bands[0]]['wave'].min(), filters[bands[-1]]['wave'].max()
     
     if method=='gp':
         x_pred, y_pred, yerr_pred = fit_gp(eff_waves, opt_flux_ratio, flux_ratio_err, kernel=kernel,
                                            mangling=True, x_edges=[min_wave, max_wave])
     elif method=='spline':
-        kernel = None  # for result display purposes
+        kernel = None  # for result display purposes [not used anymore?]
         x_pred, y_pred, yerr_pred = fit_spline(eff_waves, opt_flux_ratio, flux_ratio_err, x_edges=[min_wave, max_wave])
         
     interp_sed_flux = np.interp(x_pred, sed_wave, sed_flux)

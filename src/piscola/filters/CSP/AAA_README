@@ -11,4 +11,4 @@ FILTER:  CSP-r/z              r_texas_WLcorr_atm.txt  9.35160
 FILTER:  CSP-i/A              i_texas_WLcorr_atm.txt  9.25000
 
 
-csp_V is the same as csp_m, but I use this name for JLA instead of Pantheon and it is the only V filter I used in JLA (is it the correct one? -  Tomás Müller)
+csp_V is the same as csp_m, but I use this name for JLA instead of Pantheon and there is only one V filter being used in JLA (is it the correct one? -  Tomás Müller)

@@ -77,7 +77,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, mangling=False, x_edges=N
     x /= x_norm
     
     ###### mean function for gp #######
-    if mangling and len(x)>2:
+    if mangling:
         mean_function = y.mean()
     ###################################
     
@@ -95,7 +95,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, mangling=False, x_edges=N
     else:
         raise ValueError(f'"{kernel}" is not a valid kernel.')
 
-    gp = george.GP(kernel=k, solver=george.HODLRSolver, mean=mean_function)
+    gp = george.GP(kernel=k, solver=george.HODLRSolver, mean=mean_function)  
     # initial guess
     gp.compute(x, yerr)
     
