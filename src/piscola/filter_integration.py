@@ -57,7 +57,7 @@ def run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, respo
     return flux_filter
 
 
-def calc_eff_wave(spectrum_wave, spectrum__flux, filter_wave, filter_response, response_type='photon'):
+def calc_eff_wave(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type='photon'):
     """Calcultes the effective wavelength of the filter given an SED.
     
     Parameters
@@ -81,20 +81,20 @@ def calc_eff_wave(spectrum_wave, spectrum__flux, filter_wave, filter_response, r
     
     if response_type == 'photon':
         interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
-        I1 = np.trapz((spectrum_wave**2)*interp_response*spectrum__flux, spectrum_wave)
-        I2 = np.trapz(spectrum_wave*interp_response*spectrum__flux, spectrum_wave)
+        I1 = np.trapz((spectrum_wave**2)*interp_response*spectrum_flux, spectrum_wave)
+        I2 = np.trapz(spectrum_wave*interp_response*spectrum_flux, spectrum_wave)
         eff_wave = I1/I2
     
     elif response_type == 'energy':
         interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
-        I1 = np.trapz(spectrum_wave*interp_response*spectrum__flux, spectrum_wave)
-        I2 = np.trapz(interp_response*spectrum__flux, spectrum_wave)
+        I1 = np.trapz(spectrum_wave*interp_response*spectrum_flux, spectrum_wave)
+        I2 = np.trapz(interp_response*spectrum_flux, spectrum_wave)
         eff_wave = I1/I2
         
     return eff_wave
 
 
-def calc_pivot_wave(filter_wave, filter_response, response_type='photon'):
+def calc_pivot_wave(filter_wave, filter_response, response_type):
     """Calcultes the pivot wavelength for the given filter.
     
     Parameters
@@ -125,28 +125,8 @@ def calc_pivot_wave(filter_wave, filter_response, response_type='photon'):
     return pivot_wave
 
 
-def calc_zp_ab(pivot_wave):
-    """Calculates the zero point in the AB magnitude sytem given the pivot wavelength of a given filter.
-    
-    Parameters
-    ----------
-    pivot_wave : float
-        Pivot wavelength.
-        
-    Returns
-    -------
-    Zero-point in the AB magnitude system.
-    
-    """
-    
-    c = 2.99792458e18  # speed of light in Angstroms
-    zp_ab = 2.5*np.log10(c/pivot_wave**2) - 48.6
-    
-    return zp_ab
-
-
-def calc_zp_vega(filter_wave, filter_response, response_type='photon'):
-    """Calculates the zero point in the Vega magnitude sytem.
+def calc_zp(filter_wave, filter_response, response_type, mag_sys):
+    """Calculates the zero point in the AB, Vega or BD+17 magnitude sytems.
     
     Parameters
     ----------
@@ -154,8 +134,10 @@ def calc_zp_vega(filter_wave, filter_response, response_type='photon'):
         Filter's wavelength range.
     filter_response : array
         Filter's response function.
-    response_type : str, default 'photon'
+    response_type : str
         Filter's response type. Either 'photon' or 'energy'. Only the Bessell filters use 'energy'.
+    mag_sys : str
+        Magnitude system. Either 'AB', 'Vega' or 'BD17'.
         
     Returns
     -------
@@ -164,11 +146,23 @@ def calc_zp_vega(filter_wave, filter_response, response_type='photon'):
     """
     
     path = piscola.__path__[0]
-    spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.ascii').T
-    f = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type=response_type)
-    zp_vega = 2.5*np.log10(f)
+
+    if mag_sys.lower() == 'ab':
+        pivot_wave = calc_pivot_wave(filter_wave, filter_response, response_type)
+        c = 2.99792458e18  # speed of light in Angstroms
+        zp = 2.5*np.log10(c/pivot_wave**2) - 48.6
+
+    if mag_sys.lower() == 'vega':
+        spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.dat').T
+        f_vega = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
+        zp = 2.5*np.log10(f_vega)
+
+    if mag_sys.lower() == 'bd17':
+        spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/bd_17d4708_stisnic_005.dat').T
+        f_bd17 = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
+        zp = 2.5*np.log10(f_bd17)
     
-    return zp_vega
+    return zp
 
 
 def filter_effective_range(filter_response, percent=99.0):

@@ -185,7 +185,7 @@ class sn(object):
         """Obtains the filters's transmission function for the observed bands and the Bessell bands."""
         
         path = piscola.__path__[0]
-        vega_wave, vega_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.ascii').T
+        vega_wave, vega_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.dat').T
                     
         # add filters of the observed bands
         for band in self.bands:
@@ -246,7 +246,7 @@ class sn(object):
         """
         
         path = piscola.__path__[0]
-        vega_wave, vega_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.ascii').T
+        vega_wave, vega_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.dat').T
         
         if isinstance(filter_list, str) and os.path.isdir(f'{path}/filters/{filter_list}'):
             # add directory
@@ -608,6 +608,14 @@ class sn(object):
             
             exp = np.round(np.log10(self.data[self.bands[0]]['flux'].max()), 0)
             y_norm = 10**exp
+
+            # to set plot limits
+            plot_lim_vals = [[self.data[band]['flux'].min(), self.data[band]['flux'].max()] for band in self.bands]
+            plot_lim_vals = np.ndarray.flatten(np.asarray(plot_lim_vals))/y_norm
+            ymin_lim = np.r_[plot_lim_vals, 0.0].min()*0.9
+            if ymin_lim < 0.0:
+                ymin_lim *= 1.1/0.9
+            ymax_lim = plot_lim_vals.max()*1.05
             
             fig, ax = plt.subplots(figsize=(8, 6))
             for i, band in enumerate(self.bands):
@@ -630,6 +638,7 @@ class sn(object):
             ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
             ax.set_title(f'{self.name} (z = {self.z:.5})', fontsize=18, family='serif')
             ax.legend(fontsize=13)
+            ax.set_ylim(ymin_lim, ymax_lim)
         
         else:
             h = 3
@@ -796,6 +805,21 @@ class sn(object):
         
         exp = np.round(np.log10(self.data[band_list[0]]['flux'].max()), 0)
         y_norm = 10**exp
+
+        # to set plot limits
+        if plot_type=='flux':
+            plot_lim_vals = [[self.data[band]['flux'].min()/y_norm, self.data[band]['flux'].max()/y_norm] for band in self.bands]
+            plot_lim_vals = np.ndarray.flatten(np.asarray(plot_lim_vals))
+            ymin_lim = np.r_[plot_lim_vals, 0.0].min()*0.9
+            if ymin_lim < 0.0:
+                ymin_lim *= 1.1/0.9
+            ymax_lim = plot_lim_vals.max()*1.1
+        elif plot_type=='mag':
+            plot_lim_vals = [[np.nanmin(-2.5*np.log10(self.data[band]['flux']) + self.data[band]['zp']), 
+                              np.nanmax(-2.5*np.log10(self.data[band]['flux']) + self.data[band]['zp'])] for band in self.bands]
+            plot_lim_vals = np.ndarray.flatten(np.asarray(plot_lim_vals))
+            ymin_lim = plot_lim_vals.min()*0.98
+            ymax_lim = plot_lim_vals.max()*1.02
         
         f, ax = plt.subplots(figsize=(8,6))    
         for i, band in enumerate(band_list):
@@ -819,7 +843,8 @@ class sn(object):
         ax.minorticks_on()
         ax.tick_params(which='major', length=8, width=1, direction='in', top=True, right=True, labelsize=16)
         ax.tick_params(which='minor', length=4, width=1, direction='in', top=True, right=True, labelsize=16)
-        plt.legend(fontsize=13)
+        ax.legend(fontsize=13)
+        ax.set_ylim(ymin_lim, ymax_lim)
         
         if plot_type=='mag':
             plt.gca().invert_yaxis()
@@ -834,26 +859,25 @@ class sn(object):
 
         
     def normalize_data(self):
-        """Normalize the zero-points.
+        """Normalize the fluxes and zero-points.
         
-        Zero-points are normalized according to the chosen type of normalization, scaling the fluxes
-        accordingly as well. 'ab' uses the AB spectrum to normalize. 'vega' uses 'alpha_lyr_stis_005'.
-        'counts' sets all the zero-points to have the same value (arbitrary choice).
-            
+        Fluxes are converted to physical units and the magnitude system is changed to 'Vega'.
         """
                     
         for band in self.bands:
             mag_sys = self.data[band]['mag_sys']
-            if mag_sys.lower()=='vega':
-                zp = calc_zp_vega(self.filters[band]['wave'], 
-                                  self.filters[band]['transmission'], 
-                                  self.filters[band]['response_type'])
-            elif mag_sys.lower()=='ab':
-                zp = calc_zp_ab(self.filters[band]['pivot_wave'])
+            
+            zp_vega = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'], 
+                         self.filters[band]['response_type'], 'vega')
+            zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'], 
+                         self.filters[band]['response_type'], mag_sys)
                 
-            self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(self.data[band]['zp'] - zp))
-            self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(self.data[band]['zp'] - zp))
-            # update the zp only at the end
+            #self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(self.data[band]['zp'] - zp))
+            #self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(self.data[band]['zp'] - zp))
+            #self.data[band]['zp'] = zp  # update the zp only at the end
+            ##########################
+            self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(self.data[band]['zp'] - zp_vega))
+            self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(self.data[band]['zp'] - zp_vega))
             self.data[band]['zp'] = zp
         
             
@@ -1174,7 +1198,7 @@ class sn(object):
         if verbose:
             print(f'Mangling results, i.e., difference between mangled SED and "observed" magnitudes, at phase {phase}:')
             for band, diff in man['mag_diff'].items():      
-                print(f'{band}: {diff} [mags]')
+                print(f'{band}: {diff:.4f} [mags]')
     
     
     def correct_extinction(self, scaling=0.86):
@@ -1223,7 +1247,7 @@ class sn(object):
                     mag_sys = self.data[band]['mag_sys']
                 else: 
                     # only for Bessell filters
-                    zp = calc_zp_vega(self.filters[band]['wave'], self.filters[band]['transmission'], self.filters[band]['response_type'])
+                    zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'], self.filters[band]['response_type'], 'vega')
                     mag_sys = 'VEGA'    
                                    
                 band_flux = run_filter(self.sed['wave'], self.sed['flux'], 
