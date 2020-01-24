@@ -125,7 +125,7 @@ def calc_pivot_wave(filter_wave, filter_response, response_type):
     return pivot_wave
 
 
-def calc_zp(filter_wave, filter_response, response_type, mag_sys):
+def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name=None):
     """Calculates the zero point in the AB, Vega or BD+17 magnitude sytems.
     
     Parameters
@@ -137,7 +137,9 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys):
     response_type : str
         Filter's response type. Either 'photon' or 'energy'. Only the Bessell filters use 'energy'.
     mag_sys : str
-        Magnitude system. Either 'AB', 'Vega' or 'BD17'.
+        Magnitude system. Either 'AB', 'Vega', 'BD17' or 'BD+17'. 'BD17' and 'BD+17' are the same.
+    filter_name : str
+        Filter name. Used to estimate the zero point for the 'BD+17' or 'BD17' magnitude system.
         
     Returns
     -------
@@ -157,10 +159,14 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys):
         f_vega = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
         zp = 2.5*np.log10(f_vega)
 
-    if mag_sys.lower() == 'bd17':
+    if mag_sys.lower() in ['bd17', 'bd+17']:
         spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/bd_17d4708_stisnic_005.dat').T
         f_bd17 = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
-        zp = 2.5*np.log10(f_bd17)
+
+        bd17_file = open(path + '/templates/bd17_mag_sys.dat', 'rt').read()
+        band_line = [line for line in bd17_file.split('\n') if filter_name in line]
+        m_bd17 = float(band_line[0].split()[-1])
+        zp = 2.5*np.log10(f_bd17) + m_bd17
     
     return zp
 

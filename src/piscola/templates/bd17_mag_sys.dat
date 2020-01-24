@@ -1,0 +1,47 @@
+# BD17_SED:     bd_17d4708_stisnic_005.dat
+# All the values are taken from SNANA with supercal, except for the Keplercam and Standard values, taken from JLA, for which bd_17d4708_stisnic_003 was used
+
+# Magnitudes in the Landolt system : Landolt & Uomoto (2007)
+Standard_U 9.724
+Standard_B 9.907
+Standard_V 9.464
+Standard_R 9.166
+Standard_I 8.846
+
+# Start filters for VERSION = PS1s_CFA3_4SHOOTER2_DS17
+4Shooter2_U  9.6930 
+4Shooter2_B  9.8395 
+4Shooter2_V  9.4703 
+4Shooter2_R  9.1340 
+4Shooter2_I  8.8374 
+
+# Start filters for VERSION = PS1s_CFA3_KEPLERCAM_DS17
+Keplercam_Us 9.724
+Keplercam_U  9.6922 
+Keplercam_B  9.8803
+Keplercam_V  9.4722 
+Keplercam_r  9.3524 
+Keplercam_i  9.2542 
+
+# Start filters for VERSION = PS1s_CFA4_p1_DS17
+p1_U  9.724 
+p1_B  9.86205 
+p1_V  9.47312 
+p1_r  9.35502 
+p1_i  9.25065 
+
+# Start filters for VERSION = PS1s_CFA4_p2_DS17
+p2_B  9.86395087 
+p2_V  9.4730877998
+p2_r  9.3631652098
+p2_i  9.2509725347
+
+# Start filters for VERSION = PS1s_CSPDR2_V_DS17
+csp_u  10.51952 
+cap_B  9.86815772
+csp_o  9.4783963098
+csp_m  9.4730463098
+csp_n  9.4792463098 
+csp_g  9.6528873
+csp_r  9.3527820498
+csp_i  9.23389628

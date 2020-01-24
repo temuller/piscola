@@ -868,7 +868,7 @@ class sn(object):
             mag_sys = self.data[band]['mag_sys']
             
             zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'], 
-                         self.filters[band]['response_type'], mag_sys)
+                         self.filters[band]['response_type'], mag_sys, band)
             zp_vega = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'], 
                          self.filters[band]['response_type'], 'vega')
             
