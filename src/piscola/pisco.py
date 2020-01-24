@@ -867,18 +867,15 @@ class sn(object):
         for band in self.bands:
             mag_sys = self.data[band]['mag_sys']
             
-            zp_vega = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'], 
-                         self.filters[band]['response_type'], 'vega')
             zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'], 
                          self.filters[band]['response_type'], mag_sys)
-                
-            #self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(self.data[band]['zp'] - zp))
-            #self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(self.data[band]['zp'] - zp))
-            #self.data[band]['zp'] = zp  # update the zp only at the end
-            ##########################
-            self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(self.data[band]['zp'] - zp_vega))
-            self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(self.data[band]['zp'] - zp_vega))
-            self.data[band]['zp'] = zp
+            zp_vega = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'], 
+                         self.filters[band]['response_type'], 'vega')
+            
+            self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(self.data[band]['zp'] - zp))
+            self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(self.data[band]['zp'] - zp))
+            self.data[band]['zp'] = zp_vega
+            self.data[band]['mag_sys'] = 'VEGA'
         
             
     def delete_bands(self, bands_list, verbose=False):
@@ -1381,7 +1378,7 @@ class sn(object):
     def calc_lc_parameters(self):
         """Calculates the SN light curve parameters. 
         
-        Estimation of B-band peak apparent magnitude (mb), stretch (dm15) and color (Bmax-Vmax) parameters.
+        Estimation of B-band peak apparent magnitude (mb), stretch (dm15) and color ((B-V)max) parameters.
         An interpolation of the corrected light curves is done as well as part of this process.
         
         """

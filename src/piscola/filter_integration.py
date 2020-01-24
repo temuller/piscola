@@ -149,7 +149,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys):
 
     if mag_sys.lower() == 'ab':
         pivot_wave = calc_pivot_wave(filter_wave, filter_response, response_type)
-        c = 2.99792458e18  # speed of light in Angstroms
+        c = 2.99792458e18  # speed of light in Angstroms/s
         zp = 2.5*np.log10(c/pivot_wave**2) - 48.6
 
     if mag_sys.lower() == 'vega':
