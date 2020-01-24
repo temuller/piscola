@@ -109,12 +109,12 @@ def mangle(flux_ratio, flux_ratio_err, sed_wave, sed_flux, bands, filters, obs_f
     param_bands = [band.lstrip("0123456789\'.-").replace("'", "").replace(".", "") for band in bands]  
                                                                   
     for val, band in zip(flux_ratio, param_bands):
-        params.add(band, value=val/norm, min=val*0)#.8, max=val*1.2)   # tighten this constrains for a smoother mangling
+        params.add(band, value=val/norm, min=0) # , max=val*1.2)   # tighten this constrains for a smoother(?) mangling
     
     args=(eff_waves, flux_ratio_err/norm, sed_wave, sed_flux*norm, obs_fluxes, obs_flux_err, bands, filters, kernel, method)
     result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args)
     
-    #### use optimize results ####
+    #### use optimized results ####
     opt_flux_ratio = np.asarray([result.params[band].value for band in param_bands]) * norm
     min_wave, max_wave = filters[bands[0]]['wave'].min(), filters[bands[-1]]['wave'].max()
     
