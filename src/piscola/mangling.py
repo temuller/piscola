@@ -159,4 +159,5 @@ def mangle(flux_ratio, flux_ratio_err, sed_wave, sed_flux, bands, filters, obs_f
                         'method':method, 
                         'result':result}
     
-    return mangled_wave, mangled_flux, mangled_flux_err, mangling_results
+    #return mangled_wave, mangled_flux, mangled_flux_err, mangling_results
+    return mangling_results

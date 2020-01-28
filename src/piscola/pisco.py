@@ -1021,24 +1021,25 @@ class sn(object):
         obs_fluxes = np.asarray([self.lc_interp[band]['flux'][idx] for band, idx in zip(valid_bands, idx_bands)])
         obs_fluxes_err = np.asarray([self.lc_interp[band]['flux_err'][idx] for band, idx in zip(valid_bands, idx_bands)])
 
-        results = mangle(flux_ratios, flux_ratios_err, self.sed['wave'], self.sed['flux'], 
+        mangling_results = mangle(flux_ratios, flux_ratios_err, self.sed['wave'], self.sed['flux'], 
                          valid_bands, self.filters, obs_fluxes, obs_fluxes_err, kernel=kernel, method=method)
 
-        mangled_wave, mangled_flux, mangled_flux_err, mangling_results = results
+        #mangled_wave, mangled_flux, mangled_flux_err, mangling_results = results
+        mangled_sed = mangling_results['mangled_sed']
+        mangled_wave, mangled_flux, mangled_flux_err = mangled_sed['wave'], mangled_sed['flux'], mangled_sed['flux_err']
 
+        # estimate precision of the mangling function
         mag_diffs = {}
-        diff_array = np.empty(0)
         for band, obs_flux in zip(valid_bands, obs_fluxes):
             band_wave, band_transmission = self.filters[band]['wave'], self.filters[band]['transmission']
             response_type = self.filters[band]['response_type']
             model_flux = run_filter(mangled_wave, mangled_flux, band_wave, band_transmission, response_type)
 
             mag_diffs[band] = -2.5*np.log10(obs_flux) - (-2.5*np.log10(model_flux))
-            diff_array = np.r_[diff_array, mag_diffs[band]]
         
         self.sed['wave'], self.sed['flux'], self.sed['flux_err'] = mangled_wave, mangled_flux, mangled_flux_err
         self.mangling_results.update({self.phase:mangling_results})
-        self.mangling_results[self.phase].update({'mag_diff':mag_diffs})
+        self.mangling_results[self.phase].update({'mag_diff':mag_diffs})  # this line actually adds the 'mag_diff' key
         
         self.set_eff_wave()
             
