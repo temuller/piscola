@@ -583,7 +583,7 @@ class sn(object):
         self.tmax = self.lc_fits[self.pivot_band]['tmax']                               
 
         
-    def plot_fits(self, plot_together=True, save=False, fig_name=None):
+    def plot_fits(self, plot_together=True, plot_type='mag', save=False, fig_name=None):
         """Plots the light-curves fits results.
         
         Plots the observed data for each band together with the gaussian process fits. The initial B-band
@@ -610,24 +610,45 @@ class sn(object):
             y_norm = 10**exp
 
             # to set plot limits
-            plot_lim_vals = [[self.data[band]['flux'].min(), self.data[band]['flux'].max()] for band in self.bands]
-            plot_lim_vals = np.ndarray.flatten(np.asarray(plot_lim_vals))/y_norm
-            ymin_lim = np.r_[plot_lim_vals, 0.0].min()*0.9
-            if ymin_lim < 0.0:
-                ymin_lim *= 1.1/0.9
-            ymax_lim = plot_lim_vals.max()*1.05
+            if plot_type=='flux':
+                plot_lim_vals = [[self.data[band]['flux'].min(), self.data[band]['flux'].max()] for band in self.bands]
+                plot_lim_vals = np.ndarray.flatten(np.asarray(plot_lim_vals))/y_norm
+                ymin_lim = np.r_[plot_lim_vals, 0.0].min()*0.9
+                if ymin_lim < 0.0:
+                    ymin_lim *= 1.1/0.9
+                ymax_lim = plot_lim_vals.max()*1.05
+            elif plot_type=='mag':
+                plot_lim_vals = [[-2.5*np.log10(self.data[band]['flux'].min()) + self.data[band]['zp'], 
+                                  -2.5*np.log10(self.data[band]['flux'].max()) + self.data[band]['zp']] for band in self.bands]
+                plot_lim_vals = np.ndarray.flatten(np.asarray(plot_lim_vals))
+                ymin_lim = plot_lim_vals.min()*0.98
+                ymax_lim = plot_lim_vals.max()*1.02
             
             fig, ax = plt.subplots(figsize=(8, 6))
             for i, band in enumerate(self.bands):
 
                 time, flux, std = np.copy(self.lc_fits[band]['mjd']), np.copy(self.lc_fits[band]['flux']), np.copy(self.lc_fits[band]['std'])
-                flux, std = flux/y_norm, std/y_norm
                 data_time, data_flux, data_std = np.copy(self.data[band]['mjd']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
-                data_flux, data_std = data_flux/y_norm, data_std/y_norm
-                
-                ax.errorbar(data_time, data_flux, data_std, fmt='o', capsize=3, color=new_palette[i],label=band)
-                ax.plot(time, flux,'-', color=new_palette[i])
-                ax.fill_between(time, flux-std, flux+std, alpha=0.5, color=new_palette[i])
+
+                if plot_type=='flux':
+                    flux, std = flux/y_norm, std/y_norm
+                    data_flux, data_std = data_flux/y_norm, data_std/y_norm
+
+                    ax.errorbar(data_time, data_flux, data_std, fmt='o', capsize=3, color=new_palette[i],label=band)
+                    ax.plot(time, flux,'-', color=new_palette[i])
+                    ax.fill_between(time, flux-std, flux+std, alpha=0.5, color=new_palette[i])
+                    ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
+
+                elif plot_type=='mag':
+                    mag = -2.5*np.log10(flux) + self.data[band]['zp']
+                    err = np.abs(2.5*std/(flux*np.log(10)))
+                    data_mag = -2.5*np.log10(data_flux) + self.data[band]['zp']
+                    data_err = np.abs(2.5*data_std/(data_flux*np.log(10)))
+
+                    ax.errorbar(data_time, data_mag, data_err, fmt='o', capsize=3, color=new_palette[i],label=band)
+                    ax.plot(time, mag,'-', color=new_palette[i])
+                    ax.fill_between(time, mag-err, mag+err, alpha=0.5, color=new_palette[i])
+                    ax.set_ylabel(r'Apparent Magnitude [mag]', fontsize=16, family='serif')
                 
             ax.axvline(x=self.tmax, color='r', linestyle='--')
             ax.axvline(x=self.lc_fits[self.pivot_band]['tmax'], color='k', linestyle='--')
@@ -635,11 +656,13 @@ class sn(object):
             ax.tick_params(which='major', length=6, width=1, direction='in', top=True, right=True, labelsize=16)
             ax.tick_params(which='minor', length=3, width=1, direction='in', top=True, right=True, labelsize=16)
             ax.set_xlabel('Modified Julian Date', fontsize=16, family='serif')
-            ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
+            
             ax.set_title(f'{self.name} (z = {self.z:.5})', fontsize=18, family='serif')
             ax.legend(fontsize=13)
             ax.set_ylim(ymin_lim, ymax_lim)
-        
+
+            if plot_type=='mag':
+                plt.gca().invert_yaxis()
         else:
             h = 3
             v = math.ceil(len(self.bands) / h)
@@ -778,7 +801,7 @@ class sn(object):
         print(mags)
     
     
-    def plot_data(self, band_list=None, plot_type='flux', save=False, fig_name=None):
+    def plot_data(self, band_list=None, plot_type='mag', save=False, fig_name=None):
         """Plot the SN light curves.
         
         Negative fluxes are masked out if magnitudes are plotted.
@@ -938,7 +961,7 @@ class sn(object):
             self.lc_interp[band]['mag_sys'] = self.data[band]['mag_sys']
             
             
-    def plot_interp_data(self, band_list=None, plot_type='flux'):
+    def plot_interp_data(self, band_list=None, plot_type='mag'):
         """Plot the interpolated data from the SN light curve fit given by the function set_interp_data.
         
         Parameters
@@ -1446,7 +1469,7 @@ class sn(object):
                 pass
        
     
-    def display_results(self, band=None, save=False, fig_name=None):
+    def display_results(self, band=None, plot_type='mag', save=False, fig_name=None):
         """Displays the rest-frame light curve for the given band. 
         
         Plots the rest-frame band light curve together with a gaussian fit to it. The parameters estimated with
@@ -1463,6 +1486,8 @@ class sn(object):
             Only works if 'save' is set to 'True'.
 
         """
+        
+        assert (plot_type=='mag' or plot_type=='flux'), f'"{plot_type}" is not a valid plot type.'
         
         mb = self.lc_parameters['mb']
         dmb = self.lc_parameters['dmb']
@@ -1481,12 +1506,21 @@ class sn(object):
         y_fit = np.copy(self.lc_final_fits[band]['flux'])
         yerr_fit = np.copy(self.lc_final_fits[band]['flux_err'])
         
-        exp = np.round(np.log10(y.max()), 0)
-        y_norm = 10**exp
-        y /= y_norm
-        yerr /= y_norm
-        y_fit /= y_norm
-        yerr_fit /= y_norm
+        if plot_type=='flux':
+            exp = np.round(np.log10(y.max()), 0)
+            y_norm = 10**exp
+            y /= y_norm
+            yerr /= y_norm
+            y_fit /= y_norm
+            yerr_fit /= y_norm
+
+        elif plot_type=='mag':
+            # y, yerr, y_fit, yerr_fit variables get reassigned
+            yerr = np.abs(2.5*yerr/(y*np.log(10)))
+            y = -2.5*np.log10(y) + self.lc_final_fits[band]['zp']
+            yerr_fit = np.abs(2.5*yerr_fit/(y_fit*np.log(10)))
+            y_fit = -2.5*np.log10(y_fit) + self.lc_final_fits[band]['zp']
+
 
         f, ax = plt.subplots(figsize=(8,6))
         ax.errorbar(x, y, yerr, fmt='-.o', capsize=3, color='k')
@@ -1498,9 +1532,14 @@ class sn(object):
         ax.text(0.75, 0.7,r'($B-V$)$_{\rm max}$=%.3f$\pm$%.3f'%(color, dcolor), ha='center', va='center', fontsize=15, transform=ax.transAxes)
 
         ax.set_xlabel(f'Phase with respect to B-band peak [days]', fontsize=16, family='serif')
-        ax.set_ylabel('Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
         ax.set_title(f'{self.name} ({band}, z={self.z:.5})', fontsize=16, family='serif')
-        ax.set_ylim(y.min()*0.90, y.max()*1.05)
+        if plot_type=='flux':
+            ax.set_ylabel('Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
+            ax.set_ylim(y.min()*0.90, y.max()*1.05)
+        elif plot_type=='mag':
+            ax.set_ylabel('Apparent Magnitude [mag]', fontsize=16, family='serif')
+            ax.set_ylim(y.min()*0.98, y.max()*1.02)
+            plt.gca().invert_yaxis()
         ax.minorticks_on()
         ax.tick_params(which='major', length=8, width=1, direction='in', top=True, right=True, labelsize=16)
         ax.tick_params(which='minor', length=4, width=1, direction='in', top=True, right=True, labelsize=16)
