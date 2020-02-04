@@ -621,8 +621,8 @@ class sn(object):
                 plot_lim_vals = [[-2.5*np.log10(self.data[band]['flux'].min()) + self.data[band]['zp'], 
                                   -2.5*np.log10(self.data[band]['flux'].max()) + self.data[band]['zp']] for band in self.bands]
                 plot_lim_vals = np.ndarray.flatten(np.asarray(plot_lim_vals))
-                ymin_lim = plot_lim_vals.min()*0.98
-                ymax_lim = plot_lim_vals.max()*1.02
+                ymin_lim = np.nanmin(plot_lim_vals)*0.98
+                ymax_lim = np.nanmax(plot_lim_vals)*1.02
             
             fig, ax = plt.subplots(figsize=(8, 6))
             for i, band in enumerate(self.bands):
@@ -841,8 +841,8 @@ class sn(object):
             plot_lim_vals = [[np.nanmin(-2.5*np.log10(self.data[band]['flux']) + self.data[band]['zp']), 
                               np.nanmax(-2.5*np.log10(self.data[band]['flux']) + self.data[band]['zp'])] for band in self.bands]
             plot_lim_vals = np.ndarray.flatten(np.asarray(plot_lim_vals))
-            ymin_lim = plot_lim_vals.min()*0.98
-            ymax_lim = plot_lim_vals.max()*1.02
+            ymin_lim = np.nanmin(plot_lim_vals)*0.98
+            ymax_lim = np.nanmax(plot_lim_vals)*1.02
         
         f, ax = plt.subplots(figsize=(8,6))    
         for i, band in enumerate(band_list):
