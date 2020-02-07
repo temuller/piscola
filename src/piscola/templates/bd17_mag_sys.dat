@@ -8,6 +8,13 @@ Standard_V 9.464
 Standard_R 9.166
 Standard_I 8.846
 
+# Copied from the Standard ones
+Bessell_U 9.724
+Bessell_B 9.907
+Bessell_V 9.464
+Bessell_R 9.166
+Bessell_I 8.846
+
 # Start filters for VERSION = PS1s_CFA3_4SHOOTER2_DS17
 4Shooter2_U  9.6930 
 4Shooter2_B  9.8395 

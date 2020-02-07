@@ -163,11 +163,14 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name=No
         spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/bd_17d4708_stisnic_005.dat').T
         f_bd17 = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
 
-        bd17_file = open(path + '/templates/bd17_mag_sys.dat', 'rt').read()
-        band_line = [line for line in bd17_file.split('\n') if filter_name in line]
-        m_bd17 = float(band_line[0].split()[-1])
-        zp = 2.5*np.log10(f_bd17) + m_bd17
-    
+        with open(path + '/templates/bd17_mag_sys.dat', 'rt') as bd17_file:
+            mag = [line.split()[-1] for line in bd17_file if filter_name in line.split()]
+        if mag:
+            m_bd17 = float(mag[0])
+            zp = 2.5*np.log10(f_bd17) + m_bd17
+        else:
+            raise ValueError(f'Could not find "{filter_name}" band in {path + "/templates/bd17_mag_sys.dat"} file')
+
     return zp
 
 
