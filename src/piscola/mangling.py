@@ -5,13 +5,13 @@ from .spline import fit_spline
 import numpy as np
 import lmfit
 
-def residual(params, eff_waves, flux_ratio_err, sed_wave, sed_flux, obs_flux, obs_flux_err, bands, filters, kernel, method):
+def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filters, kernel, x_edges):
     """Residual functions for the SED mangling minimization routine.
-    
+
     Lmfit works in such a way that each parameters needs to have a residual value. In the case of the
     hyperparameters, a residual equal to the sum of the bands's residuals is used given that there is no
     model used to compare these values.
-    
+
     Parameters
     ----------
     params : lmfit.Parameters()
@@ -36,39 +36,34 @@ def residual(params, eff_waves, flux_ratio_err, sed_wave, sed_flux, obs_flux, ob
         Kernel to be used with the gaussian process. Possible choices are: 'matern52', 'matern32', 'squaredexp'.
     method : str
         Fitting method. Either 'gp' for gaussian process or 'spline' for spline.
-        
+
     Returns
     -------
     Array of residuals for each parameter.
-    
+
     """
-    
+
     param_bands = [band.lstrip("0123456789\'.-").replace("'", "").replace(".", "") for band in bands]
-    flux_ratio = np.asarray([params[band].value for band in param_bands])
-    min_wave, max_wave = filters[bands[0]]['wave'].min(), filters[bands[-1]]['wave'].max()
-    
-    if method=='gp':
-        x_pred, y_pred, yerr_pred = fit_gp(eff_waves, flux_ratio, flux_ratio_err, kernel=kernel, 
-                                           mangling=True, x_edges=[min_wave, max_wave])
-    elif method=='spline':
-        x_pred, y_pred, yerr_pred = fit_spline(eff_waves, flux_ratio, flux_ratio_err, x_edges=[min_wave, max_wave])
-    
+    flux_ratio_array = np.array([params[band].value for band in param_bands])
+
+    x_pred, y_pred, yerr_pred = fit_gp(wave_array, flux_ratio_array, np.zeros_like(flux_ratio_array),
+                                        kernel=kernel, x_edges=x_edges)
+
     interp_sed_flux = np.interp(x_pred, sed_wave, sed_flux)
-    mangled_wave, mangled_flux = x_pred, y_pred*interp_sed_flux
-    model_flux = np.array([run_filter(mangled_wave, mangled_flux, filters[band]['wave'], filters[band]['transmission'], 
+    mangled_wave, mangled_flux = x_pred, (y_pred*norm)*interp_sed_flux
+    model_flux = np.array([run_filter(mangled_wave, mangled_flux, filters[band]['wave'], filters[band]['transmission'],
                                       filters[band]['response_type']) for band in bands])
 
-    residuals = np.abs((obs_flux - model_flux)/obs_flux_err)
-
+    residuals = -2.5*np.log10(obs_flux/model_flux)
     return residuals
 
 
-def mangle(flux_ratio, flux_ratio_err, sed_wave, sed_flux, bands, filters, obs_fluxes, obs_flux_err, kernel='squaredexp', method='gp'):
+def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, bands, filters, obs_fluxes, kernel, x_edges):
     """Mangling routine.
-    
+
     A mangling of the SED is done by minimizing the the difference between the "observed" fluxes and the fluxes
     coming from the modified SED.
-    
+
     Parameters
     ----------
     flux_ratio : array
@@ -91,73 +86,74 @@ def mangle(flux_ratio, flux_ratio_err, sed_wave, sed_flux, bands, filters, obs_f
         Kernel to be used with the gaussian process. Possible choices are: 'matern52', 'matern32', 'squaredexp'.
     method : str
         Fitting method. Either 'gp' for gaussian process or 'spline' for spline.
-        
+
     Returns
     -------
     Returns the mangled/modified SED with 1-sigma standard deviation and all the results
     from the mangling routine (these can plotted later to check the results).
-    
+
     """
 
-    #### optimize values ####
-    eff_waves = np.asarray([filters[band]['eff_wave'] for band in bands])
-    norm = flux_ratio.max()  # normalization avoids tiny numbers which cause problems with the minimization routine
-    
+    #########################
+    #### Optimise values ####
+    #########################
     params = lmfit.Parameters()
-    # lmfit Parameters doesn't allow parameter names beginning with numbers so all digits are deleted 
+    # lmfit Parameters doesn't allow parameter names beginning with numbers so all digits are deleted
     # just in case and quotes (') and dots (.) as well.
-    param_bands = [band.lstrip("0123456789\'.-").replace("'", "").replace(".", "") for band in bands]  
-                                                                  
-    for val, band in zip(flux_ratio, param_bands):
-        params.add(band, value=val/norm, min=0) # , max=val*1.2)   # tighten this constrains for a smoother(?) mangling
-    
-    args=(eff_waves, flux_ratio_err/norm, sed_wave, sed_flux*norm, obs_fluxes, obs_flux_err, bands, filters, kernel, method)
-    result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args)
-    
-    #### use optimized results ####
+    param_bands = [band.lstrip("0123456789\'.-").replace("'", "").replace(".", "") for band in bands]
+
+    norm = flux_ratio_array.max()  # normalization avoids tiny numbers which cause problems with the minimization routine
+    for val, band in zip(flux_ratio_array/norm, param_bands):
+        params.add(band, value=val, min=0) # , max=val*1.2)   # tighten this constrains for a smoother(?) mangling
+
+    args=(wave_array, sed_wave, sed_flux, obs_fluxes, norm, bands, filters, kernel, x_edges)
+    result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-3, ftol=1e-3, maxfev=40)
+
+    ###############################
+    #### Use Optimized Results ####
+    ###############################
     opt_flux_ratio = np.asarray([result.params[band].value for band in param_bands]) * norm
-    min_wave, max_wave = filters[bands[0]]['wave'].min(), filters[bands[-1]]['wave'].max()
-    
-    if method=='gp':
-        x_pred, y_pred, yerr_pred = fit_gp(eff_waves, opt_flux_ratio, flux_ratio_err, kernel=kernel,
-                                           mangling=True, x_edges=[min_wave, max_wave])
-    elif method=='spline':
-        kernel = None  # for result display purposes [not used anymore?]
-        x_pred, y_pred, yerr_pred = fit_spline(eff_waves, opt_flux_ratio, flux_ratio_err, x_edges=[min_wave, max_wave])
-        
+
+    x_pred, y_pred, yerr_pred = fit_gp(wave_array, opt_flux_ratio, np.zeros_like(opt_flux_ratio),
+                                        kernel=kernel, x_edges=x_edges)
+
     interp_sed_flux = np.interp(x_pred, sed_wave, sed_flux)
     mangled_wave, mangled_flux, mangled_flux_err = x_pred, y_pred*interp_sed_flux, yerr_pred*interp_sed_flux
-    
-    #### propagate errors ####
+
+    ###########################
+    #### Error propagation ####
+    ###########################
     flux_diffs = []
     for band, obs_flux in zip(bands, obs_fluxes):
-        model_flux = run_filter(mangled_wave, mangled_flux, 
+        model_flux = run_filter(mangled_wave, mangled_flux,
                                 filters[band]['wave'], filters[band]['transmission'], filters[band]['response_type'])
         flux_diffs.append(obs_flux - model_flux)
-    flux_diffs = np.r_[0, flux_diffs, 0]    
-    
-    interp_flux_err = np.interp(mangled_wave, np.r_[min_wave, eff_waves, max_wave], flux_diffs)
+    flux_diffs = np.r_[flux_diffs[0], flux_diffs, flux_diffs[-1]]
+
+    # penalise for inaccuracy in optimisation routine
+    interp_flux_err = np.interp(mangled_wave, np.r_[x_edges[0], wave_array, x_edges[-1]], flux_diffs)
     mangled_flux_err = np.sqrt(mangled_flux_err**2 + interp_flux_err**2)
-    
+
     yerr_pred = mangled_flux_err/interp_sed_flux  # error propagation from flux_diffs
-    
-    #### save results ####
+
+    ######################
+    #### Save Results ####
+    ######################
     sed_fluxes = np.empty(0)
     for band in bands:
-        band_flux = run_filter(sed_wave, sed_flux, 
+        band_flux = run_filter(sed_wave, sed_flux,
                                filters[band]['wave'], filters[band]['transmission'], filters[band]['response_type'])
         sed_fluxes = np.r_[sed_fluxes, band_flux]
-    
-    mangling_results = {'init_vals':{'waves':eff_waves, 'flux_ratios':flux_ratio, 'flux_ratios_err':flux_ratio_err},
-                        'opt_vals':{'waves':eff_waves, 'flux_ratios':opt_flux_ratio, 'flux_ratios_err':flux_ratio_err},
-                        'sed_vals':{'waves':eff_waves, 'fluxes':sed_fluxes},
-                        'obs_vals':{'waves':eff_waves, 'fluxes':obs_fluxes, 'fluxes_err':obs_flux_err},
+
+    mangling_results = {'init_vals':{'waves':wave_array, 'flux_ratios':flux_ratio_array, 'flux_ratios_err':0.0},
+                        'opt_vals':{'waves':wave_array, 'flux_ratios':opt_flux_ratio, 'flux_ratios_err':0.0},
+                        'sed_vals':{'waves':wave_array, 'fluxes':sed_fluxes},
+                        'obs_vals':{'waves':wave_array, 'fluxes':obs_fluxes},
                         'opt_fit':{'waves':x_pred, 'flux_ratios':y_pred, 'flux_ratios_err':yerr_pred},
                         'init_sed':{'wave':sed_wave, 'flux':sed_flux},
                         'mangled_sed':{'wave':mangled_wave, 'flux':mangled_flux, 'flux_err':mangled_flux_err},
-                        'kernel':kernel, 
-                        'method':method, 
+                        'kernel':kernel,
                         'result':result}
-    
+
     #return mangled_wave, mangled_flux, mangled_flux_err, mangling_results
     return mangling_results
