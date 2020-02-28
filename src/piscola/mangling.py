@@ -58,7 +58,7 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
     return residuals
 
 
-def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, bands, filters, obs_fluxes, kernel, x_edges):
+def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_errs, bands, filters, kernel, x_edges):
     """Mangling routine.
 
     A mangling of the SED is done by minimizing the the difference between the "observed" fluxes and the fluxes
@@ -112,7 +112,7 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, bands, filters, obs
     ###############################
     #### Use Optimized Results ####
     ###############################
-    opt_flux_ratio = np.asarray([result.params[band].value for band in param_bands]) * norm
+    opt_flux_ratio = np.array([result.params[band].value for band in param_bands]) * norm
 
     x_pred, y_pred, yerr_pred = fit_gp(wave_array, opt_flux_ratio, np.zeros_like(opt_flux_ratio),
                                         kernel=kernel, x_edges=x_edges)
@@ -123,30 +123,37 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, bands, filters, obs
     ###########################
     #### Error propagation ####
     ###########################
+    extended_wave_array = np.r_[x_edges[0], wave_array, x_edges[-1]]
+
     flux_diffs = []
+    flux_diff_ratios = []
     for band, obs_flux in zip(bands, obs_fluxes):
         model_flux = run_filter(mangled_wave, mangled_flux,
                                 filters[band]['wave'], filters[band]['transmission'], filters[band]['response_type'])
         flux_diffs.append(obs_flux - model_flux)
-    flux_diffs = np.r_[flux_diffs[0], flux_diffs, flux_diffs[-1]]
+        flux_diff_ratios.append(obs_flux/model_flux)
+    flux_diff_ratios =np.array(flux_diff_ratios)
 
-    # penalise for inaccuracy in optimisation routine
-    interp_flux_err = np.interp(mangled_wave, np.r_[x_edges[0], wave_array, x_edges[-1]], flux_diffs)
-    mangled_flux_err = np.sqrt(mangled_flux_err**2 + interp_flux_err**2)
+    # penalise for inaccuracy in optimisation routine of the mangling function
+    extended_flux_diffs = np.r_[flux_diffs[0], flux_diffs, flux_diffs[-1]]
+    interp_mangling_err = np.interp(mangled_wave, extended_wave_array, extended_flux_diffs)
+    mangled_flux_err = np.sqrt(mangled_flux_err**2 + interp_mangling_err**2)
 
-    yerr_pred = mangled_flux_err/interp_sed_flux  # error propagation from flux_diffs
+    # add uncertainties from the observed (gp-fitted) fluxes per band
+    error_prop = np.r_[obs_errs[0], obs_errs, obs_errs[-1]]  # extrapolaton of the uncertainties
+    interp_error_prop = np.interp(mangled_wave, extended_wave_array, error_prop)
+    mangled_flux_err = np.sqrt(mangled_flux_err**2 + interp_error_prop**2)
 
-    ######################
-    #### Save Results ####
-    ######################
-    sed_fluxes = np.empty(0)
+    # Save Results
+    sed_fluxes = []
     for band in bands:
-        band_flux = run_filter(sed_wave, sed_flux,
-                               filters[band]['wave'], filters[band]['transmission'], filters[band]['response_type'])
-        sed_fluxes = np.r_[sed_fluxes, band_flux]
+        sed_fluxes.append(run_filter(sed_wave, sed_flux,
+                               filters[band]['wave'], filters[band]['transmission'], filters[band]['response_type']))
+    sed_fluxes = np.array(sed_fluxes)
 
     mangling_results = {'init_vals':{'waves':wave_array, 'flux_ratios':flux_ratio_array, 'flux_ratios_err':0.0},
                         'opt_vals':{'waves':wave_array, 'flux_ratios':opt_flux_ratio, 'flux_ratios_err':0.0},
+                        'flux_ratios':flux_diff_ratios,
                         'sed_vals':{'waves':wave_array, 'fluxes':sed_fluxes},
                         'obs_vals':{'waves':wave_array, 'fluxes':obs_fluxes},
                         'opt_fit':{'waves':x_pred, 'flux_ratios':y_pred, 'flux_ratios_err':yerr_pred},

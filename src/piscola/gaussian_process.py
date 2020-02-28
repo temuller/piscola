@@ -39,9 +39,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
         gp.set_parameter_vector(p)
         return -gp.grad_log_likelihood(y)
 
-    if kernel is None and mangling:
-        kernel = 'squaredexp'
-    elif kernel is None:
+    if kernel is None:
         kernel = 'matern52'
 
     x, y, yerr = np.copy(x_data), np.copy(y_data), np.copy(yerr_data)
@@ -51,6 +49,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
         x_min -= 200
         x_max += 200
 
+        # linear extrapolation
         pmin = np.polyfit(x[:2], y[:2], deg=1)
         pmax = np.polyfit(x[-2:], y[-2:], deg=1)
         y_left, y_right = np.poly1d(pmin)(x_min), np.poly1d(pmax)(x_max)
@@ -60,7 +59,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
             y_left=0
         if y_right<0:
             y_right=0
-        y = np.r_[y_left, y, y_right]  # linear extrapolation
+        y = np.r_[y_left, y, y_right]
         x = np.r_[x_min, x, x_max]
         yerr_min = np.sqrt(yerr[0]**2 + yerr[1]**2)
         yerr_max = np.sqrt(yerr[-1]**2 + yerr[-2]**2)
@@ -76,6 +75,11 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
         x /= x_norm
         x_min /= x_norm
         x_max /= x_norm
+
+    else:
+        # not for mangling, only light curves with time in phase
+        x_norm = 1
+        x_min, x_max = x.min(), x.max()
 
     # normalise the data for better results
     y_norm = y.max()
@@ -103,7 +107,6 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
     gp.set_parameter_vector(results.x)
 
     step = 1e-3
-    #x_pred = np.arange(x.min(), x.max()+step, step)
     x_pred = np.arange(x_min, x_max+step, step)
 
     mu, var = gp.predict(y, x_pred, return_var=True)
@@ -112,7 +115,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
     return x_pred*x_norm, mu*y_norm, std*y_norm
 
 
-def fit_2dgp(x1_data, x2_data, y_data, yerr_data, kernel='matern52', x1_edges=None, x2_edges=None):
+def fit_2dgp(x1_data, x2_data, y_data, yerr_data, kernel1, kernel2, x1_edges=None, x2_edges=None):
     """Fits data with gaussian process.
     The package 'george' is used for the gaussian process fit.
     Parameters
@@ -161,17 +164,16 @@ def fit_2dgp(x1_data, x2_data, y_data, yerr_data, kernel='matern52', x1_edges=No
     X = np.array([x1, x2]).reshape(2, -1).T
 
     # define kernel
-    var, lengths = np.var(y), np.array([np.diff(x1).max(), np.diff(x2).max()])
+    kernels_dict = {'matern52':george.kernels.Matern52Kernel,
+                    'matern32':george.kernels.Matern32Kernel,
+                    'squaredexp':george.kernels.ExpSquaredKernel,
+                    }
+    assert kernel1 in kernels_dict.keys(), f'"{kernel1}" is not a valid kernel, choose one of the following ones: {list(kernels_dict.keys())}'
+    assert kernel2 in kernels_dict.keys(), f'"{kernel2}" is not a valid kernel, choose one of the following ones: {list(kernels_dict.keys())}'
 
-    if kernel == 'matern52':
-        ker = var * george.kernels.Matern52Kernel(lengths, ndim=2)
-        #ker = var * george.kernels.Matern52Kernel(lengths[0], ndim=2, axes=0) * george.kernels.ExpSquaredKernel(lengths[1], ndim=2, axes=1)
-    elif kernel == 'matern32':
-        ker = var * george.kernels.Matern32Kernel(lengths, ndim=2)
-    elif kernel == 'squaredexp':
-        ker = var * george.kernels.ExpSquaredKernel(lengths, ndim=2)
-    else:
-        raise ValueError(f'"{kernel}" is not a valid kernel.')
+    var, lengths = np.var(y), np.array([np.diff(x1).max(), np.diff(x2).max()])
+    ker1, ker2 = kernels_dict[kernel1], kernels_dict[kernel2]
+    ker = var * ker1(lengths[0], ndim=2, axes=0) * ker2(lengths[1], ndim=2, axes=1)
 
     mean_function = 0.0
     gp = george.GP(kernel=ker, solver=george.HODLRSolver, mean=mean_function)
