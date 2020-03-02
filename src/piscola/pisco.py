@@ -41,7 +41,7 @@ def initialise(file_name):
     # call sn object
     sn_obj = sn(name, z=z, ra=ra, dec=dec)
     sn_obj.set_sed_template()  # Set the SED template to be used in the entire process
-    #sn_obj.bands = [band for band in list(sn_file['band'].unique()) if len(sn_file[sn_file['band']==band]['flux']) >= 3]
+    sn_obj.bands = [band for band in list(sn_file['band'].unique())]
     sn_obj.call_filters()
 
     # order bands by effective wavelength (estimated from the SED template)
