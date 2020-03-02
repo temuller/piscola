@@ -85,7 +85,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
     y_norm = y.max()
     y /= y_norm
     yerr /= y_norm
-    mean_function = y.min()
+    mean_function = y.mean()
 
     var, length = np.var(y), np.diff(x).max()
     if kernel == 'matern52':
@@ -175,7 +175,7 @@ def fit_2dgp(x1_data, x2_data, y_data, yerr_data, kernel1, kernel2, x1_edges=Non
     ker1, ker2 = kernels_dict[kernel1], kernels_dict[kernel2]
     ker = var * ker1(lengths[0], ndim=2, axes=0) * ker2(lengths[1], ndim=2, axes=1)
 
-    mean_function = 0.0
+    mean_function = y.mean()
     gp = george.GP(kernel=ker, solver=george.HODLRSolver, mean=mean_function)
     # initial guess
     if np.any(yerr):

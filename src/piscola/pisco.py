@@ -38,17 +38,20 @@ def initialise(file_name):
     sn_file = pd.read_csv(file_name, delim_whitespace=True, skiprows=2)
     sn_file.columns = sn_file.columns.str.lower()
 
+    # Set the SED template to be used in the entire process
+    sn_obj.set_sed_template()
+
     # call sn object
     sn_obj = sn(name, z=z, ra=ra, dec=dec)
     sn_obj.bands = [band for band in list(sn_file['band'].unique()) if len(sn_file[sn_file['band']==band]['flux']) >= 3]
     sn_obj.call_filters()
 
-    # order filters by wavelength
+    # order bands by effective wavelength (estimated from the SED template)
     eff_waves = [sn_obj.filters[band]['eff_wave'] for band in sn_obj.bands]
     sorted_idx = sorted(range(len(eff_waves)), key=lambda k: eff_waves[k])
     sn_obj.bands = [sn_obj.bands[x] for x in sorted_idx]
 
-    # add data of every band
+    # add data to each band
     for band in sn_obj.bands:
         band_info = sn_file[sn_file['band']==band]
         sn_obj.data[band] = {'mjd':band_info['mjd'].values,
@@ -57,9 +60,7 @@ def initialise(file_name):
                              'zp':float(band_info['zp'].unique()[0]),
                              'mag_sys':band_info['mag_sys'].unique()[0],
                             }
-
-    sn_obj.set_sed_template()
-
+    self.calc_pivot()
     return sn_obj
 
 
@@ -182,7 +183,9 @@ class sn(object):
         """Obtains the filters's transmission function for the observed bands and the Bessell bands."""
 
         path = piscola.__path__[0]
-        vega_wave, vega_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.dat').T
+        sed_df = self.sed['info']
+        sed_df = sed_df[sed_df.phase==0.0]
+        sed_wave, sed_flux = sed_df.wave.values, sed_df.flux.values
 
         # add filters of the observed bands
         for band in self.bands:
@@ -201,7 +204,7 @@ class sn(object):
                     response_type = 'photon'
                     self.filters[band] = {'wave':wave,
                                           'transmission':transmission,
-                                          'eff_wave':calc_eff_wave(vega_wave, vega_flux, wave,
+                                          'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave,
                                                                    transmission, response_type=response_type),
                                           'pivot_wave':calc_pivot_wave(wave, transmission,
                                                                        response_type=response_type),
@@ -223,7 +226,7 @@ class sn(object):
             response_type = 'energy'
             self.filters[band] = {'wave':wave,
                                   'transmission':transmission,
-                                  'eff_wave':calc_eff_wave(vega_wave, vega_flux, wave, transmission,
+                                  'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave, transmission,
                                                            response_type=response_type),
                                   'pivot_wave':calc_pivot_wave(wave, transmission, response_type=response_type),
                                   'response_type':response_type}
@@ -243,7 +246,9 @@ class sn(object):
         """
 
         path = piscola.__path__[0]
-        vega_wave, vega_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.dat').T
+        sed_df = self.sed['info']
+        sed_df = sed_df[sed_df.phase==0.0]
+        sed_wave, sed_flux = sed_df.wave.values, sed_df.flux.values
 
         if isinstance(filter_list, str) and os.path.isdir(f'{path}/filters/{filter_list}'):
             # add directory
@@ -262,7 +267,7 @@ class sn(object):
 
                     self.filters[band] = {'wave':wave,
                                           'transmission':transmission,
-                                          'eff_wave':calc_eff_wave(vega_wave, vega_flux, wave, transmission,
+                                          'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave, transmission,
                                                                    response_type=response_type),
                                           'pivot_wave':calc_pivot_wave(wave, transmission,
                                                                        response_type=response_type),
@@ -285,7 +290,7 @@ class sn(object):
 
                         self.filters[band] = {'wave':wave,
                                               'transmission':transmission,
-                                              'eff_wave':calc_eff_wave(vega_wave, vega_flux, wave, transmission,
+                                              'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave, transmission,
                                                                        response_type=response_type),
                                               'pivot_wave':calc_pivot_wave(wave, transmission,
                                                                            response_type=response_type),
@@ -342,7 +347,7 @@ class sn(object):
 
         """
 
-        BessellB_eff_wave = self.filters['Bessell_B']['eff_wave']  # effective wavelength in Angstroms
+        BessellB_eff_wave = self.filters['Bessell_B']['eff_wave']
 
         if band_list is None:
             band_list = self.bands
@@ -394,9 +399,9 @@ class sn(object):
             Template name.
 
         """
-
+        # This can be modified to accept other templates
         path = piscola.__path__[0]
-        file = f'{path}/templates/{template}/snflux_1av2.dat'  # v2 is the interpolated version to 0.5 day steps
+        file = f'{path}/templates/{template}/snflux_1av2.dat'  # v2 is the linearly interpolated version to 0.5 day steps
         self.sed['info'] = pd.read_csv(file, delim_whitespace=True, names=['phase', 'wave', 'flux'])
         self.sed['name'] = template
 
@@ -468,11 +473,16 @@ class sn(object):
         bands2delete = []
 
         if mask_phase:
-            assert self.tmax, 'An initial estimation of the peak is needed first!'
+            #assert self.tmax, 'An initial estimation of the peak is needed first!'
+            if self.tmax:
+                tmax = self.tmax
+            else:
+                id_peak = np.argmax(self.data[self.pivot_band]['flux'])
+                tmax = self.data[self.pivot_band]['mjd'][id_peak]
 
             for band in band_list:
-                mask = np.where((self.data[band]['mjd'] - self.tmax >= min_phase*(1+self.z)) &
-                                (self.data[band]['mjd'] - self.tmax <= max_phase*(1+self.z))
+                mask = np.where((self.data[band]['mjd'] - tmax >= min_phase*(1+self.z)) &
+                                (self.data[band]['mjd'] - tmax <= max_phase*(1+self.z))
                                )
                 self.data[band]['mjd'] = self.data[band]['mjd'][mask]
                 self.data[band]['flux'] = self.data[band]['flux'][mask]
@@ -519,7 +529,7 @@ class sn(object):
         if band_list is None:
             band_list = self.bands
 
-        exp = np.round(np.log10(self.data[band_list[0]]['flux'].max()), 0)
+        exp = np.round(np.log10(self.data[band_list[0]]['flux']), 0)
         y_norm = 10**exp
 
         # to set plot limits
@@ -531,8 +541,8 @@ class sn(object):
                 ymin_lim *= 1.1/0.9
             ymax_lim = plot_lim_vals.max()*1.1
         elif plot_type=='mag':
-            plot_lim_vals = [[np.nanmin(-2.5*np.log10(self.data[band]['flux']) + self.data[band]['zp']),
-                              np.nanmax(-2.5*np.log10(self.data[band]['flux']) + self.data[band]['zp'])] for band in self.bands]
+            plot_lim_vals = [[np.min(-2.5*np.log10(np.abs(self.data[band]['flux'])) + self.data[band]['zp']),
+                              np.max(-2.5*np.log10(np.abs(self.data[band]['flux'])) + self.data[band]['zp'])] for band in self.bands]
             plot_lim_vals = np.ndarray.flatten(np.array(plot_lim_vals))
             ymin_lim = np.nanmin(plot_lim_vals)*0.98
             ymax_lim = np.nanmax(plot_lim_vals)*1.02
@@ -597,7 +607,7 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel1='matern52', kernel2='matern52'):
+    def fit_lcs(self, kernel1='matern32', kernel2='matern52'):
         """Fits the data for each band using gaussian process
 
         The fits are done independently for each band. The initial B-band peak time is estimated with
@@ -700,8 +710,8 @@ class sn(object):
                     ymin_lim *= 1.1/0.9
                 ymax_lim = plot_lim_vals.max()*1.05
             elif plot_type=='mag':
-                plot_lim_vals = [[-2.5*np.log10(self.data[band]['flux'].min()) + self.data[band]['zp'],
-                                  -2.5*np.log10(self.data[band]['flux'].max()) + self.data[band]['zp']] for band in self.bands]
+                plot_lim_vals = [[-2.5*np.log10(np.abs(self.data[band]['flux']).min()) + self.data[band]['zp'],
+                                  -2.5*np.log10(np.abs(self.data[band]['flux']).max()) + self.data[band]['zp']] for band in self.bands]
                 plot_lim_vals = np.ndarray.flatten(np.array(plot_lim_vals))
                 ymin_lim = np.nanmin(plot_lim_vals)*0.98
                 ymax_lim = np.nanmax(plot_lim_vals)*1.02
@@ -722,6 +732,12 @@ class sn(object):
                     ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
 
                 elif plot_type=='mag':
+                    # avoid negative numbers in logarithm
+                    fit_mask = flux >= 0
+                    time, flux, std = time[fit_mask], flux[fit_mask], std[fit_mask]
+                    data_mask = flux >= 0
+                    data_time, data_flux, data_std = data_time[data_mask], data_flux[data_mask], data_std[data_mask]
+
                     mag = -2.5*np.log10(flux) + self.data[band]['zp']
                     err = np.abs(2.5*std/(flux*np.log(10)))
                     data_mag = -2.5*np.log10(data_flux) + self.data[band]['zp']
