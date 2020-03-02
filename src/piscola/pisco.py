@@ -58,7 +58,7 @@ def initialise(file_name):
                              'zp':float(band_info['zp'].unique()[0]),
                              'mag_sys':band_info['mag_sys'].unique()[0],
                             }
-    self.calc_pivot()
+    sn_obj.calc_pivot()
     return sn_obj
 
 
@@ -442,7 +442,7 @@ class sn(object):
     ########################### Light Curves Data ##############################
     ############################################################################
 
-    def mask_data(self, band_list=None, mask_phase=True, min_phase=-20, max_phase=40, mask_snr=False, snr=3):
+    def mask_data(self, band_list=None, mask_phase=True, min_phase=-25, max_phase=45, mask_snr=False, snr=3):
         """Mask the data with the given S/N ratio and/or within the given range of days respect to maximum in B band.
 
         NOTE: Bands with less than 3 data points after mask is applied will be deleted.
@@ -491,7 +491,7 @@ class sn(object):
 
         if mask_snr:
             for band in band_list:
-                mask = np.where(np.abs(self.data[band]['flux']/self.data[band]['flux_err']) >= snr)
+                mask = np.abs(self.data[band]['flux']/self.data[band]['flux_err']) >= snr
                 self.data[band]['mjd'] = self.data[band]['mjd'][mask]
                 self.data[band]['flux'] = self.data[band]['flux'][mask]
                 self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
@@ -733,8 +733,9 @@ class sn(object):
                     # avoid negative numbers in logarithm
                     fit_mask = flux >= 0
                     time, flux, std = time[fit_mask], flux[fit_mask], std[fit_mask]
-                    data_mask = flux >= 0
+                    data_mask = data_flux >= 0
                     data_time, data_flux, data_std = data_time[data_mask], data_flux[data_mask], data_std[data_mask]
+                    #print(data_time, data_flux, data_std)
 
                     mag = -2.5*np.log10(flux) + self.data[band]['zp']
                     err = np.abs(2.5*std/(flux*np.log(10)))
