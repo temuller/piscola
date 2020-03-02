@@ -38,12 +38,10 @@ def initialise(file_name):
     sn_file = pd.read_csv(file_name, delim_whitespace=True, skiprows=2)
     sn_file.columns = sn_file.columns.str.lower()
 
-    # Set the SED template to be used in the entire process
-    sn_obj.set_sed_template()
-
     # call sn object
     sn_obj = sn(name, z=z, ra=ra, dec=dec)
-    sn_obj.bands = [band for band in list(sn_file['band'].unique()) if len(sn_file[sn_file['band']==band]['flux']) >= 3]
+    sn_obj.set_sed_template()  # Set the SED template to be used in the entire process
+    #sn_obj.bands = [band for band in list(sn_file['band'].unique()) if len(sn_file[sn_file['band']==band]['flux']) >= 3]
     sn_obj.call_filters()
 
     # order bands by effective wavelength (estimated from the SED template)
@@ -488,7 +486,7 @@ class sn(object):
                 self.data[band]['flux'] = self.data[band]['flux'][mask]
                 self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
 
-                if len(self.data[band]['flux']) <= 2:
+                if len(self.data[band]['flux']) == 0:
                     bands2delete.append(band)
 
         if mask_snr:
@@ -498,7 +496,7 @@ class sn(object):
                 self.data[band]['flux'] = self.data[band]['flux'][mask]
                 self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
 
-                if len(self.data[band]['flux']) <= 2:
+                if len(self.data[band]['flux']) == 0:
                     bands2delete.append(band)
 
         self.delete_bands(bands2delete)  # delete bands with less than 3 data points after applying mask
