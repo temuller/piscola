@@ -404,32 +404,6 @@ class sn(object):
         self.sed['name'] = template
 
 
-    def set_sed_epoch(self, set_eff_wave=True):
-        """Sets the SED phase given the current value of 'self.phase'.
-
-        The chosen template is used to do all the corrections. The SED is immediately moved to the SN frame.
-
-        Parameters
-        ----------
-        set_eff_wave : bool, default 'True'
-            If True set the effective wavelengths of the filters given the SED at the current phase.
-
-        """
-
-        sed_data = self.sed['info'][self.sed['info'].phase == self.phase]
-        self.sed['wave'], self.sed['flux'] = sed_data.wave.values*(1+self.z), sed_data.flux.values/(1+self.z)
-
-        # These fluxes are used in the mangling process to compared to mangled ones with these.
-        for band in self.bands:
-            flux = run_filter(self.sed['wave'], self.sed['flux'], self.filters[band]['wave'],
-                              self.filters[band]['transmission'], self.filters[band]['response_type'])
-            self.sed[band] = {'flux': flux}
-
-        # add filter's effective wavelength, which depends on the SED and the phase.
-        if set_eff_wave:
-            self.set_eff_wave()
-
-
     def set_eff_wave(self):
         """Sets the effective wavelength of each band using the current state of the SED."""
 
@@ -442,7 +416,7 @@ class sn(object):
     ########################### Light Curves Data ##############################
     ############################################################################
 
-    def mask_data(self, band_list=None, mask_phase=True, min_phase=-25, max_phase=45, mask_snr=False, snr=3):
+    def mask_data(self, band_list=None, mask_phase=True, min_phase=-20, max_phase=35, mask_snr=False, snr=3):
         """Mask the data with the given S/N ratio and/or within the given range of days respect to maximum in B band.
 
         NOTE: Bands with less than 3 data points after mask is applied will be deleted.
@@ -527,7 +501,7 @@ class sn(object):
         if band_list is None:
             band_list = self.bands
 
-        exp = np.round(np.log10(self.data[band_list[0]]['flux']), 0)
+        exp = np.round(np.log10(self.data[band_list[0]]['flux'].mean()), 0)
         y_norm = 10**exp
 
         # to set plot limits
@@ -605,7 +579,7 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel1='matern32', kernel2='matern52'):
+    def fit_lcs(self, kernel1='matern52', kernel2='matern52', fit_mag=False, use_mcmc=True):
         """Fits the data for each band using gaussian process
 
         The fits are done independently for each band. The initial B-band peak time is estimated with
@@ -629,8 +603,24 @@ class sn(object):
         bands_waves = np.hstack(np.array([self.filters[band]['wave'] for band in self.bands]))
         bands_edges = np.array([bands_waves.min(), bands_waves.max()])
 
-        timeXwave, mu, std = fit_2dgp(time_array, wave_array, flux_array, flux_err_array, kernel1=kernel1, kernel2=kernel2, x2_edges=bands_edges)
+        if fit_mag:
+            mask = flux_array >= 0.0
+            mag_array = -2.5*np.log10(flux_array[mask])
+            mag_err_array = np.abs(2.5*flux_err_array[mask]/(flux_array[mask]*np.log(10)))
+            time_array = time_array[mask]
+            wave_array = wave_array[mask]
+
+            timeXwave, mu, std = fit_2dgp(time_array, wave_array, mag_array, mag_err_array,
+                                            kernel1=kernel1, kernel2=kernel2, x2_edges=bands_edges, use_mcmc=use_mcmc)
+            mu = 10**(-0.4*mu)
+            std = np.abs(mu*0.4*np.log(10)*std)
+
+        else:
+            timeXwave, mu, std = fit_2dgp(time_array, wave_array, flux_array, flux_err_array,
+                                            kernel1=kernel1, kernel2=kernel2, x2_edges=bands_edges, use_mcmc=use_mcmc)
+
         self.lc_fits['timeXwave'], self.lc_fits['mu'], self.lc_fits['std'] = timeXwave, mu, std
+
 
         ########################
         ###### Check Peak ######
@@ -671,7 +661,7 @@ class sn(object):
                 self.lc_fits[band]['tmax'] = np.round(time[idx_max], 2)
                 self.lc_fits[band]['mmax'] = -2.5*np.log10(flux[idx_max]) + self.data[band]['zp']
             except:
-                self.tmax = np.nan
+                self.lc_fits[band]['tmax'] = self.lc_fits[band]['mmax'] = np.nan
 
     def plot_fits(self, plot_together=True, plot_type='mag', save=False, fig_name=None):
         """Plots the light-curves fits results.
@@ -696,7 +686,7 @@ class sn(object):
 
             new_palette = [plt.get_cmap('Dark2')(i) for i in np.arange(8)] + [plt.get_cmap('Set1')(i) for i in np.arange(8)]
 
-            exp = np.round(np.log10(self.data[self.bands[0]]['flux'].max()), 0)
+            exp = np.round(np.log10(np.abs(self.data[self.bands[0]]['flux']).mean()), 0)
             y_norm = 10**exp
 
             # to set plot limits
@@ -1047,17 +1037,10 @@ class sn(object):
                 print(f'{band}: {diff:.4f} [mags]')
 
 
-    def calculate_lc_params(self):
+    def calculate_corrected_lcs(self):
         """Calculates the SN light curves and light-curves parameters.
-
-        Estimation of B-band peak apparent magnitude (mb), stretch (dm15) and color ((B-V)max) parameters.
-        An interpolation of the corrected light curves is done as well as part of this process.
-
         """
 
-        ########################################
-        ######## Calculate Light Curves ########
-        ########################################
         corrected_lcs = {}
         lcs_fluxes = []
         lcs_errs = []
@@ -1088,7 +1071,7 @@ class sn(object):
         corrected_lcs = {band:{'phase':phases, 'flux':lcs_fluxes.T[i], 'err':lcs_errs.T[i]} for i, band in enumerate(self.filters.keys())}
         self.corrected_lcs = corrected_lcs
 
-        # fit to the corrected light curves
+        # simple, independent 1D fit to the corrected light curves
         corrected_lcs_fit = {band:None for band in self.filters.keys()}
         for band in self.filters.keys():
             try:
@@ -1099,6 +1082,17 @@ class sn(object):
             except:
                 corrected_lcs_fit[band] = {'phase':np.nan, 'flux':np.nan, 'err':np.nan}
         self.corrected_lcs_fit = corrected_lcs_fit
+
+
+    def calculate_lc_params(self):
+        """Calculates the light-curves parameters.
+
+        Estimation of B-band peak apparent magnitude (mb), stretch (dm15) and color ((B-V)max) parameters.
+        An interpolation of the corrected light curves is done as well as part of this process.
+
+        """
+
+        self.calculate_corrected_lcs()
 
         ########################################
         ########### Check B-band max ###########
@@ -1114,7 +1108,14 @@ class sn(object):
 
             # compare tmax from the corrected restframe B-band to the initial estimation
             if np.abs(tmax_offset) >= 0.2:
+                # update phase of the light curves
+                self.tmax -= tmax_offset
+                self.lc_fits['phaseXwave'].T[0] -= tmax_offset
+                for band in self.bands:
+                    self.lc_fits[band]['phase'] -= tmax_offset
+                # re-do mangling
                 self.mangle_sed(**self.user_input['mangle_sed'])
+                self.calculate_corrected_lcs()
             else:
                 self.tmax_offset = tmax_offset
                 bmax_needs_check = False
@@ -1167,7 +1168,7 @@ class sn(object):
         """Displays the rest-frame light curve for the given band.
 
         Plots the rest-frame band light curve together with a gaussian fit to it. The parameters estimated with
-        'calc_lc_parameters()' are shown as well.
+        'calculate_lc_params()' are shown as well.
 
         Parameters
         ----------

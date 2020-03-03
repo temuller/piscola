@@ -1,6 +1,7 @@
 import numpy as np
 import george
 import scipy
+import emcee
 
 def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrapolation=False):
     """Fits data with gaussian process.
@@ -115,7 +116,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
     return x_pred*x_norm, mu*y_norm, std*y_norm
 
 
-def fit_2dgp(x1_data, x2_data, y_data, yerr_data, kernel1, kernel2, x1_edges=None, x2_edges=None):
+def fit_2dgp(x1_data, x2_data, y_data, yerr_data, kernel1, kernel2, x1_edges=None, x2_edges=None, use_mcmc = True):
     """Fits data with gaussian process.
     The package 'george' is used for the gaussian process fit.
     Parameters
@@ -148,6 +149,11 @@ def fit_2dgp(x1_data, x2_data, y_data, yerr_data, kernel1, kernel2, x1_edges=Non
         gp.set_parameter_vector(p)
         return -gp.grad_log_likelihood(y)
 
+    # for mcmc
+    def lnprob(p):
+        gp.set_parameter_vector(p)
+        return gp.log_likelihood(y, quiet=True) + gp.log_prior()
+
     x1, x2  = np.copy(x1_data), np.copy(x2_data)
     y, yerr = np.copy(y_data), np.copy(yerr_data)
 
@@ -175,7 +181,7 @@ def fit_2dgp(x1_data, x2_data, y_data, yerr_data, kernel1, kernel2, x1_edges=Non
     ker1, ker2 = kernels_dict[kernel1], kernels_dict[kernel2]
     ker = var * ker1(lengths[0], ndim=2, axes=0) * ker2(lengths[1], ndim=2, axes=1)
 
-    mean_function = y.mean()
+    mean_function =  y.mean()
     gp = george.GP(kernel=ker, solver=george.HODLRSolver, mean=mean_function)
     # initial guess
     if np.any(yerr):
@@ -184,9 +190,23 @@ def fit_2dgp(x1_data, x2_data, y_data, yerr_data, kernel1, kernel2, x1_edges=Non
         gp.compute(X)
 
     # optimization routine for hyperparameters
-    p0 = gp.get_parameter_vector()
-    results = scipy.optimize.minimize(neg_ln_like, p0, jac=grad_neg_ln_like)
-    gp.set_parameter_vector(results.x)
+    if not use_mcmc:
+        p0 = gp.get_parameter_vector()
+        results = scipy.optimize.minimize(neg_ln_like, p0, jac=grad_neg_ln_like)
+        gp.set_parameter_vector(results.x)
+    else:
+        initial = gp.get_parameter_vector()
+        ndim, nwalkers = len(initial), 32
+        p0 = initial + 1e-8 * np.random.randn(nwalkers, ndim)
+        sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob)
+        # Running burn-in...
+        p0, _, _ = sampler.run_mcmc(p0, 500)
+        sampler.reset()
+        # Running production...
+        sampler.run_mcmc(p0, 1000)
+        samples = sampler.flatchain
+        p_final = np.mean(samples, axis=0)
+        gp.set_parameter_vector(p_final)
 
     # check edges
     if np.any(x1_edges):
