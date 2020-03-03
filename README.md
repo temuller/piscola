@@ -1,6 +1,6 @@
-# Python for Interactive Supernova-Cosmology Light-Curve Analysis: PISCoLA
+# Python for Intelligent Supernova-Cosmology Light-Curve Analysis: PISCoLA
 
-**Type Ia Supernova Light-curve fitting code**
+**Type Ia Supernova Light-curve fitting code in python**
 
 Dependencies:
   - Python 3.6 (or greater)
