@@ -559,7 +559,7 @@ class sn(object):
     def normalize_data(self, mag_sys='vega'):
         """Normalize the fluxes and zero-points.
 
-        Fluxes are converted to physical units and the magnitude system is changed to 'Vega'.
+        Fluxes are converted to physical units and the magnitude system is changed to the chosen one.
         """
 
         for band in self.bands:
@@ -567,13 +567,13 @@ class sn(object):
 
             zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
                          self.filters[band]['response_type'], current_mag_sys, band)
-            zp_vega = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
+            new_zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
                          self.filters[band]['response_type'], mag_sys, band)
 
             self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(self.data[band]['zp'] - zp))
             self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(self.data[band]['zp'] - zp))
-            self.data[band]['zp'] = zp_vega
-            self.data[band]['mag_sys'] = 'VEGA'
+            self.data[band]['zp'] = new_zp
+            self.data[band]['mag_sys'] = mag_sys.upper()
 
     ############################################################################
     ############################ Light Curves Fits #############################
@@ -611,10 +611,16 @@ class sn(object):
 
             tmax0 = self.lc_fits[self.pivot_band]['tmax']
             assert not np.isnan(tmax0), f'Unable to obtain B-band peak for {self.name}!'
+
             delta_eff0 = np.abs(self.filters[self.pivot_band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave'])
-            # find the band to the red side of the pivot band
-            next_band_ind = self.bands.index(self.pivot_band) + 1
+
+            # find the second closest band to restframe B-band
+            rest_eff_waves = [self.filters[band]['eff_wave']/(1+self.z) for band in self.bands]
+            pivot_index = self.bands.index(self.pivot_band)
+            rest_eff_waves[pivot_index] = 0.0  # "remove" the pivot band to find the 2nd closest band
+            next_band_ind = np.argmin(np.abs(rest_eff_waves - self.filters['Bessell_B']['eff_wave']))
             next_band = self.bands[next_band_ind]
+
             tmax1 = self.lc_fits[next_band]['tmax']
             if np.isnan(tmax1) or delta_eff0 < 50:
                 self.tmax = np.round(tmax0, 2)
@@ -628,7 +634,7 @@ class sn(object):
             for band in self.bands:
                 self.lc_fits[band]['phase'] = (self.lc_fits[band]['mjd'] - self.tmax)/(1+self.z)
 
-        else:
+        elif fit_2d:
             flux_array = np.hstack(np.array([self.data[band]['flux'] for band in self.bands]))
             flux_err_array = np.hstack(np.array([self.data[band]['flux_err'] for band in self.bands]))
 
