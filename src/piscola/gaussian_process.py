@@ -90,13 +90,15 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
 
     var, length = np.var(y), np.diff(x).max()
     if kernel == 'matern52':
-        ker = var * george.kernels.Matern52Kernel(length)
+        ker = var * george.kernels.Matern52Kernel(length**2)
     elif kernel == 'matern32':
-        ker = var * george.kernels.Matern32Kernel(length)
+        ker = var * george.kernels.Matern32Kernel(length**2)
     elif kernel == 'squaredexp':
-        ker = var * george.kernels.ExpSquaredKernel(length)
+        ker = var * george.kernels.ExpSquaredKernel(length**2)
     else:
         raise ValueError(f'"{kernel}" is not a valid kernel.')
+
+    #ker.freeze_parameter("k2:metric:log_M_0_0")
 
     gp = george.GP(kernel=ker, solver=george.HODLRSolver, mean=mean_function)
     # initial guess
@@ -177,9 +179,11 @@ def fit_2dgp(x1_data, x2_data, y_data, yerr_data, kernel1, kernel2, x1_edges=Non
     assert kernel1 in kernels_dict.keys(), f'"{kernel1}" is not a valid kernel, choose one of the following ones: {list(kernels_dict.keys())}'
     assert kernel2 in kernels_dict.keys(), f'"{kernel2}" is not a valid kernel, choose one of the following ones: {list(kernels_dict.keys())}'
 
-    var, lengths = np.var(y), np.array([np.diff(x1).max(), np.diff(x2).max()])
+    var, length1, length2 = np.var(y), np.diff(x1).max(), np.diff(x2).max()
     ker1, ker2 = kernels_dict[kernel1], kernels_dict[kernel2]
-    ker = var * ker1(lengths[0], ndim=2, axes=0) * ker2(lengths[1], ndim=2, axes=1)
+    ker = var * ker1(length1**2, ndim=2, axes=0) * ker2(length2**2, ndim=2, axes=1)
+    #ker.freeze_parameter('k1:k2:metric:log_M_0_0')
+    #ker.freeze_parameter('k2:metric:log_M_0_0')
 
     mean_function =  y.mean()
     gp = george.GP(kernel=ker, solver=george.HODLRSolver, mean=mean_function)
@@ -192,9 +196,9 @@ def fit_2dgp(x1_data, x2_data, y_data, yerr_data, kernel1, kernel2, x1_edges=Non
     # optimization routine for hyperparameters
     if not use_mcmc:
         p0 = gp.get_parameter_vector()
-        results = scipy.optimize.minimize(neg_ln_like, p0, jac=grad_neg_ln_like)
+        results = scipy.optimize.minimize(neg_ln_like, p0, jac=grad_neg_ln_like, method="L-BFGS-B")
         gp.set_parameter_vector(results.x)
-    else:
+    elif use_mcmc:
         initial = gp.get_parameter_vector()
         ndim, nwalkers = len(initial), 32
         p0 = initial + 1e-8 * np.random.randn(nwalkers, ndim)
