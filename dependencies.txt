@@ -1,0 +1,8 @@
+matplotlib
+pandas
+lmfit
+peakutils
+george
+emcee
+extinction
+sfdmap
