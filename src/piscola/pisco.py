@@ -832,7 +832,7 @@ class sn(object):
     ######################### Light Curves Correction ##########################
     ############################################################################
 
-    def mangle_sed(self, phases=None, kernel='squaredexp'):
+    def mangle_sed(self, phases=None, kernel='squaredexp', correct_extinction=True):
         """Mangles the SED with the given method to match the SN magnitudes.
 
         Parameters
@@ -860,7 +860,8 @@ class sn(object):
 
         # first redshift the SED ("move" it in z) and then apply extinction from MW only
         sed_df.wave, sed_df.flux = sed_df.wave.values*(1+self.z), sed_df.flux.values/(1+self.z)
-        sed_df.flux = redden(sed_df.wave.values, sed_df.flux.values, self.ra, self.dec)
+        if correct_extinction:
+            sed_df.flux = redden(sed_df.wave.values, sed_df.flux.values, self.ra, self.dec)
 
         self.sed_lcs = {band:{'flux':[], 'mjd':None, 'phase':None} for band in self.bands}
         sed_phases = sed_df.phase.unique()
@@ -921,7 +922,8 @@ class sn(object):
 
         # correct mangled SED for MW extinction first and then blueshift it ("move" it in z)
         self.corrected_sed = self.mangled_sed.copy()
-        self.corrected_sed.flux = deredden(self.corrected_sed.wave.values, self.corrected_sed.flux.values, self.ra, self.dec)
+        if correct_extinction:
+            self.corrected_sed.flux = deredden(self.corrected_sed.wave.values, self.corrected_sed.flux.values, self.ra, self.dec)
         self.corrected_sed.wave = self.corrected_sed.wave.values/(1+self.z)
         self.corrected_sed.flux = self.corrected_sed.flux.values*(1+self.z)
 
