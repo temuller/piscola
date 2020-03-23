@@ -71,7 +71,7 @@ p2_i  9.2509725347
 # Start filters for VERSION = PS1s_CSPDR2_V_DS17
 # MAGSYSTEM:   BD17
 # FILTSYSTEM:  COUNT
-# FILTPATH:  PS1/Pantheon//CSP_Str11
+# FILTPATH:  PS1/Pantheon/CSP_Str11
 csp_u  10.51952 
 csp_B  9.86815772
 csp_o  9.4783963098
@@ -80,3 +80,13 @@ csp_n  9.4792463098
 csp_g  9.6528873
 csp_r  9.3527820498
 csp_i  9.23389628
+
+# Start filters for VERSION = SNCOSMO09
+# MAGSYSTEM:   BD17
+# FILTSYSTEM:  COUNT
+# FILTPATH:  PS1/Pantheon/SNLS3-Megacam
+Megacam_g  9.717
+Megacam_r  9.224
+Megacam_i  8.905
+Megacam_z  8.754
+
