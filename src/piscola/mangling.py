@@ -55,6 +55,7 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
                                       filters[band]['response_type']) for band in bands])
 
     residuals = -2.5*np.log10(obs_flux/model_flux)
+    residuals[np.isnan(residuals)]= np.nanmean(residuals)  # replace nan with mean value, if any
     return residuals
 
 
