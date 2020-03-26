@@ -832,7 +832,7 @@ class sn(object):
     ######################### Light Curves Correction ##########################
     ############################################################################
 
-    def mangle_sed(self, phases=None, kernel='squaredexp', correct_extinction=True):
+    def mangle_sed(self, min_phase=None, max_phase=None, kernel='squaredexp', correct_extinction=True):
         """Mangles the SED with the given method to match the SN magnitudes.
 
         Parameters
@@ -846,8 +846,11 @@ class sn(object):
 
         """
 
-        if phases is None:
-            phases = np.arange(-10, 31, 1)
+        if (min_phase is None) and (max_phase is None):
+            phases = np.arange(-15, 31, 1)
+        else:
+            phases = np.arange(min_phase, max_phase+1, 1)
+
         self.user_input['mangle_sed'] = {'phases':phases, 'kernel':kernel}
         lc_phases = self.lc_fits[self.pivot_band]['phase']
 
