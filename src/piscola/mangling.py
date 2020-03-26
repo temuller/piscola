@@ -4,8 +4,9 @@ from .spline import fit_spline
 
 import numpy as np
 import lmfit
+import time
 
-def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filters, kernel, x_edges):
+def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filters, kernel, x_edges, timeout):
     """Residual functions for the SED mangling minimization routine.
 
     Lmfit works in such a way that each parameters needs to have a residual value. In the case of the
@@ -59,6 +60,17 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
     return residuals
 
 
+def timeout_callback(params, iter, resid, *args, **kws):
+    """ Callback function for the minimizationself.
+
+    This function will stop the minimization after certain amount of time has passed.
+    """
+
+    timeout = args[-1]
+    if time.time() > timeout:
+        return True  # abort the minimization
+
+
 def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_errs, bands, filters, kernel, x_edges):
     """Mangling routine.
 
@@ -107,8 +119,9 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
     for val, band in zip(flux_ratio_array/norm, param_bands):
         params.add(band, value=val, min=0) # , max=val*1.2)   # tighten this constrains for a smoother(?) mangling
 
-    args=(wave_array, sed_wave, sed_flux, obs_fluxes, norm, bands, filters, kernel, x_edges)
-    result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-3, ftol=1e-3, maxfev=40)
+    timeout = time.time() + 10  # value for callback function
+    args=(wave_array, sed_wave, sed_flux, obs_fluxes, norm, bands, filters, kernel, x_edges, timeout)
+    result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-3, ftol=1e-3, maxfev=40, iter_cb=timeout_callback)
 
     ###############################
     #### Use Optimized Results ####
