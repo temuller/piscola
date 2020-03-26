@@ -847,11 +847,13 @@ class sn(object):
         """
 
         if (min_phase is None) and (max_phase is None):
-            phases = np.arange(-15, 31, 1)
+            min_phase, max_phase = -15, 30
+            phases = np.arange(min_phase, max_phase+1, 1)
         else:
             phases = np.arange(min_phase, max_phase+1, 1)
 
-        self.user_input['mangle_sed'] = {'phases':phases, 'kernel':kernel}
+        self.user_input['mangle_sed'] = {'min_phase':min_phase, 'max_phase':max_phase,
+                                            'kernel':kernel, 'correct_extinction':correct_extinction}
         lc_phases = self.lc_fits[self.pivot_band]['phase']
 
         ####################################
