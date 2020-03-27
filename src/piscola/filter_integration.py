@@ -155,7 +155,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name=No
         zp = 2.5*np.log10(c/pivot_wave**2) - 48.6
 
         with open(path + '/templates/ab_mag_sys.dat', 'rt') as ab_file:
-            offset = [line.split()[-1] for line in ab_file if filter_name in line.split()][0]
+            offset = [line.split()[-1] for line in ab_file if filter_name in line.split() and line[0]!='#'][0]
         if offset:
             offset = eval(offset)
             zp += offset
@@ -170,7 +170,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name=No
         f_bd17 = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
 
         with open(path + '/templates/bd17_mag_sys.dat', 'rt') as bd17_file:
-            offset = [line.split()[-1] for line in bd17_file if filter_name in line.split()][0]
+            offset = [line.split()[-1] for line in bd17_file if filter_name in line.split() and line[0]!='#'][0]
         if offset:
             offset = eval(offset)
             zp = 2.5*np.log10(f_bd17) + offset
