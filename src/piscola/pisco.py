@@ -890,7 +890,6 @@ class sn(object):
         obs_flux_dict = {band:np.interp(sed_phases, self.lc_fits[band]['phase'], self.lc_fits[band]['flux']) for band in self.bands}
         obs_err_dict = {band:np.interp(sed_phases, self.lc_fits[band]['phase'], self.lc_fits[band]['std']) for band in self.bands}
         flux_ratios_dict = {band:obs_flux_dict[band]/self.sed_lcs[band]['flux'] for band in self.bands}
-        #flux_ratios_err_dict = {band:obs_err_dict[band]/self.sed_lcs[band]['flux'] for band in self.bands}  # MIGHT NOT BE NECESSARY
 
         wave_array = np.array([self.filters[band]['eff_wave'] for band in self.bands])
         bands_waves = np.hstack(np.array([self.filters[band]['wave'] for band in self.bands]))
@@ -904,7 +903,6 @@ class sn(object):
             obs_fluxes = np.array([obs_flux_dict[band][i] for band in self.bands])
             obs_errs = np.array([obs_err_dict[band][i] for band in self.bands])
             flux_ratios_array = np.array([flux_ratios_dict[band][i] for band in self.bands])
-            #flux_ratios_err = np.array([flux_ratios_err_dict[band][i] for band in self.bands])
 
             phase_df = sed_df[sed_df.phase==phase]
             sed_epoch_wave, sed_epoch_flux = phase_df.wave.values, phase_df.flux.values
