@@ -125,7 +125,7 @@ def calc_pivot_wave(filter_wave, filter_response, response_type):
     return pivot_wave
 
 
-def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name=None):
+def calc_zp(filter_wave, filter_response, response_type, mag_sys, apply_offset=True, filter_name=None):
     """Calculates the zero point in the AB, Vega or BD+17 magnitude sytems.
 
     Parameters
@@ -154,11 +154,12 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name=No
         c = 2.99792458e18  # speed of light in Angstroms/s
         zp = 2.5*np.log10(c/pivot_wave**2) - 48.6
 
-        with open(path + '/templates/ab_mag_sys.dat', 'rt') as ab_file:
-            offset = [line.split()[-1] for line in ab_file if filter_name in line.split() and line[0]!='#'][0]
-        if offset:
-            offset = eval(offset)
-            zp += offset
+        if apply_offset:
+            with open(path + '/templates/ab_mag_sys.dat', 'rt') as ab_file:
+                offset = [line.split()[-1] for line in ab_file if filter_name in line.split()]
+            if offset:
+                offset = eval(offset[0])
+                zp += offset
 
     if mag_sys.lower() == 'vega':
         spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.dat').T
@@ -170,9 +171,9 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name=No
         f_bd17 = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
 
         with open(path + '/templates/bd17_mag_sys.dat', 'rt') as bd17_file:
-            offset = [line.split()[-1] for line in bd17_file if filter_name in line.split() and line[0]!='#'][0]
+            offset = [line.split()[-1] for line in bd17_file if filter_name in line.split()]
         if offset:
-            offset = eval(offset)
+            offset = eval(offset[0])
             zp = 2.5*np.log10(f_bd17) + offset
         else:
             raise ValueError(f'Could not find "{filter_name}" band in {path + "/templates/bd17_mag_sys.dat"} file')

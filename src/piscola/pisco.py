@@ -556,7 +556,7 @@ class sn(object):
         plt.show()
 
 
-    def normalize_data(self, mag_sys='vega'):
+    def normalize_data(self, mag_sys='vega', apply_offset=True):
         """Normalize the fluxes and zero-points.
 
         Fluxes are converted to physical units and the magnitude system is changed to the chosen one.
@@ -566,9 +566,9 @@ class sn(object):
             current_mag_sys = self.data[band]['mag_sys']
 
             zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
-                         self.filters[band]['response_type'], current_mag_sys, band)
+                         self.filters[band]['response_type'], current_mag_sys, apply_offset, band)
             new_zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
-                         self.filters[band]['response_type'], mag_sys, band)
+                         self.filters[band]['response_type'], mag_sys, apply_offset, band)
 
             self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(self.data[band]['zp'] - zp))
             self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(self.data[band]['zp'] - zp))
