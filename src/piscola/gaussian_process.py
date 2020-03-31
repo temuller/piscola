@@ -3,6 +3,7 @@ import george
 import scipy
 import emcee
 
+
 def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrapolation=False):
     """Fits data with gaussian process.
 
@@ -106,7 +107,8 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
 
     # optimization routine for hyperparameters
     p0 = gp.get_parameter_vector()
-    results = scipy.optimize.minimize(neg_ln_like, p0, jac=grad_neg_ln_like)
+    results = scipy.optimize.minimize(neg_ln_like, p0, jac=grad_neg_ln_like,
+                                            method="L-BFGS-B", options={'maxiter':30})
     gp.set_parameter_vector(results.x)
 
     step = 1e-3
