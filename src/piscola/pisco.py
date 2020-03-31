@@ -1134,7 +1134,7 @@ class sn(object):
         self.corrected_lcs_fit = corrected_lcs_fit
 
 
-    def calculate_lc_params(self):
+    def calculate_lc_params(self, maxiter=3):
         """Calculates the light-curves parameters.
 
         Estimation of B-band peak apparent magnitude (mb), stretch (dm15) and color ((B-V)max) parameters.
@@ -1148,6 +1148,7 @@ class sn(object):
         ########### Check B-band max ###########
         ########################################
         bmax_needs_check = True
+        iter = 0
         while bmax_needs_check:
             b_data = self.corrected_lcs_fit['Bessell_B']
             b_phase, b_flux = b_data['phase'], b_data['flux']
@@ -1174,6 +1175,10 @@ class sn(object):
             else:
                 self.tmax_offset = tmax_offset
                 bmax_needs_check = False
+
+            if iter>maxiter:
+                break
+            iter += 1
 
         ########################################
         ### Calculate Light Curve Parameters ###
