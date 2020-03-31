@@ -61,7 +61,7 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
 
 
 def timeout_callback(params, iter, resid, *args, **kws):
-    """ Callback function for the minimizationself.
+    """ Callback function for the minimization.
 
     This function will stop the minimization after certain amount of time has passed.
     """
