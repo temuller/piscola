@@ -604,7 +604,10 @@ class sn(object):
                     peakidxs = peak.indexes(flux, thres=.3, min_dist=5//(time[1]-time[0]))
                     idx_max = np.asarray([idx for idx in peakidxs if all(flux[:idx]<flux[idx])]).min()
                     tmax = time[idx_max]
-                    mmax = -2.5*np.log10(flux[idx_max]) + self.data[band]['zp']
+                    if flux[idx_max] > 0:
+                        mmax = -2.5*np.log10(flux[idx_max]) + self.data[band]['zp']
+                    else:
+                        mmax = np.nan
                 except:
                     tmax = mmax = np.nan
                 self.lc_fits[band] = {'mjd':time, 'flux':flux, 'std':std, 'tmax':tmax, 'mmax':mmax}
@@ -912,7 +915,8 @@ class sn(object):
                                         obs_fluxes, obs_errs, self.bands, self.filters, kernel=kernel, x_edges=x_edges)
 
             # precision of the mangling function
-            mag_diffs = {band:-2.5*np.log10(mangling_results['flux_ratios'][i]) for i, band in enumerate(self.bands)}
+            mag_diffs = {band:-2.5*np.log10(mangling_results['flux_ratios'][i]) if mangling_results['flux_ratios'][i] > 0
+                                                else np.nan for i, band in enumerate(self.bands)}
             self.mangling_results.update({phase:mangling_results})
             self.mangling_results[phase].update({'mag_diff':mag_diffs})
 
