@@ -15,7 +15,10 @@
 
 ########################################################################################
 
-# Start filters for VERSION = PS1s_CFA2_JRK07_DS16
+# Start filters for VERSION = PS1s_CFA1_JRK07_DS16
+# MAGSYSTEM:   BD17
+# FILTSYSTEM:  COUNT
+# FILTPATH:    PS1/Pantheon/SNLS3-Landolt
 Standard_U 9.724
 Standard_B 9.907
 Standard_V 9.464
@@ -37,10 +40,10 @@ Bessell_I 8.846
 # FILTSYSTEM:  COUNT
 # FILTPATH:   PS1/Pantheon/CFA3_native
 4Shooter2_U  9.6930 
-4Shooter2_B  9.8395 
-4Shooter2_V  9.4703 
-4Shooter2_R  9.1340 
-4Shooter2_I  8.8374 
+4Shooter2_B  9.87400-0.0345 
+4Shooter2_V  9.47900-0.0087 
+4Shooter2_R  9.15500-0.021 
+4Shooter2_I  8.85100-0.0136 
 
 # Start filters for VERSION = PS1s_CFA3_KEPLERCAM_DS17
 # MAGSYSTEM:   BD17
@@ -50,36 +53,36 @@ Bessell_I 8.846
 # these are used (like in JLA), but Pantheon uses the CFA4_p1 filters for CFA3_Keplercam SNe.
 Keplercam_Us 9.724
 Keplercam_U  9.724 
-Keplercam_B  9.86205
-Keplercam_V  9.47312 
-Keplercam_r  9.35502 
-Keplercam_i  9.25065 
+Keplercam_B  9.88605-0.024
+Keplercam_V  9.47432-0.0012 
+Keplercam_r  9.35252+0.0025 
+Keplercam_i  9.25465-0.004
 
 # Start filters for VERSION = PS1s_CFA4_p1_DS17
 p1_U  9.724 
-p1_B  9.86205 
-p1_V  9.47312 
-p1_r  9.35502 
-p1_i  9.25065 
+p1_B  9.88605-0.024 
+p1_V  9.47432-0.0012 
+p1_r  9.35252+0.0025 
+p1_i  9.25465-0.004 
 
 # Start filters for VERSION = PS1s_CFA4_p2_DS17
-p2_B  9.86395087 
-p2_V  9.4730877998
-p2_r  9.3631652098
-p2_i  9.2509725347
+p2_B  9.86124+0.0027108700 
+p2_V  9.47432-0.0012322002
+p2_r  9.35730+0.0058652098
+p2_i  9.25521-0.0042374653
 
 # Start filters for VERSION = PS1s_CSPDR2_V_DS17
 # MAGSYSTEM:   BD17
 # FILTSYSTEM:  COUNT
 # FILTPATH:  PS1/Pantheon/CSP_Str11
 csp_u  10.51952 
-csp_B  9.86815772
-csp_o  9.4783963098
-csp_m  9.4730463098
-csp_n  9.4792463098 
-csp_g  9.6528873
-csp_r  9.3527820498
-csp_i  9.23389628
+csp_B  9.87643-0.0082722800
+csp_o  9.47663+0.0017663098
+csp_m  9.47128+0.0017663098
+csp_n  9.47748+0.0017663098 
+csp_g  9.64406+0.0088273000
+csp_r  9.35160+0.0011820498
+csp_i  9.25000-0.016103720
 
 # Start filters for VERSION = SNCOSMO09
 # MAGSYSTEM:   BD17
