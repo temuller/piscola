@@ -1,5 +1,10 @@
 import numpy as np
 import piscola
+#from astropy import units as u
+#from astropy import constants as const
+
+#h = const.cgs.codata2014.h.value
+#c = const.c.to(u.AA/u.s).value
 
 def run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type='photon'):
     """Calcultes the flux density of an SED given a filter response.
@@ -39,20 +44,13 @@ def run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, respo
     filter_response = filter_response[imin:imax]
 
     #check filter response type
-    if response_type == 'photon':
-        interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
-        I1 = np.trapz(spectrum_flux*interp_response*spectrum_wave, spectrum_wave)
-        I2 = np.trapz(filter_response*filter_wave, filter_wave)
-        flux_filter = I1/I2
+    if response_type == 'energy':
+        filter_response = filter_response/filter_wave
 
-    elif response_type == 'energy':
-        interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
-        I1 = np.trapz(spectrum_flux*interp_response, spectrum_wave)
-        I2 = np.trapz(filter_response, filter_wave)
-        flux_filter = I1/I2
-
-    else:
-        raise ValueError(f'"{response_type}" is not a valis response type.')
+    interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
+    I1 = np.trapz(spectrum_flux*interp_response*spectrum_wave, spectrum_wave)
+    I2 = np.trapz(filter_response*filter_wave, filter_wave)
+    flux_filter = I1/I2
 
     return flux_filter
 
@@ -79,17 +77,14 @@ def calc_eff_wave(spectrum_wave, spectrum_flux, filter_wave, filter_response, re
 
     """
 
-    if response_type == 'photon':
-        interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
-        I1 = np.trapz((spectrum_wave**2)*interp_response*spectrum_flux, spectrum_wave)
-        I2 = np.trapz(spectrum_wave*interp_response*spectrum_flux, spectrum_wave)
-        eff_wave = I1/I2
+    #check filter response type
+    if response_type == 'energy':
+        filter_response = filter_response/filter_wave
 
-    elif response_type == 'energy':
-        interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
-        I1 = np.trapz(spectrum_wave*interp_response*spectrum_flux, spectrum_wave)
-        I2 = np.trapz(interp_response*spectrum_flux, spectrum_wave)
-        eff_wave = I1/I2
+    interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
+    I1 = np.trapz((spectrum_wave**2)*interp_response*spectrum_flux, spectrum_wave)
+    I2 = np.trapz(spectrum_wave*interp_response*spectrum_flux, spectrum_wave)
+    eff_wave = I1/I2
 
     return eff_wave
 
@@ -112,15 +107,13 @@ def calc_pivot_wave(filter_wave, filter_response, response_type):
 
     """
 
-    if response_type == 'photon':
-        I1 = np.trapz(filter_response*filter_wave, filter_wave)
-        I2 = np.trapz(filter_response/filter_wave, filter_wave)
-        pivot_wave = np.sqrt(I1/I2)
+    #check filter response type
+    if response_type == 'energy':
+        filter_response = filter_response/filter_wave
 
-    elif response_type == 'energy':
-        I1 = np.trapz(filter_response, filter_wave)
-        I2 = np.trapz(filter_response/(filter_wave**2), filter_wave)
-        pivot_wave = np.sqrt(I1/I2)
+    I1 = np.trapz(filter_response*filter_wave, filter_wave)
+    I2 = np.trapz(filter_response/filter_wave, filter_wave)
+    pivot_wave = np.sqrt(I1/I2)
 
     return pivot_wave
 
@@ -150,16 +143,18 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, apply_offset=T
     path = piscola.__path__[0]
 
     if mag_sys.lower() == 'ab':
-        pivot_wave = calc_pivot_wave(filter_wave, filter_response, response_type)
+        #pivot_wave = calc_pivot_wave(filter_wave, filter_response, response_type)
+        #zp = 2.5*np.log10(c/pivot_wave**2) - 48.6
         c = 2.99792458e18  # speed of light in Angstroms/s
-        zp = 2.5*np.log10(c/pivot_wave**2) - 48.6
+        ab_wave = np.arange(1000, 250000, 5)
+        ab_flux = 3631e-23*c/ab_wave
+        f_ab = run_filter(ab_wave, ab_flux, filter_wave, filter_response, response_type)
+        zp = 2.5*np.log10(f_ab)
 
-        if apply_offset:
-            with open(path + '/templates/ab_mag_sys.dat', 'rt') as ab_file:
-                offset = [line.split()[-1] for line in ab_file if filter_name in line.split()]
-            if offset:
-                offset = eval(offset[0])
-                zp += offset
+        with open(path + '/templates/ab_mag_sys.dat', 'rt') as ab_file:
+            offset = [line.split()[-1] for line in ab_file if filter_name in line.split()]
+        if offset:
+            zp += eval(offset[0])
 
     if mag_sys.lower() == 'vega':
         spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.dat').T
@@ -171,10 +166,9 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, apply_offset=T
         f_bd17 = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
 
         with open(path + '/templates/bd17_mag_sys.dat', 'rt') as bd17_file:
-            offset = [line.split()[-1] for line in bd17_file if filter_name in line.split()]
-        if offset:
-            offset = eval(offset[0])
-            zp = 2.5*np.log10(f_bd17) + offset
+            bd17_mag = [line.split()[-1] for line in bd17_file if filter_name in line.split()]
+        if bd17_mag:
+            zp = 2.5*np.log10(f_bd17) + eval(bd17_mag[0])
         else:
             raise ValueError(f'Could not find "{filter_name}" band in {path + "/templates/bd17_mag_sys.dat"} file')
 

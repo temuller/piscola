@@ -204,8 +204,6 @@ class sn(object):
                                           'transmission':transmission,
                                           'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave,
                                                                    transmission, response_type=response_type),
-                                          'pivot_wave':calc_pivot_wave(wave, transmission,
-                                                                       response_type=response_type),
                                           'response_type':response_type}
 
         # add Bessell filters
@@ -221,12 +219,11 @@ class sn(object):
             imin, imax = trim_filters(transmission)
             wave, transmission = wave[imin:imax], transmission[imin:imax]
 
-            response_type = 'energy'
+            response_type = 'photon'
             self.filters[band] = {'wave':wave,
                                   'transmission':transmission,
                                   'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave, transmission,
                                                            response_type=response_type),
-                                  'pivot_wave':calc_pivot_wave(wave, transmission, response_type=response_type),
                                   'response_type':response_type}
 
 
@@ -267,8 +264,6 @@ class sn(object):
                                           'transmission':transmission,
                                           'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave, transmission,
                                                                    response_type=response_type),
-                                          'pivot_wave':calc_pivot_wave(wave, transmission,
-                                                                       response_type=response_type),
                                           'response_type':response_type}
 
         else:
@@ -290,8 +285,6 @@ class sn(object):
                                               'transmission':transmission,
                                               'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave, transmission,
                                                                        response_type=response_type),
-                                              'pivot_wave':calc_pivot_wave(wave, transmission,
-                                                                           response_type=response_type),
                                               'response_type':response_type}
 
 
@@ -556,15 +549,17 @@ class sn(object):
         plt.show()
 
 
-    def normalize_data(self, mag_sys='vega', apply_offset=True):
+    def normalize_data(self, mag_sys=None, apply_offset=True):
         """Normalize the fluxes and zero-points.
 
-        Fluxes are converted to physical units and the magnitude system is changed to the chosen one.
+        Fluxes are converted to physical units and the magnitude system is changed to either AB, BD+17 or Vega.
         """
 
         for band in self.bands:
-            current_mag_sys = self.data[band]['mag_sys']
 
+            current_mag_sys = self.data[band]['mag_sys']
+            if mag_sys is None:
+                mag_sys = current_mag_sys
             zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
                          self.filters[band]['response_type'], current_mag_sys, apply_offset, band)
             new_zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
@@ -625,7 +620,7 @@ class sn(object):
             next_band = self.bands[next_band_ind]
 
             tmax1 = self.lc_fits[next_band]['tmax']
-            if np.isnan(tmax1) or delta_eff0 < 50:
+            if np.isnan(tmax1) or delta_eff0 < 20:
                 self.tmax = np.round(tmax0, 2)
             else:
                 # estimate average of tmax from two bands
@@ -1088,7 +1083,7 @@ class sn(object):
 
 
     def calculate_corrected_lcs(self):
-        """Calculates the SN light curves and light-curves parameters.
+        """Calculates the SN light curves applying extinction and k-corrections.
         """
 
         corrected_lcs = {}
@@ -1185,8 +1180,8 @@ class sn(object):
         ########################################
         bessell_b = 'Bessell_B'
         zp_b = calc_zp(self.filters[bessell_b]['wave'], self.filters[bessell_b]['transmission'],
-                        self.filters[bessell_b]['response_type'], 'vega')
-        self.corrected_lcs[bessell_b]['zp'] = zp_b
+                        self.filters[bessell_b]['response_type'], 'BD17')
+        self.corrected_lcs[bessell_b]['zp'] = zp_b - 0.131
 
         # B-band peak apparent magnitude
         phase_b, flux_b, flux_err_b = self.corrected_lcs[bessell_b]['phase'], self.corrected_lcs[bessell_b]['flux'], self.corrected_lcs[bessell_b]['err']
@@ -1208,8 +1203,8 @@ class sn(object):
         try:
             bessell_v = 'Bessell_V'
             zp_v = calc_zp(self.filters[bessell_v]['wave'], self.filters[bessell_v]['transmission'],
-                            self.filters[bessell_v]['response_type'], 'vega')
-            self.corrected_lcs[bessell_v]['zp'] = zp_v
+                            self.filters[bessell_v]['response_type'], 'BD17')
+            self.corrected_lcs[bessell_v]['zp'] = zp_v - 0.006
             phase_v, flux_v, flux_err_v = self.corrected_lcs[bessell_v]['phase'], self.corrected_lcs[bessell_v]['flux'], self.corrected_lcs[bessell_v]['err']
 
             id_v0 = np.where(phase_v==0.0)[0][0]
