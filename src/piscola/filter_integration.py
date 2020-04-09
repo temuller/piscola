@@ -118,7 +118,7 @@ def calc_pivot_wave(filter_wave, filter_response, response_type):
     return pivot_wave
 
 
-def calc_zp(filter_wave, filter_response, response_type, mag_sys, apply_offset=True, filter_name=None):
+def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
     """Calculates the zero point in the AB, Vega or BD+17 magnitude sytems.
 
     Parameters
