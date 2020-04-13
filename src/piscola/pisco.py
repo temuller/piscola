@@ -52,12 +52,14 @@ def initialise(file_name):
     # add data to each band
     for band in sn_obj.bands:
         band_info = sn_file[sn_file['band']==band]
-        sn_obj.data[band] = {'mjd':band_info['mjd'].values,
-                             'flux':band_info['flux'].values,
-                             'flux_err':band_info['flux_err'].values,
-                             'zp':float(band_info['zp'].unique()[0]),
-                             'mag_sys':band_info['mag_sys'].unique()[0],
-                            }
+        if len(band_info['flux'].values) >= 3:
+            sn_obj.data[band] = {'mjd':band_info['mjd'].values,
+                                 'flux':band_info['flux'].values,
+                                 'flux_err':band_info['flux_err'].values,
+                                 'zp':float(band_info['zp'].unique()[0]),
+                                 'mag_sys':band_info['mag_sys'].unique()[0],
+                                }
+    sn_obj.bands = list(sn_obj.data.keys())  # to exclude removed bands
     sn_obj.calc_pivot()
     return sn_obj
 
@@ -549,26 +551,22 @@ class sn(object):
         plt.show()
 
 
-    def normalize_data(self, mag_sys=None, apply_offset=True):
+    def normalize_data(self):
         """Normalize the fluxes and zero-points.
 
         Fluxes are converted to physical units and the magnitude system is changed to either AB, BD+17 or Vega.
         """
 
         for band in self.bands:
+            mag_sys = self.data[band]['mag_sys']
+            current_zp = self.data[band]['zp']
 
-            current_mag_sys = self.data[band]['mag_sys']
-            if mag_sys is None:
-                mag_sys = current_mag_sys
-            zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
-                         self.filters[band]['response_type'], current_mag_sys, band)
-            new_zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
-                         self.filters[band]['response_type'], mag_sys, band)
+            new_zp, _ = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
+                                        self.filters[band]['response_type'], mag_sys, band)
 
-            self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(self.data[band]['zp'] - zp))
-            self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(self.data[band]['zp'] - zp))
+            self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(current_zp - new_zp))
+            self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(current_zp - new_zp))
             self.data[band]['zp'] = new_zp
-            self.data[band]['mag_sys'] = mag_sys.upper()
 
     ############################################################################
     ############################ Light Curves Fits #############################
@@ -1179,9 +1177,9 @@ class sn(object):
         ### Calculate Light Curve Parameters ###
         ########################################
         bessell_b = 'Bessell_B'
-        zp_b = calc_zp(self.filters[bessell_b]['wave'], self.filters[bessell_b]['transmission'],
-                        self.filters[bessell_b]['response_type'], 'BD17', bessell_b)
-        self.corrected_lcs[bessell_b]['zp'] = zp_b - 0.131
+        zp_b, offset_b = calc_zp(self.filters[bessell_b]['wave'], self.filters[bessell_b]['transmission'],
+                                    self.filters[bessell_b]['response_type'], 'BD17', bessell_b)
+        self.corrected_lcs[bessell_b]['zp'] = zp_b + offset_b
 
         # B-band peak apparent magnitude
         phase_b, flux_b, flux_err_b = self.corrected_lcs[bessell_b]['phase'], self.corrected_lcs[bessell_b]['flux'], self.corrected_lcs[bessell_b]['err']
@@ -1202,9 +1200,9 @@ class sn(object):
         # Colour
         try:
             bessell_v = 'Bessell_V'
-            zp_v = calc_zp(self.filters[bessell_v]['wave'], self.filters[bessell_v]['transmission'],
-                            self.filters[bessell_v]['response_type'], 'BD17', bessell_v)
-            self.corrected_lcs[bessell_v]['zp'] = zp_v - 0.006
+            zp_v, offset_v = calc_zp(self.filters[bessell_v]['wave'], self.filters[bessell_v]['transmission'],
+                                        self.filters[bessell_v]['response_type'], 'BD17', bessell_v)
+            self.corrected_lcs[bessell_v]['zp'] = zp_v + offset_v
             phase_v, flux_v, flux_err_v = self.corrected_lcs[bessell_v]['phase'], self.corrected_lcs[bessell_v]['flux'], self.corrected_lcs[bessell_v]['err']
 
             id_v0 = np.where(phase_v==0.0)[0][0]
