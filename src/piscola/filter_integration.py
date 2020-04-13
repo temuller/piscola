@@ -161,7 +161,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
     #    f_vega = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
     #    zp = 2.5*np.log10(f_vega)
 
-    if mag_sys.lower() in ['bd17', 'bd+17']:
+    elif mag_sys.lower() in ['bd17', 'bd+17']:
         spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/bd_17d4708_stisnic_005.dat').T
         f_bd17 = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
 
@@ -170,10 +170,12 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
             obs_bd17_mag = eval(bd17_mags[0][-1])
             syn_bd17_mag = eval(bd17_mags[0][1])
         if bd17_mags:
-            zp = 2.5*np.log10(f_bd17) + eval(syn_bd17_mag)
+            zp = 2.5*np.log10(f_bd17) + syn_bd17_mag
             offset = syn_bd17_mag - obs_bd17_mag
         else:
             raise ValueError(f'Could not find "{filter_name}" band in {path + "/templates/bd17_mag_sys.dat"} file')
+    else:
+        raise ValueError(f'Could not find "{mag_sys}" magnitude system in {path + "/templates/bd17_mag_sys.dat"} file')
 
     return zp, offset
 
