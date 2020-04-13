@@ -1,10 +1,6 @@
 ########################################################################################
 ### NOTE: This is the same file as in SNANA, but modified to be readable for PISCoLA ###
 ########################################################################################
-COLUMNS:
-FILTER_NAME  OBSERVED_MAG
-
-########################################################################################
 
 # Combined kcor file create by
 #   ['/project/rkessler/SN/SNANA/SNANA_CURRENT/util/combine_dataVersions.py', 'COMBINE.INPUT']
@@ -18,36 +14,39 @@ FILTER_NAME  OBSERVED_MAG
 # OUTFILE:      kcor_PS1_LOWZ_COMBINED.fits
 
 ########################################################################################
+### COLUMNS:									     ###
+### FILTER_NAME SYNTHETIC_MAG  OBSERVED_MAG					     ###
+########################################################################################
 
 # Start filters for VERSION = PS1s_CFA1_JRK07_DS16
 # MAGSYSTEM:   BD17
 # FILTSYSTEM:  COUNT
 # FILTPATH:    PS1/Pantheon/SNLS3-Landolt
-Standard_U 9.724
-Standard_B 9.907
-Standard_V 9.464
-Standard_R 9.166
-Standard_I 8.846
+Standard_U 10.5174	9.724
+Standard_B 9.7764	9.907
+Standard_V 9.4578	9.464
+Standard_R 9.3341	9.166
+Standard_I 9.2561	8.846
 
 # Start filters for VERSION = PS1s_CFA1_JRK07_DS16
 # MAGSYSTEM:   BD17
 # FILTSYSTEM:  COUNT
 # FILTPATH:    PS1/Pantheon/SNLS3-Landolt
-Bessell_U 9.724
-Bessell_B 9.907
-Bessell_V 9.464
-Bessell_R 9.166
-Bessell_I 8.846
+Bessell_U 10.5174	9.724
+Bessell_B 9.7764 	9.907
+Bessell_V 9.4578	9.464
+Bessell_R 9.3341	9.166
+Bessell_I 9.2561	8.846
 
 # Start filters for VERSION = PS1s_CFA3_4SHOOTER2_DS17
 # MAGSYSTEM:   BD17
 # FILTSYSTEM:  COUNT
 # FILTPATH:   PS1/Pantheon/CFA3_native
-4Shooter2_U  9.6930 
-4Shooter2_B  9.87400-0.0345 
-4Shooter2_V  9.47900-0.0087 
-4Shooter2_R  9.15500-0.021 
-4Shooter2_I  8.85100-0.0136 
+4Shooter2_U  10.4126	9.6930 
+4Shooter2_B  9.8028	9.87400-0.0345 
+4Shooter2_V  9.4720	9.47900-0.0087 
+4Shooter2_R  9.3339	9.15500-0.021 
+4Shooter2_I  9.2569	8.85100-0.0136 
 
 # Start filters for VERSION = PS1s_CFA3_KEPLERCAM_DS17
 # MAGSYSTEM:   BD17
@@ -55,45 +54,45 @@ Bessell_I 8.846
 # FILTPATH:    PS1/Pantheon/PS1_CFA4
 # CFA3_Keplercam filters are the same as in CFA4_p1. I just changed the filters names in case 
 # these are used (like in JLA), but Pantheon uses the CFA4_p1 filters for CFA3_Keplercam SNe.
-Keplercam_Us 9.724
-Keplercam_U  9.724 
-Keplercam_B  9.88605-0.024
-Keplercam_V  9.47432-0.0012 
-Keplercam_r  9.35252+0.0025 
-Keplercam_i  9.25465-0.004
+Keplercam_Us 10.4594	9.724
+Keplercam_U  10.4594	9.724 
+Keplercam_B  9.8058	9.88605-0.024
+Keplercam_V  9.4689	9.47432-0.0012 
+Keplercam_r  9.3559	9.35252+0.0025 
+Keplercam_i  9.2639	9.25465-0.004
 
 # Start filters for VERSION = PS1s_CFA4_p1_DS17
-p1_U  9.724 
-p1_B  9.88605-0.024 
-p1_V  9.47432-0.0012 
-p1_r  9.35252+0.0025 
-p1_i  9.25465-0.004 
+p1_U  10.4594	9.724 
+p1_B  9.8058	9.88605-0.024 
+p1_V  9.4689	9.47432-0.0012 
+p1_r  9.3559	9.35252+0.0025 
+p1_i  9.2639	9.25465-0.004 
 
 # Start filters for VERSION = PS1s_CFA4_p2_DS17
-p2_B  9.86124+0.0027108700 
-p2_V  9.47432-0.0012322002
-p2_r  9.35730+0.0058652098
-p2_i  9.25521-0.0042374653
+p2_B  9.7261	9.86124+0.0027108700 
+p2_V  9.4679	9.47432-0.0012322002
+p2_r  9.3559	9.35730+0.0058652098
+p2_i  9.2639	9.25521-0.0042374653
 
 # Start filters for VERSION = PS1s_CSPDR2_V_DS17
 # MAGSYSTEM:   BD17
 # FILTSYSTEM:  COUNT
 # FILTPATH:  PS1/Pantheon/CSP_Str11
-csp_u  10.51952 
-csp_B  9.87643-0.0082722800
-csp_o  9.47663+0.0017663098
-csp_m  9.47128+0.0017663098
-csp_n  9.47748+0.0017663098 
-csp_g  9.64406+0.0088273000
-csp_r  9.35160+0.0011820498
-csp_i  9.25000-0.016103720
+csp_u  10.4627	10.51952 
+csp_B  9.7745	9.87643-0.0082722800
+csp_o  9.4704	9.47663+0.0017663098
+csp_m  9.4787	9.47128+0.0017663098
+csp_n  9.4750	9.47748+0.0017663098 
+csp_g  9.6343	9.64406+0.0088273000
+csp_r  9.3559	9.35160+0.0011820498
+csp_i  9.2629	9.25000-0.016103720
 
 # Start filters for VERSION = SNCOSMO09
 # MAGSYSTEM:   BD17
 # FILTSYSTEM:  COUNT
 # FILTPATH:  PS1/Pantheon/SNLS3-Megacam
-Megacam_g  9.717
-Megacam_r  9.224
-Megacam_i  8.905
-Megacam_z  8.754
+#Megacam_g  9.717
+#Megacam_r  9.224
+#Megacam_i  8.905
+#Megacam_z  8.754
 
