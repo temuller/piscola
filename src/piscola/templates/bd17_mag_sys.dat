@@ -1,6 +1,10 @@
 ########################################################################################
 ### NOTE: This is the same file as in SNANA, but modified to be readable for PISCoLA ###
 ########################################################################################
+COLUMNS:
+FILTER_NAME  OBSERVED_MAG
+
+########################################################################################
 
 # Combined kcor file create by
 #   ['/project/rkessler/SN/SNANA/SNANA_CURRENT/util/combine_dataVersions.py', 'COMBINE.INPUT']
