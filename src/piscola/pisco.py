@@ -1179,7 +1179,8 @@ class sn(object):
         bessell_b = 'Bessell_B'
         zp_b, offset_b = calc_zp(self.filters[bessell_b]['wave'], self.filters[bessell_b]['transmission'],
                                     self.filters[bessell_b]['response_type'], 'BD17', bessell_b)
-        self.corrected_lcs[bessell_b]['zp'] = zp_b + offset_b
+        zp_b += offset_b  # add ofset to calculate standard system
+        self.corrected_lcs[bessell_b]['zp'] = zp_b
 
         # B-band peak apparent magnitude
         phase_b, flux_b, flux_err_b = self.corrected_lcs[bessell_b]['phase'], self.corrected_lcs[bessell_b]['flux'], self.corrected_lcs[bessell_b]['err']
@@ -1202,7 +1203,8 @@ class sn(object):
             bessell_v = 'Bessell_V'
             zp_v, offset_v = calc_zp(self.filters[bessell_v]['wave'], self.filters[bessell_v]['transmission'],
                                         self.filters[bessell_v]['response_type'], 'BD17', bessell_v)
-            self.corrected_lcs[bessell_v]['zp'] = zp_v + offset_v
+            zp_v += offset_v  # add ofset to calculate standard system
+            self.corrected_lcs[bessell_v]['zp'] = zp_v
             phase_v, flux_v, flux_err_v = self.corrected_lcs[bessell_v]['phase'], self.corrected_lcs[bessell_v]['flux'], self.corrected_lcs[bessell_v]['err']
 
             id_v0 = np.where(phase_v==0.0)[0][0]
