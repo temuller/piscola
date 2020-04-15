@@ -552,16 +552,17 @@ class sn(object):
 
 
     def normalize_data(self):
-        """Normalize the fluxes and zero-points.
+        """Normalize the fluxes and zero-points (ZPs).
 
-        Fluxes are converted to physical units and the magnitude system is changed to either AB, BD+17 or Vega.
+        Fluxes are converted to physical units by calculating the ZPs according to the
+        magnitude system, either AB, BD+17 or Vega.
         """
 
         for band in self.bands:
             mag_sys = self.data[band]['mag_sys']
             current_zp = self.data[band]['zp']
 
-            new_zp, _ = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
+            new_zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
                                         self.filters[band]['response_type'], mag_sys, band)
 
             self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(current_zp - new_zp))
@@ -1177,9 +1178,9 @@ class sn(object):
         ### Calculate Light Curve Parameters ###
         ########################################
         bessell_b = 'Bessell_B'
-        zp_b, offset_b = calc_zp(self.filters[bessell_b]['wave'], self.filters[bessell_b]['transmission'],
+        zp_b = calc_zp(self.filters[bessell_b]['wave'], self.filters[bessell_b]['transmission'],
                                     self.filters[bessell_b]['response_type'], 'BD17', bessell_b)
-        zp_b += offset_b  # add ofset to calculate standard system
+
         self.corrected_lcs[bessell_b]['zp'] = zp_b
 
         # B-band peak apparent magnitude
@@ -1201,9 +1202,9 @@ class sn(object):
         # Colour
         try:
             bessell_v = 'Bessell_V'
-            zp_v, offset_v = calc_zp(self.filters[bessell_v]['wave'], self.filters[bessell_v]['transmission'],
+            zp_v = calc_zp(self.filters[bessell_v]['wave'], self.filters[bessell_v]['transmission'],
                                         self.filters[bessell_v]['response_type'], 'BD17', bessell_v)
-            zp_v += offset_v  # add ofset to calculate standard system
+
             self.corrected_lcs[bessell_v]['zp'] = zp_v
             phase_v, flux_v, flux_err_v = self.corrected_lcs[bessell_v]['phase'], self.corrected_lcs[bessell_v]['flux'], self.corrected_lcs[bessell_v]['err']
 
