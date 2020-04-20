@@ -619,7 +619,7 @@ class sn(object):
             next_band = self.bands[next_band_ind]
 
             tmax1 = self.lc_fits[next_band]['tmax']
-            if np.isnan(tmax1) or delta_eff0 < 20:
+            if np.isnan(tmax1) or delta_eff0 < 10:
                 self.tmax = np.round(tmax0, 2)
             else:
                 # estimate average of tmax from two bands
@@ -883,7 +883,7 @@ class sn(object):
         ###################################
         ####### set-up for mangling #######
         ###################################
-        # match exact phases with SED
+        # find the fluxes at the exact SED phases
         obs_flux_dict = {band:np.interp(sed_phases, self.lc_fits[band]['phase'], self.lc_fits[band]['flux']) for band in self.bands}
         obs_err_dict = {band:np.interp(sed_phases, self.lc_fits[band]['phase'], self.lc_fits[band]['std']) for band in self.bands}
         flux_ratios_dict = {band:obs_flux_dict[band]/self.sed_lcs[band]['flux'] for band in self.bands}
@@ -921,7 +921,7 @@ class sn(object):
             phase_df = pd.DataFrame(data=phase_info, columns=['phase', 'wave', 'flux', 'err'])
             self.mangled_sed = pd.concat([self.mangled_sed, phase_df])
 
-        # correct mangled SED for MW extinction first and then blueshift it ("move" it in z)
+        # correct mangled SED for MW extinction first and then de-redshift it ("move" it back in z)
         self.corrected_sed = self.mangled_sed.copy()
         if correct_extinction:
             self.corrected_sed.flux = deredden(self.corrected_sed.wave.values, self.corrected_sed.flux.values, self.ra, self.dec)
@@ -937,8 +937,7 @@ class sn(object):
         band_list : list, default 'None'
             List of filters to plot. If 'None', band list is set to 'self.bands'.
         mangle_only : bool, default 'True'
-            If 'True', only plots the mangling function, else, plots the SEDs and filters as well (in a
-            relative scale).
+            If 'True', only plots the mangling function, else, plots the SEDs and filters as well (randomly scaled).
         verbose : bool, default 'True'
             If 'True', returns the difference between the magnitudes from the fits and the magnitudes from the
             modified SED after mangling, for each of the bands in 'band_list'.
@@ -1041,8 +1040,8 @@ class sn(object):
             ax3.plot(eff_waves, obs_fluxes2*norm2,'*r', ms=12, label='Observed values')  # observed fluxes
 
             ax.set_xlabel(r'Observer-frame Wavelength [$\AA$]', fontsize=16, family='serif')
-            ax.set_ylabel(r'Relative Mangling Function', fontsize=16, family='serif', color='g')
-            ax.set_title(f'Mangling Function', fontsize=18, family='serif')
+            ax.set_ylabel(r'Scaled Mangling Function', fontsize=16, family='serif', color='g')
+            #ax.set_title(f'Mangling Function', fontsize=18, family='serif')
             ax.set_xlim(x.min(), x.max())
             ax.set_ylim((y/opt_flux_ratios[index]).min()*0.8, (y/opt_flux_ratios[index]).max()*1.2)
             ax.minorticks_on()
