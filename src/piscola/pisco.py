@@ -60,7 +60,7 @@ def initialise(file_name):
                                  'mag_sys':band_info['mag_sys'].unique()[0],
                                 }
     sn_obj.bands = list(sn_obj.data.keys())  # to exclude removed bands
-    sn_obj.calc_pivot()
+    #sn_obj.calc_pivot()
     return sn_obj
 
 
@@ -394,7 +394,7 @@ class sn(object):
         """
         # This can be modified to accept other templates
         path = piscola.__path__[0]
-        file = f'{path}/templates/{template}/snflux_1av2.dat'  # v2 is the linearly interpolated version to 0.5 day steps
+        file = f'{path}/templates/{template}/snflux_1a.dat'
         self.sed['info'] = pd.read_csv(file, delim_whitespace=True, names=['phase', 'wave', 'flux'])
         self.sed['name'] = template
 
@@ -589,6 +589,8 @@ class sn(object):
         ####### GP Fit #########
         ########################
 
+        self.calc_pivot()
+
         if not fit_2d:
             for band in self.bands:
                 time, flux, std = fit_gp(self.data[band]['mjd'], self.data[band]['flux'],
@@ -607,11 +609,22 @@ class sn(object):
                 self.lc_fits[band] = {'mjd':time, 'flux':flux, 'std':std, 'tmax':tmax, 'mmax':mmax}
 
             tmax0 = self.lc_fits[self.pivot_band]['tmax']
+
+            bands = self.bands.copy()
+            while np.isnan(tmax0):
+                bands.remove(self.pivot_band)
+                # check another band to work as pivot bands
+                self.calc_pivot(bands)
+                tmax0 = self.lc_fits[self.pivot_band]['tmax']
+                if not bands:
+                    break
+
             assert not np.isnan(tmax0), f'Unable to obtain B-band peak for {self.name}!'
+            self.tmax = np.round(tmax0, 2)
 
-            delta_eff0 = np.abs(self.filters[self.pivot_band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave'])
+            # find the second closest band to restframe B-band for a more accurate tmax estimation
+            '''delta_eff0 = np.abs(self.filters[self.pivot_band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave'])
 
-            # find the second closest band to restframe B-band
             rest_eff_waves = [self.filters[band]['eff_wave']/(1+self.z) for band in self.bands]
             pivot_index = self.bands.index(self.pivot_band)
             rest_eff_waves[pivot_index] = 0.0  # "remove" the pivot band to find the 2nd closest band
@@ -626,7 +639,7 @@ class sn(object):
                 w0 = 1/delta_eff0**2
                 delta_eff1 = np.abs(self.filters[next_band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave'])
                 w1 = 1/delta_eff1**2
-                self.tmax = (tmax0*delta_eff0 + tmax1*delta_eff1)/(delta_eff0 + delta_eff1)  # weighted mean
+                self.tmax = (tmax0*delta_eff0 + tmax1*delta_eff1)/(delta_eff0 + delta_eff1)  # weighted mean'''
 
             for band in self.bands:
                 self.lc_fits[band]['phase'] = (self.lc_fits[band]['mjd'] - self.tmax)/(1+self.z)
@@ -1153,7 +1166,7 @@ class sn(object):
             tmax_offset = np.round(b_phase[idx_max], 2)
 
             # compare tmax from the corrected restframe B-band to the initial estimation
-            if np.abs(tmax_offset) >= 0.2:
+            if np.abs(tmax_offset) >= 0.5:
                 # update phase of the light curves
                 self.tmax -= tmax_offset
                 try:
