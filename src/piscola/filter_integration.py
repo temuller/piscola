@@ -151,10 +151,10 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
         f_ab = run_filter(ab_wave, ab_flux, filter_wave, filter_response, response_type)
         zp = 2.5*np.log10(f_ab)
 
-        with open(path + '/templates/ab_mag_sys.dat', 'rt') as ab_file:
-            offset = [line.split()[-1] for line in ab_file if filter_name in line.split()]
-        if offset:
-            zp += eval(offset[0])
+        #with open(path + '/templates/ab_mag_sys.dat', 'rt') as ab_file:
+        #    offset = [line.split()[-1] for line in ab_file if filter_name in line.split()]
+        #if offset:
+        #    zp += eval(offset[0])
 
     elif mag_sys.lower() == 'vega':
         spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.dat').T
