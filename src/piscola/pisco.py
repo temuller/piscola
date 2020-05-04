@@ -383,7 +383,7 @@ class sn(object):
                                                            if os.path.isdir(f"{path}/templates/{name}")])
 
 
-    def set_sed_template(self, template='conley09f'):
+    def set_sed_template(self, template='jla'):
         """Sets the SED templates that are going to be used for the mangling.
 
         Parameters
@@ -444,6 +444,7 @@ class sn(object):
             if self.tmax:
                 tmax = self.tmax
             else:
+                self.calc_pivot()
                 id_peak = np.argmax(self.data[self.pivot_band]['flux'])
                 tmax = self.data[self.pivot_band]['mjd'][id_peak]
 
@@ -616,7 +617,7 @@ class sn(object):
                 # check another band to work as pivot bands
                 self.calc_pivot(bands)
                 tmax0 = self.lc_fits[self.pivot_band]['tmax']
-                if not bands:
+                if len(bands)<=2:
                     break
 
             assert not np.isnan(tmax0), f'Unable to obtain B-band peak for {self.name}!'
