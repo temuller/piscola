@@ -621,7 +621,7 @@ class sn(object):
                     break
 
             assert not np.isnan(tmax0), f'Unable to obtain B-band peak for {self.name}!'
-            self.tmax = np.round(tmax0, 2)
+            self.tmax = self.tmax0 = np.round(tmax0, 2)
 
             # find the second closest band to restframe B-band for a more accurate tmax estimation
             '''delta_eff0 = np.abs(self.filters[self.pivot_band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave'])
@@ -789,6 +789,7 @@ class sn(object):
                     ax.fill_between(time, mag-err, mag+err, alpha=0.5, color=new_palette[i])
                     ax.set_ylabel(r'Apparent Magnitude [mag]', fontsize=16, family='serif')
 
+            ax.axvline(x=self.tmax0, color='r', linestyle='--')
             ax.axvline(x=self.tmax, color='k', linestyle='--')
             ax.minorticks_on()
             ax.tick_params(which='major', length=6, width=1, direction='in', top=True, right=True, labelsize=16)
@@ -1297,7 +1298,7 @@ class sn(object):
         ax.text(0.75, 0.7,r'($B-V$)$_{\rm max}$=%.3f$\pm$%.3f'%(color, dcolor), ha='center', va='center', fontsize=15, transform=ax.transAxes)
 
         ax.set_xlabel(f'Phase with respect to B-band peak [days]', fontsize=16, family='serif')
-        ax.set_title(f'{self.name} ({band}, z={self.z:.5})', fontsize=16, family='serif')
+        ax.set_title(f'{self.name} ({band}, z={self.z:.5}, t0={self.tmax})', fontsize=16, family='serif')
         if plot_type=='flux':
             ax.set_ylabel('Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
             ax.set_ylim(y.min()*0.90, y.max()*1.05)
