@@ -599,26 +599,26 @@ class sn(object):
 
                 try:
                     peakidxs = peak.indexes(flux, thres=.3, min_dist=5//(time[1]-time[0]))
-                    idx_max = np.asarray([idx for idx in peakidxs if all(flux[:idx]<flux[idx])]).min()
-                    tmax = time[idx_max]
-                    if flux[idx_max] > 0:
+                    idx_max = np.array([idx for idx in peakidxs if all(flux[:idx]<flux[idx])]).min()
+                    if flux[idx_max] == np.max(flux) and flux[idx_max] > 0:
+                        tmax = time[idx_max]
                         mmax = -2.5*np.log10(flux[idx_max]) + self.data[band]['zp']
                     else:
-                        mmax = np.nan
+                        tmax = mmax = np.nan
                 except:
                     tmax = mmax = np.nan
                 self.lc_fits[band] = {'mjd':time, 'flux':flux, 'std':std, 'tmax':tmax, 'mmax':mmax}
 
             tmax0 = self.lc_fits[self.pivot_band]['tmax']
 
-            bands = self.bands.copy()
-            while np.isnan(tmax0):
-                bands.remove(self.pivot_band)
+            #bands = self.bands.copy()
+            #while np.isnan(tmax0):
+            #    bands.remove(self.pivot_band)
                 # check another band to work as pivot bands
-                self.calc_pivot(bands)
-                tmax0 = self.lc_fits[self.pivot_band]['tmax']
-                if len(bands)<=2:
-                    break
+            #    self.calc_pivot(bands)
+            #    tmax0 = self.lc_fits[self.pivot_band]['tmax']
+            #    if len(bands)<=2:
+            #        break
 
             assert not np.isnan(tmax0), f'Unable to obtain B-band peak for {self.name}!'
             self.tmax = self.tmax0 = np.round(tmax0, 2)
@@ -645,6 +645,7 @@ class sn(object):
             for band in self.bands:
                 self.lc_fits[band]['phase'] = (self.lc_fits[band]['mjd'] - self.tmax)/(1+self.z)
 
+        # UNDER DEVELOPMENT
         elif fit_2d:
             flux_array = np.hstack(np.array([self.data[band]['flux'] for band in self.bands]))
             flux_err_array = np.hstack(np.array([self.data[band]['flux_err'] for band in self.bands]))
@@ -1298,7 +1299,7 @@ class sn(object):
         ax.text(0.75, 0.7,r'($B-V$)$_{\rm max}$=%.3f$\pm$%.3f'%(color, dcolor), ha='center', va='center', fontsize=15, transform=ax.transAxes)
 
         ax.set_xlabel(f'Phase with respect to B-band peak [days]', fontsize=16, family='serif')
-        ax.set_title(f'{self.name} ({band}, z={self.z:.5}, t0={self.tmax})', fontsize=16, family='serif')
+        ax.set_title(f'{self.name} ({band}, z={self.z:.5}, t0={self.tmax:.2f})', fontsize=16, family='serif')
         if plot_type=='flux':
             ax.set_ylabel('Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
             ax.set_ylim(y.min()*0.90, y.max()*1.05)
