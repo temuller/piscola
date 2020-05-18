@@ -143,18 +143,18 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
     path = piscola.__path__[0]
 
     if mag_sys.lower() == 'ab':
-        #pivot_wave = calc_pivot_wave(filter_wave, filter_response, response_type)
-        #zp = 2.5*np.log10(c/pivot_wave**2) - 48.6
         c = 2.99792458e18  # speed of light in Angstroms/s
         ab_wave = np.arange(1000, 250000, 5)
         ab_flux = 3631e-23*c/ab_wave**2  # in erg s^-1 cm^-2 A^-1
         f_ab = run_filter(ab_wave, ab_flux, filter_wave, filter_response, response_type)
-        zp = 2.5*np.log10(f_ab)
+        #zp = 2.5*np.log10(f_ab)
 
-        #with open(path + '/templates/ab_mag_sys.dat', 'rt') as ab_file:
-        #    offset = [line.split()[-1] for line in ab_file if filter_name in line.split()]
-        #if offset:
-        #    zp += eval(offset[0])
+        with open(path + '/templates/ab_mag_sys.dat', 'rt') as ab_file:
+            ab_mag = [line.split() for line in ab_file if filter_name in line.split()]
+        if ab_mag:
+            zp = 2.5*np.log10(f_ab) + eval(ab_mag[0][-1])
+        else:
+            raise ValueError(f'Could not find "{filter_name}" band in {path + "/templates/ab_mag_sys.dat"} file')
 
     elif mag_sys.lower() == 'vega':
         spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.dat').T
