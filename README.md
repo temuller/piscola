@@ -1,4 +1,4 @@
-# Python for Intelligent Supernova-Cosmology Light-Curve Analysis: PISCoLA
+# Python for Intelligent Supernova-COsmology Light-Curve Analysis: PISCOLA
 
 **Type Ia Supernova Light-curve fitting code in python**
 
