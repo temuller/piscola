@@ -24,4 +24,4 @@ but `sfdmap` would need to be installed manually with `pip`.
 Otherwise, you can install the dependencies by typing `pip install -r dependencies.txt` on your terminal.
 
 
-In order to use PISCoLA in any directory, you will need to install it: `python setup.py install`.
+In order to use PISCOLA in any directory, you will need to install it: `python setup.py install`.
