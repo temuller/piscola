@@ -611,14 +611,14 @@ class sn(object):
 
             tmax0 = self.lc_fits[self.pivot_band]['tmax']
 
-            #bands = self.bands.copy()
-            #while np.isnan(tmax0):
-            #    bands.remove(self.pivot_band)
+            bands = self.bands.copy()
+            while np.isnan(tmax0):
+                bands.remove(self.pivot_band)
                 # check another band to work as pivot bands
-            #    self.calc_pivot(bands)
-            #    tmax0 = self.lc_fits[self.pivot_band]['tmax']
-            #    if len(bands)<=2:
-            #        break
+                self.calc_pivot(bands)
+                tmax0 = self.lc_fits[self.pivot_band]['tmax']
+                if len(bands)<=2:
+                    break
 
             assert not np.isnan(tmax0), f'Unable to obtain B-band peak for {self.name}!'
             self.tmax = self.tmax0 = np.round(tmax0, 2)
