@@ -845,7 +845,7 @@ class sn(object):
     ######################### Light Curves Correction ##########################
     ############################################################################
 
-    def mangle_sed(self, min_phase=None, max_phase=None, kernel='squaredexp', correct_extinction=True):
+    def mangle_sed(self, min_phase=-15, max_phase=30, kernel='squaredexp', correct_extinction=True):
         """Mangles the SED with the given method to match the SN magnitudes.
 
         Parameters
@@ -859,11 +859,7 @@ class sn(object):
 
         """
 
-        if (min_phase is None) and (max_phase is None):
-            min_phase, max_phase = -15, 30
-            phases = np.arange(min_phase, max_phase+1, 1)
-        else:
-            phases = np.arange(min_phase, max_phase+1, 1)
+        phases = np.arange(min_phase, max_phase+1, 1)
 
         self.user_input['mangle_sed'] = {'min_phase':min_phase, 'max_phase':max_phase,
                                             'kernel':kernel, 'correct_extinction':correct_extinction}
@@ -1321,7 +1317,7 @@ class sn(object):
 
 
     def do_magic(self):
-        """Applies the whole correction process to obtain restframe light curves and light-curve parameters.
+        """Applies the whole correction process with default settings to obtain restframe light curves and light-curve parameters.
         """
         self.normalize_data()
         self.fit_lcs()
