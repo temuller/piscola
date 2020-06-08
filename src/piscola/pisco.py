@@ -552,19 +552,21 @@ class sn(object):
         plt.show()
 
 
-    def normalize_data(self):
+    def normalize_data(self, offsets_file=None):
         """Normalize the fluxes and zero-points (ZPs).
 
         Fluxes are converted to physical units by calculating the ZPs according to the
-        magnitude system, either AB, BD+17 or Vega.
+        magnitude system, either AB, BD17 or Vega.
         """
+
+        self.user_input['calc_zp'] = {'offsets_file': offsets_file}  # save it for the light curve parameters
 
         for band in self.bands:
             mag_sys = self.data[band]['mag_sys']
             current_zp = self.data[band]['zp']
 
             new_zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
-                                        self.filters[band]['response_type'], mag_sys, band)
+                                        self.filters[band]['response_type'], mag_sys, band, offsets_file)
 
             self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(current_zp - new_zp))
             self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(current_zp - new_zp))
@@ -1188,9 +1190,11 @@ class sn(object):
         ########################################
         ### Calculate Light Curve Parameters ###
         ########################################
+        offsets_file = self.user_input['calc_zp']['offsets_file']
+
         bessell_b = 'Bessell_B'
         zp_b = calc_zp(self.filters[bessell_b]['wave'], self.filters[bessell_b]['transmission'],
-                                    self.filters[bessell_b]['response_type'], 'BD17', bessell_b)
+                                    self.filters[bessell_b]['response_type'], 'BD17', bessell_b, offsets_file)
 
         self.corrected_lcs[bessell_b]['zp'] = zp_b
 
@@ -1214,7 +1218,7 @@ class sn(object):
         try:
             bessell_v = 'Bessell_V'
             zp_v = calc_zp(self.filters[bessell_v]['wave'], self.filters[bessell_v]['transmission'],
-                                        self.filters[bessell_v]['response_type'], 'BD17', bessell_v)
+                                        self.filters[bessell_v]['response_type'], 'BD17', bessell_v, offsets_file)
 
             self.corrected_lcs[bessell_v]['zp'] = zp_v
             phase_v, flux_v, flux_err_v = self.corrected_lcs[bessell_v]['phase'], self.corrected_lcs[bessell_v]['flux'], self.corrected_lcs[bessell_v]['err']

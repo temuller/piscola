@@ -118,8 +118,8 @@ def calc_pivot_wave(filter_wave, filter_response, response_type):
     return pivot_wave
 
 
-def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
-    """Calculates the zero point in the AB, Vega or BD+17 magnitude sytems.
+def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, offsets_file=None):
+    """Calculates the zero point in the AB, Vega or BD17 magnitude sytems.
 
     Parameters
     ----------
@@ -130,9 +130,9 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
     response_type : str
         Filter's response type. Either 'photon' or 'energy'. Only the Bessell filters use 'energy'.
     mag_sys : str
-        Magnitude system. Either 'AB', 'Vega', 'BD17' or 'BD+17'. 'BD17' and 'BD+17' are the same.
+        Magnitude system. Either 'AB', 'Vega', 'BD17'.
     filter_name : str
-        Filter name. Used to estimate the zero point for the 'BD+17' or 'BD17' magnitude system.
+        Filter name. Used to estimate the zero point for the 'BD17' magnitude system.
 
     Returns
     -------
@@ -142,35 +142,41 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
 
     path = piscola.__path__[0]
 
-    if mag_sys.lower() == 'ab':
-        c = 2.99792458e18  # speed of light in Angstroms/s
-        ab_wave = np.arange(1000, 250000, 5)
-        ab_flux = 3631e-23*c/ab_wave**2  # in erg s^-1 cm^-2 A^-1
-        f_ab = run_filter(ab_wave, ab_flux, filter_wave, filter_response, response_type)
-        #zp = 2.5*np.log10(f_ab)
+    if offsets_file:
+        file_path = f'{path}/templates/{offsets_file}'
+    else:
+        file_path = f'{path}/templates/{mag_sys.lower()}_sys_zps.dat'
 
-        with open(path + '/templates/ab_mag_sys.dat', 'rt') as ab_file:
+    if mag_sys.lower() == 'ab':
+        c = 2.99792458e18  # speed of light in [Angstroms/s]
+        ab_wave = np.arange(1000, 250000, 5)
+        ab_flux = 3631e-23*c/ab_wave**2  # in [erg s^-1 cm^-2 A^-1]
+        f_ab = run_filter(ab_wave, ab_flux, filter_wave, filter_response, response_type)
+
+        # get ZP offsets
+        with open(file_path, 'rt') as ab_file:
             ab_mag = [line.split() for line in ab_file if filter_name in line.split()]
         if ab_mag:
             zp = 2.5*np.log10(f_ab) + eval(ab_mag[0][-1])
         else:
-            raise ValueError(f'Could not find "{filter_name}" band in {path + "/templates/ab_mag_sys.dat"} file')
+            raise ValueError(f'Could not find "{filter_name}" filter in {file_path}')
 
     elif mag_sys.lower() == 'vega':
         spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.dat').T
         f_vega = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
         zp = 2.5*np.log10(f_vega)
 
-    elif mag_sys.lower() in ['bd17', 'bd+17']:
+    elif mag_sys.lower() == 'bd17':
         spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/bd_17d4708_stisnic_005.dat').T
         f_bd17 = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
 
-        with open(path + '/templates/bd17_mag_sys.dat', 'rt') as bd17_file:
+        # get ZP offsets
+        with open(file_path, 'rt') as bd17_file:
             bd17_mag = [line.split() for line in bd17_file if filter_name in line.split()]
         if bd17_mag:
             zp = 2.5*np.log10(f_bd17) +  eval(bd17_mag[0][-1])
         else:
-            raise ValueError(f'Could not find "{filter_name}" band in {path + "/templates/bd17_mag_sys.dat"} file')
+            raise ValueError(f'Could not find "{filter_name}" filter in {file_path}')
     else:
         raise ValueError(f'Could not find "{mag_sys}" magnitude system')
 
