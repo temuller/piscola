@@ -1044,11 +1044,11 @@ class sn(object):
 
             # initial sed and fluxes
             ax3.plot(init_sed_wave, init_sed_flux2*norm2, '--k')  # initial sed
-            ax3.plot(eff_waves, sed_fluxes2*norm2, 'ok', ms=12, label='Template values', alpha=0.8, fillstyle='none')  # initial sed fluxes
+            ax3.plot(eff_waves, sed_fluxes2*norm2, 'ok', ms=12, label='Initial SED values', alpha=0.8, fillstyle='none')  # initial sed fluxes
 
             # optimized sed and fluxes
             ax3.plot(mang_sed_wave, mang_sed_flux2*norm2, 'red')  # mangled sed
-            ax3.plot(eff_waves, obs_fluxes2*norm2,'*r', ms=12, label='Observed values')  # observed fluxes
+            ax3.plot(eff_waves, obs_fluxes2*norm2,'*r', ms=12, label='Mangled SED values')  # optimized fluxes
 
             ax.set_xlabel(r'Observer-frame Wavelength [$\AA$]', fontsize=16, family='serif')
             ax.set_ylabel(r'Scaled Mangling Function', fontsize=16, family='serif', color='g')
@@ -1071,7 +1071,7 @@ class sn(object):
 
             ax3.set_ylim(0, None)
             ax3.yaxis.set_tick_params(labelsize=16)
-            ax3.set_ylabel(r'Relative Flux', fontsize=16, family='serif', rotation=270, labelpad=20)
+            ax3.set_ylabel(r'Scaled Flux', fontsize=16, family='serif', rotation=270, labelpad=20)
             ax3.tick_params(which='major', length=8, width=1, direction='in', labelsize=16)
             ax3.tick_params(which='minor', length=4, width=1, direction='in', labelsize=16)
 
