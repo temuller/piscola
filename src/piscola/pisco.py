@@ -410,14 +410,18 @@ class sn(object):
     ########################### Light Curves Data ##############################
     ############################################################################
 
-    def mask_data(self, band_list=None, mask_phase=True, min_phase=-20, max_phase=35, mask_snr=False, snr=3):
-        """Mask the data with the given S/N ratio and/or within the given range of days respect to maximum in B band.
+    def mask_data(self, band_list=None, mask_snr=True, snr=5, mask_phase=False, min_phase=-20, max_phase=40):
+        """Mask the data with the given S/N and/or within the given range of days respect to maximum in B band.
 
-        NOTE: Bands with less than 3 data points after mask is applied will be deleted.
+        NOTE: Bands with less than 3 data points, after mask is applied, will be deleted.
 
         Parameters
         ----------
         band_list : list, default 'None'
+        mask_snr : bool, default 'True'
+            If 'True', keeps the flux values with S/N greater or equal to the threshold 'snr'.
+        snr : float, default '5'
+            S/N threshold applied to mask data.
         mask_phase : bool, default 'False'
             If 'True', keeps the flux values within the given phase range set by 'min_phase' and 'max_phase'.
              An initial estimation of the peak is needed first (can be set manually).
@@ -426,11 +430,6 @@ class sn(object):
         max_phase : float, default '40'
             Maximum phase threshold applied to mask data.
             List of bands to mask. If 'None', the mask is applied to all bands in self.bands
-        mask_snr : bool, default 'True'
-            If 'True', keeps the flux values with S/N ratio greater or equal to the threshold 'snr'.
-        snr : float, default '3'
-            S/N ratio threshold applied to mask data.
-
         """
 
         if band_list is None:
