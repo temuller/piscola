@@ -939,7 +939,7 @@ class sn(object):
         self.corrected_sed.flux = self.corrected_sed.flux.values*(1+self.z)
 
 
-    def plot_mangling_function(self, phase=0.0, mangle_only=True, verbose=True, save=False, fig_name=None):
+    def plot_mangling_function(self, phase=0.0, mangling_function_only=False, verbose=True, save=False, fig_name=None):
         """Plot the mangling function for a given phase.
 
         Parameters
@@ -977,7 +977,7 @@ class sn(object):
         kernel = man['kernel']
         bands = man['mag_diff'].keys()
 
-        if mangle_only:
+        if mangling_function_only:
             f, ax = plt.subplots(figsize=(8,6))
             ax2 = ax.twiny()
 
@@ -1037,6 +1037,7 @@ class sn(object):
 
             # mangling function
             ax.plot(x, y/opt_flux_ratios[index], 'green')
+            ax.fill_between(x, (y-yerr)/opt_flux_ratios[index], (y+yerr)/opt_flux_ratios[index], alpha=0.2, color='green')
             indexes = [np.argmin(np.abs(x-wave_val)) for wave_val in eff_waves]
             #ax.plot(eff_waves, opt_flux_ratios/opt_flux_ratios[index], 'sg')
             ax.plot(eff_waves, y[indexes]/opt_flux_ratios[index], 'sg')
