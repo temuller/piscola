@@ -31,6 +31,33 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
 
     """
 
+    class lcMeanModel(george.modeling.Model):
+        parameter_names = ("A", "mu", "log_sigma2")
+
+        def get_value(self, t):
+            # Gaussian function
+            return self.A * np.exp(-0.5*(t-self.mu)**2 * np.exp(-self.log_sigma2))
+
+        # This method is to compute the gradient of the objective function below.
+        def compute_gradient(self, t):
+            e = 0.5*(t-self.mu)**2 * np.exp(-self.log_sigma2)
+            dA = np.exp(-e)
+            dmu = self.A * dA * (t-self.mu) * np.exp(-self.log_sigma2)
+            dlog_s2 = self.A * dA * e
+            return np.array([dA, dmu, dlog_s2])
+
+    class manglingMeanModel(george.modeling.Model):
+        parameter_names = ("c1", "c2", "c3")
+
+        def get_value(self, t):
+            return self.c1*t + self.c2*t**2 + self.c3*t**3
+
+        def compute_gradient(self, t):
+            dc1 = t
+            dc2 = t**2
+            dc3 = t**3
+            return np.array([dc1, dc2, dc3])
+
     # define the objective function (negative log-likelihood in this case)
     def neg_ln_like(p):
         gp.set_parameter_vector(p)
@@ -87,7 +114,15 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
     y_norm = y.max()
     y /= y_norm
     yerr /= y_norm
-    mean_function = y.mean()
+
+    if x_edges is None:
+        A, mu, log_sigma2 = y.max(), x[y==y.max()][0], np.log(10)
+        mean_model = lcMeanModel(A=A, mu=mu, log_sigma2=log_sigma2)
+    else:
+        poly = np.poly1d(np.polyfit(x, y, 3))
+        c1, c2, c3 = poly.coeffs[2], poly.coeffs[1], poly.coeffs[0]
+        mean_model = manglingMeanModel(c1=c1, c2=c2, c3=c3)
+        #mean_model = y.mean()
 
     var, length = np.var(y), np.diff(x).max()
     if kernel == 'matern52':
@@ -101,7 +136,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
 
     #ker.freeze_parameter("k2:metric:log_M_0_0")
 
-    gp = george.GP(kernel=ker, solver=george.HODLRSolver, mean=mean_function)
+    gp = george.GP(kernel=ker, mean=mean_model, fit_mean=True)
     # initial guess
     gp.compute(x, yerr)
 
