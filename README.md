@@ -3,7 +3,8 @@
 **Type Ia Supernova Light-curve fitting code in python**
 
 Dependencies:
-  - Python 3.6+
+  - python 3.6+
+  - numpy
   - matplotlib
   - pandas
   - lmfit
@@ -15,13 +16,11 @@ Dependencies:
   
 It is recommended to create a conda environment:
 
-`conda config --add channels conda-forge`
+	`conda config --add channels conda-forge`
 
-`conda create -n pisco matplotlib pandas lmfit peakutils george emcee extinction multiprocess`
-
-but `sfdmap` would need to be installed manually with `pip`.
+	`conda create -n pisco numpy matplotlib pandas lmfit peakutils george emcee extinction sfdmap`
 
 Otherwise, you can install the dependencies by typing `pip install -r dependencies.txt` on your terminal.
 
 
-In order to use PISCOLA in any directory, you will need to install it: `python setup.py install`.
+In order to use PISCOLA in any directory, you will need to clone the repository and install it by typing `python setup.py install` inside the directory.
