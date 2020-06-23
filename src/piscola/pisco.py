@@ -8,6 +8,7 @@ from .util import *
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
 from peakutils import peak
 import pandas as pd
 import numpy as np
@@ -993,19 +994,18 @@ class sn(object):
             ax.errorbar(eff_waves, opt_flux_ratios, flux_ratios_err, fmt='*', capsize=3, color='red', label='Optimized values')
 
             ax.set_xlabel(r'Observer-frame Wavelength [$\AA$]', fontsize=16, family='serif')
-            ax.set_ylabel(r'Flux$_{\rm Obs}$ / Flux$_{\rm Temp} \times$ 10$^{%.0f}$'%exp, fontsize=16, family='serif')
-            ax.set_title(f'Mangling Function', fontsize=18, family='serif')
+            ax.set_ylabel(r'(Flux$_{\rm Obs}$ / Flux$_{\rm Temp}) \times$ 10$^{%.0f}$'%exp, fontsize=16, family='serif')
             ax.minorticks_on()
-            ax.tick_params(which='major', length=8, width=1, direction='in', right=True, labelsize=16)
-            ax.tick_params(which='minor', length=4, width=1, direction='in', right=True, labelsize=16)
+            ax.tick_params(which='both', length=8, width=1, direction='in', right=True, labelsize=16)
+            ax.tick_params(which='minor', length=4)
+            ax.set_ylim(y.min()*0.95, y.max()*1.03)
 
-            xticks = x[::len(x)//(len(self.bands)+1)]
             ax2.set_xlim(ax.get_xlim())
-            ax2.set_xticks(xticks)
-            ax2.set_xticklabels(np.round(xticks/(1+self.z), 0))
+            ax2.set_xticklabels((ax.get_xticks()/(1+self.z)).astype(int))
+            ax2.minorticks_on()
             ax2.set_xlabel(r'Rest-frame Wavelength [$\AA$]', fontsize=16, family='serif')
-            ax2.tick_params(which='major', length=8, width=1, direction='in', labelsize=16)
-            ax2.tick_params(which='minor', length=4, width=1, direction='in', labelsize=16)
+            ax2.tick_params(which='both', length=8, width=1, direction='in', labelsize=16)
+            ax2.tick_params(which='minor', length=4)
 
             for i, band in enumerate(bands):
                 x1, y1 = ax.transLimits.transform((eff_waves[i], init_flux_ratios[i]))
@@ -1039,7 +1039,6 @@ class sn(object):
             ax.plot(x, y/opt_flux_ratios[index], 'green')
             ax.fill_between(x, (y-yerr)/opt_flux_ratios[index], (y+yerr)/opt_flux_ratios[index], alpha=0.2, color='green')
             indexes = [np.argmin(np.abs(x-wave_val)) for wave_val in eff_waves]
-            #ax.plot(eff_waves, opt_flux_ratios/opt_flux_ratios[index], 'sg')
             ax.plot(eff_waves, y[indexes]/opt_flux_ratios[index], 'sg')
 
             # initial sed and fluxes
@@ -1052,29 +1051,25 @@ class sn(object):
 
             ax.set_xlabel(r'Observer-frame Wavelength [$\AA$]', fontsize=16, family='serif')
             ax.set_ylabel(r'Scaled Mangling Function', fontsize=16, family='serif', color='g')
-            #ax.set_title(f'Mangling Function', fontsize=18, family='serif')
             ax.set_xlim(x.min(), x.max())
             ax.set_ylim((y/opt_flux_ratios[index]).min()*0.8, (y/opt_flux_ratios[index]).max()*1.2)
-            ax.minorticks_on()
-            ax.tick_params(which='major', length=8, width=1, direction='in', labelsize=16)
-            ax.tick_params(which='minor', length=4, width=1, direction='in', labelsize=16)
-            ax.yaxis.set_tick_params(labelsize=16, labelcolor='g')
+            ax.tick_params(which='both', length=8, width=1, direction='in', labelsize=16)
+            ax.tick_params(which='minor', length=4)
+            ax.tick_params(axis='y', which='both', colors='g')
+            ax.spines['left'].set_color('g')
 
-            xticks = x[::len(x)//(len(self.bands)+1)]
             ax2.set_xlim(ax.get_xlim())
-            ax2.set_xticks(xticks)
-            ax2.set_xticklabels(np.round(xticks/(1+self.z), 0))
+            ax2.set_xticklabels((ax.get_xticks()/(1+self.z)).astype(int))
             ax2.set_xlabel(r'Rest-frame Wavelength [$\AA$]', fontsize=16, family='serif')
-            ax2.tick_params(which='major', length=8, width=1, direction='in', labelsize=16)
-            ax2.tick_params(which='minor', length=4, width=1, direction='in', labelsize=16)
-            ax2.xaxis.set_tick_params(labelsize=16)
+            ax2.minorticks_on()
+            ax2.tick_params(which='both', length=8, width=1, direction='in', labelsize=16)
+            ax2.tick_params(which='minor', length=4)
 
             ax3.set_ylim(0, None)
-            ax3.yaxis.set_tick_params(labelsize=16)
             ax3.set_ylabel(r'Scaled Flux', fontsize=16, family='serif', rotation=270, labelpad=20)
-            ax3.tick_params(which='major', length=8, width=1, direction='in', labelsize=16)
-            ax3.tick_params(which='minor', length=4, width=1, direction='in', labelsize=16)
-
+            ax3.minorticks_on()
+            ax3.tick_params(which='both', length=8, width=1, direction='in', labelsize=16)
+            ax3.tick_params(which='minor', length=4)
             ax3.legend(loc='upper right', fontsize=12)
 
         if save:
