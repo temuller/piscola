@@ -32,6 +32,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
     """
 
     class lcMeanModel(george.modeling.Model):
+        """Gaussian model."""
         parameter_names = ("A", "mu", "log_sigma2")
 
         def get_value(self, t):
@@ -47,6 +48,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
             return np.array([dA, dmu, dlog_s2])
 
     class manglingMeanModel(george.modeling.Model):
+        """Polynomial model with 3 degrees and no constant parameter."""
         parameter_names = ("c1", "c2", "c3")
 
         def get_value(self, t):
@@ -59,14 +61,18 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
             return np.array([dc1, dc2, dc3])
 
     # define the objective function (negative log-likelihood in this case)
-    def neg_ln_like(p):
-        gp.set_parameter_vector(p)
-        return -gp.log_likelihood(y)
+    def neg_log_like(params):
+        gp.set_parameter_vector(params)
+        log_like = gp.log_likelihood(y, quiet=True)
+        if np.isfinite(log_like):
+            return -log_like
+        else:
+            return -np.inf
 
     # and the gradient of the objective function
-    def grad_neg_ln_like(p):
-        gp.set_parameter_vector(p)
-        return -gp.grad_log_likelihood(y)
+    def grad_neg_log_like(params):
+        gp.set_parameter_vector(params)
+        return -gp.grad_log_likelihood(y, quiet=True)
 
     if kernel is None:
         kernel = 'matern52'
@@ -117,33 +123,42 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
 
     if x_edges is None:
         A, mu, log_sigma2 = y.max(), x[y==y.max()][0], np.log(10)
-        mean_model = lcMeanModel(A=A, mu=mu, log_sigma2=log_sigma2)
+        mean_bounds = {'A':(1e-5, 1e2),
+                       'mu':(mu-50, mu+50),
+                       'log_sigma2':(np.log(10), np.log(40),
+                       }
+        mean_model = lcMeanModel(A=A, mu=mu, log_sigma2=log_sigma2, bounds=mean_bounds)
     else:
         poly = np.poly1d(np.polyfit(x, y, 3))
         c1, c2, c3 = poly.coeffs[2], poly.coeffs[1], poly.coeffs[0]
-        mean_model = manglingMeanModel(c1=c1, c2=c2, c3=c3)
+        mean_bounds = {'c1':(1e-5, 1e2), 'c2':(1e-5, 1e2), 'c3':(1e-5, 1e2)}
+        mean_model = manglingMeanModel(c1=c1, c2=c2, c3=c3, bounds=mean_bounds)
         #mean_model = y.mean()
 
     var, length = np.var(y), np.diff(x).max()
+    bounds_var, bounds_length = (np.log(1e-3), np.log(1e2))
+    k1 = george.kernels.ConstantKernel(np.log(var), bounds=bounds_var)
+
     if kernel == 'matern52':
-        ker = var * george.kernels.Matern52Kernel(length**2)
+        k2 = george.kernels.Matern52Kernel(length**2, metric_bounds=bounds_length)
     elif kernel == 'matern32':
-        ker = var * george.kernels.Matern32Kernel(length**2)
+        k2 = george.kernels.Matern32Kernel(length**2, metric_bounds=bounds_length)
     elif kernel == 'squaredexp':
-        ker = var * george.kernels.ExpSquaredKernel(length**2)
+        k2 = george.kernels.ExpSquaredKernel(length**2, metric_bounds=bounds_length)
     else:
         raise ValueError(f'"{kernel}" is not a valid kernel.')
 
-    #ker.freeze_parameter("k2:metric:log_M_0_0")
-
+    ker = k1*k2
     gp = george.GP(kernel=ker, mean=mean_model, fit_mean=True)
     # initial guess
     gp.compute(x, yerr)
 
     # optimization routine for hyperparameters
     p0 = gp.get_parameter_vector()
-    results = scipy.optimize.minimize(neg_ln_like, p0, jac=grad_neg_ln_like,
-                                            method="L-BFGS-B", options={'maxiter':30})
+    bounds = gp.get_parameter_bounds()
+    results = scipy.optimize.minimize(neg_log_like, p0, jac=grad_neg_log_like,
+                                            method="L-BFGS-B", options={'maxiter':30},
+                                            bounds=bounds)
     gp.set_parameter_vector(results.x)
 
     step = 1e-3
