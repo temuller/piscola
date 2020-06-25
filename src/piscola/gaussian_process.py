@@ -125,18 +125,18 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
         A, mu, log_sigma2 = y.max(), x[y==y.max()][0], np.log(10)
         mean_bounds = {'A':(1e-5, 1e2),
                        'mu':(mu-50, mu+50),
-                       'log_sigma2':(np.log(10), np.log(40),
+                       'log_sigma2':(np.log(10), np.log(60)),
                        }
         mean_model = lcMeanModel(A=A, mu=mu, log_sigma2=log_sigma2, bounds=mean_bounds)
     else:
         poly = np.poly1d(np.polyfit(x, y, 3))
         c1, c2, c3 = poly.coeffs[2], poly.coeffs[1], poly.coeffs[0]
-        mean_bounds = {'c1':(1e-5, 1e2), 'c2':(1e-5, 1e2), 'c3':(1e-5, 1e2)}
+        mean_bounds = {'c1':(-1e2, 1e2), 'c2':(-1e2, 1e2), 'c3':(-1e2, 1e2)}
         mean_model = manglingMeanModel(c1=c1, c2=c2, c3=c3, bounds=mean_bounds)
         #mean_model = y.mean()
 
     var, length = np.var(y), np.diff(x).max()
-    bounds_var, bounds_length = (np.log(1e-3), np.log(1e2))
+    bounds_var, bounds_length = [(np.log(1e-5), np.log(1e2))], [(np.log(1e-1), np.log(1e4))]
     k1 = george.kernels.ConstantKernel(np.log(var), bounds=bounds_var)
 
     if kernel == 'matern52':
