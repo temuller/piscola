@@ -573,7 +573,7 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel1='matern52', kernel2='matern52', fit_2d=False, fit_mag=False, use_mcmc=True):
+    def fit_lcs(self, kernel1='matern52', kernel2='matern52', fit_1d=True, fit_mag=False, use_mcmc=True):
         """Fits the data for each band using gaussian process
 
         The fits are done independently for each band. The initial B-band peak time is estimated with
@@ -591,7 +591,7 @@ class sn(object):
 
         self.calc_pivot()
 
-        if not fit_2d:
+        if fit_1d:
             for band in self.bands:
                 time, flux, std = fit_gp(self.data[band]['mjd'], self.data[band]['flux'],
                                          self.data[band]['flux_err'], kernel=kernel1)
@@ -645,7 +645,7 @@ class sn(object):
                 self.lc_fits[band]['phase'] = (self.lc_fits[band]['mjd'] - self.tmax)/(1+self.z)
 
         # UNDER DEVELOPMENT
-        elif fit_2d:
+        else:
             flux_array = np.hstack(np.array([self.data[band]['flux'] for band in self.bands]))
             flux_err_array = np.hstack(np.array([self.data[band]['flux_err'] for band in self.bands]))
 
