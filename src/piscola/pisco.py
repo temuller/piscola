@@ -455,7 +455,7 @@ class sn(object):
                 self.data[band]['flux'] = self.data[band]['flux'][mask]
                 self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
 
-                if len(self.data[band]['flux']) == 0:
+                if len(self.data[band]['flux']) <= 3:
                     bands2delete.append(band)
 
         if mask_snr:
@@ -465,7 +465,7 @@ class sn(object):
                 self.data[band]['flux'] = self.data[band]['flux'][mask]
                 self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
 
-                if len(self.data[band]['flux']) == 0:
+                if len(self.data[band]['flux']) <= 3:
                     bands2delete.append(band)
 
         self.delete_bands(bands2delete)  # delete bands with less than 3 data points after applying mask
