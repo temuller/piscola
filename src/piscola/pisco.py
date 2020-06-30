@@ -1154,9 +1154,11 @@ class sn(object):
             try:
                 peakidxs = peak.indexes(b_flux, thres=.3, min_dist=5//(b_phase[1]-b_phase[0]))
                 idx_max = np.array([idx for idx in peakidxs if all(b_flux[:idx]<b_flux[idx])]).min()
+                tmax_offset = np.round(b_phase[idx_max], 2)
             except:
-                idx_max = np.argmax(b_flux)
-            tmax_offset = np.round(b_phase[idx_max], 2)
+                tmax_offset = None
+
+            assert tmax_offset, "The peak of the corrected B-band light curve can not be calculated."
 
             # compare tmax from the corrected restframe B-band to the initial estimation
             if np.abs(tmax_offset) >= 0.5:
