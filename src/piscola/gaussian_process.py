@@ -31,7 +31,7 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, x_edges=None, free_extra
 
     """
 
-    if gp_mean=='gaussian'
+    if gp_mean=='gaussian':
         class lcMeanModel(george.modeling.Model):
             """Gaussian light curve model."""
             parameter_names = ("A", "mu", "log_sigma2")
@@ -48,7 +48,7 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, x_edges=None, free_extra
                 dlog_s2 = self.A * dA * e
                 return np.array([dA, dmu, dlog_s2])
 
-    elif gp_mean=='bazin'
+    elif gp_mean=='bazin':
         class lcMeanModel(george.modeling.Model):
             """Bazin et al. (2011) light curve model"""
             parameter_names = ("A", "t0", "tf", "tr")
@@ -72,7 +72,7 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, x_edges=None, free_extra
 
                 return np.nan_to_num(np.array([dA, dt0, dtf, dtr]), nan=1e-2)
 
-    elif gp_mean=='zheng'
+    elif gp_mean=='zheng':
         class lcMeanModel(george.modeling.Model):
             """Zheng et al. (2018) light curve model"""
             parameter_names = ("A", "t0", "tb", "ar", "ad", "s")
@@ -182,7 +182,7 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, x_edges=None, free_extra
                            }
             mean_model = lcMeanModel(A=A, mu=mu, log_sigma2=log_sigma2, bounds=mean_bounds)
 
-        elif gp_mean=='gaussian':
+        elif gp_mean=='bazin':
             A, tf, tr = y.max(), 40, 20
             t0 = 20 + tr*np.log(tf/tr-1)
             mean_bounds = {'A':(1e-3, 1e2),
@@ -192,7 +192,7 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, x_edges=None, free_extra
                            }
             mean_model = lcMeanModel(A=A, t0=t0, tf=tf, tr=tr, bounds=mean_bounds)
 
-        elif gp_mean=='gaussian':
+        elif gp_mean=='zheng':
             A, t0, tb, ar, ad, s = y.max(), x[y==y.max()][0]-20, 20, 2, 2.5, 1.5
             mean_bounds = {'A':(1e-3, 1e2),
                    't0':(t0-50, t0+50),
