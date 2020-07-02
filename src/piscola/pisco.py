@@ -772,12 +772,11 @@ class sn(object):
                     ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
 
                 elif plot_type=='mag':
-                    # avoid negative numbers in logarithm
-                    fit_mask = flux >= 0
+                    # avoid non-positive numbers in logarithm
+                    fit_mask = flux > 0
                     time, flux, std = time[fit_mask], flux[fit_mask], std[fit_mask]
-                    data_mask = data_flux >= 0
+                    data_mask = data_flux > 0
                     data_time, data_flux, data_std = data_time[data_mask], data_flux[data_mask], data_std[data_mask]
-                    #print(data_time, data_flux, data_std)
 
                     mag = -2.5*np.log10(flux) + self.data[band]['zp']
                     err = np.abs(2.5*std/(flux*np.log(10)))
@@ -797,7 +796,7 @@ class sn(object):
             ax.set_xlabel('Modified Julian Date', fontsize=16, family='serif')
 
             ax.set_title(f'{self.name} (z = {self.z:.5})', fontsize=18, family='serif')
-            ax.legend(fontsize=13)
+            ax.legend(fontsize=13, loc='upper right')
             ax.set_ylim(ymin_lim, ymax_lim)
 
             if plot_type=='mag':
@@ -1125,7 +1124,7 @@ class sn(object):
         for band in self.filters.keys():
             try:
                 phases, fluxes, errs = corrected_lcs[band]['phase'], corrected_lcs[band]['flux'], corrected_lcs[band]['err']
-                phases_fit, fluxes_fit, _ = fit_gp(phases, fluxes, 1e-8)
+                phases_fit, fluxes_fit, _ = fit_gp(phases, fluxes, fluxes*1e-3)
                 errs_fit = np.interp(phases_fit, phases, errs)  # linear extrapolation of errors
                 corrected_lcs_fit[band] = {'phase':phases_fit, 'flux':fluxes_fit, 'err':errs_fit}
             except:
