@@ -573,7 +573,7 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel1='matern52', kernel2='matern52', fit_1d=True, fit_mag=False, use_mcmc=True):
+    def fit_lcs(self, kernel1='matern52', kernel2='matern52', gp_mean='mean', fit_1d=True, fit_mag=False, use_mcmc=True):
         """Fits the data for each band using gaussian process
 
         The fits are done independently for each band. The initial B-band peak time is estimated with
@@ -594,7 +594,7 @@ class sn(object):
         if fit_1d:
             for band in self.bands:
                 time, flux, std = fit_gp(self.data[band]['mjd'], self.data[band]['flux'],
-                                         self.data[band]['flux_err'], kernel=kernel1)
+                                         self.data[band]['flux_err'], kernel=kernel1, gp_mean=gp_mean)
 
                 try:
                     peakidxs = peak.indexes(flux, thres=.3, min_dist=5//(time[1]-time[0]))
@@ -1125,7 +1125,7 @@ class sn(object):
         for band in self.filters.keys():
             try:
                 phases, fluxes, errs = corrected_lcs[band]['phase'], corrected_lcs[band]['flux'], corrected_lcs[band]['err']
-                phases_fit, fluxes_fit, _ = fit_gp(phases, fluxes, 0.0)
+                phases_fit, fluxes_fit, _ = fit_gp(phases, fluxes, 1e-8)
                 errs_fit = np.interp(phases_fit, phases, errs)  # linear extrapolation of errors
                 corrected_lcs_fit[band] = {'phase':phases_fit, 'flux':fluxes_fit, 'err':errs_fit}
             except:

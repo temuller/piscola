@@ -4,7 +4,7 @@ import scipy
 import emcee
 
 
-def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrapolation=False):
+def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, x_edges=None, free_extrapolation=False, gp_mean='mean'):
     """Fits data with gaussian process.
 
     The package 'george' is used for the gaussian process fit.
@@ -31,21 +31,70 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
 
     """
 
-    class lcMeanModel(george.modeling.Model):
-        """Gaussian model."""
-        parameter_names = ("A", "mu", "log_sigma2")
+    if gp_mean=='gaussian'
+        class lcMeanModel(george.modeling.Model):
+            """Gaussian light curve model."""
+            parameter_names = ("A", "mu", "log_sigma2")
 
-        def get_value(self, t):
-            # Gaussian function
-            return self.A * np.exp(-0.5*(t-self.mu)**2 * np.exp(-self.log_sigma2))
+            def get_value(self, t):
+                # Gaussian function
+                return self.A * np.exp(-0.5*(t-self.mu)**2 * np.exp(-self.log_sigma2))
 
-        # This method is to compute the gradient of the objective function below.
-        def compute_gradient(self, t):
-            e = 0.5*(t-self.mu)**2 * np.exp(-self.log_sigma2)
-            dA = np.exp(-e)
-            dmu = self.A * dA * (t-self.mu) * np.exp(-self.log_sigma2)
-            dlog_s2 = self.A * dA * e
-            return np.array([dA, dmu, dlog_s2])
+            # This method is to compute the gradient of the objective function below.
+            def compute_gradient(self, t):
+                e = 0.5*(t-self.mu)**2 * np.exp(-self.log_sigma2)
+                dA = np.exp(-e)
+                dmu = self.A * dA * (t-self.mu) * np.exp(-self.log_sigma2)
+                dlog_s2 = self.A * dA * e
+                return np.array([dA, dmu, dlog_s2])
+
+    elif gp_mean=='bazin'
+        class lcMeanModel(george.modeling.Model):
+            """Bazin et al. (2011) light curve model"""
+            parameter_names = ("A", "t0", "tf", "tr")
+
+            def get_value(self, t):
+                return self.A * np.exp(-(t-self.t0)/self.tf) / (1 + np.exp(-(t-self.t0)/self.tr))
+
+            def compute_gradient(self, t):
+                Tf = (t-self.t0)/self.tf
+                Tr = (t-self.t0)/self.tr
+                B = np.exp(-Tf)
+                C = 1 + np.exp(-Tr)
+
+                dA = B/C
+                dtf = A*B/C * Tf/self.tf
+                dtr = A*B/C**2 * Tf/self.tr * np.exp(-Tr)
+                dt0 = (np.exp(-t/self.tf + self.t0/self.tf + t/self.tr) *
+                   (self.tr*(np.exp(t/self.tr) + np.exp(self.t0/self.tr)) - self.tr*np.exp(self.t0/self.tr$
+                   (self.tr*self.tf*(np.exp(t/self.tr) + np.exp(self.t0/self.tr))**2)
+                  )
+
+                return np.nan_to_num(np.array([dA, dt0, dtf, dtr]), nan=1e-2)
+
+    elif gp_mean=='zheng'
+        class lcMeanModel(george.modeling.Model):
+            """Zheng et al. (2018) light curve model"""
+            parameter_names = ("A", "t0", "tb", "ar", "ad", "s")
+
+            def get_value(self, t):
+                Tb = (t-self.t0)/self.tb
+                return np.nan_to_num(self.A * Tb**self.ar * (1 + Tb**(self.s*self.ad))**(-2/self.s), nan=1e-5)
+
+            def compute_gradient(self, t):
+                Tb = (t-self.t0)/self.tb
+                Tb_ar = np.nan_to_num(Tb**self.ar, nan=1e-5)
+                Tb_sad = np.nan_to_num(Tb**(self.s*self.ad), nan=1e-5)
+
+                dA = np.nan_to_num(Tb_ar * (1 + Tb_sad)**(-2/self.s), nan=1e-5)
+                dt0 = np.nan_to_num((2*self.A*self.ad * (Tb_sad + 1)**(-2/self.s - 1) * Tb_sad*Tb_ar/Tb)/self.tb -
+                                    (self.A*self.ar*Tb_ar/Tb * (Tb_sad + 1)**(-2/self.s))/self.tb, nan=1e-5)
+                dtb = dt0*Tb
+                dar = np.nan_to_num(self.A * Tb_ar * np.log(Tb) * (Tb_sad + 1)**(-2/self.s), nan=1e-5)
+                dad = np.nan_to_num(-2*self.A * np.log(Tb) * (Tb_sad + 1)**(-2/self.s - 1) * Tb_sad*Tb_ar, nan=1e-5)
+                ds = np.nan_to_num(self.A * Tb_ar * (Tb_sad + 1)**(-2/self.s) * (2*np.log(Tb_sad + 1)/self.s**2
+                                                               - 2*self.ad*np.log(Tb)*Tb_sad/(self.s*(Tb_sad + 1))), nan=1e-5)
+                return np.array([dA, dt0, dtb, dar, dad, ds])
 
     class manglingMeanModel(george.modeling.Model):
         """Polynomial model with 3 degrees and no constant parameter."""
@@ -67,7 +116,7 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
         if np.isfinite(log_like):
             return -log_like
         else:
-            return -np.inf
+            return np.inf
 
     # and the gradient of the objective function
     def grad_neg_log_like(params):
@@ -122,33 +171,58 @@ def fit_gp(x_data, y_data, yerr_data=0.0, kernel=None, x_edges=None, free_extrap
     yerr /= y_norm
 
     if x_edges is None:
-        A, mu, log_sigma2 = y.max(), x[y==y.max()][0], np.log(10)
-        mean_bounds = {'A':(1e-5, 1e2),
-                       'mu':(mu-50, mu+50),
-                       'log_sigma2':(np.log(10), np.log(60)),
-                       }
-        mean_model = lcMeanModel(A=A, mu=mu, log_sigma2=log_sigma2, bounds=mean_bounds)
+        if gp_mean=='mean':
+            mean_model = y.mean()
+
+        elif gp_mean=='gaussian':
+            A, mu, log_sigma2 = y.max(), x[y==y.max()][0], np.log(10)
+            mean_bounds = {'A':(1e-3, 1e2),
+                           'mu':(mu-50, mu+50),
+                           'log_sigma2':(np.log(10), np.log(60)),
+                           }
+            mean_model = lcMeanModel(A=A, mu=mu, log_sigma2=log_sigma2, bounds=mean_bounds)
+
+        elif gp_mean=='gaussian':
+            A, tf, tr = y.max(), 40, 20
+            t0 = 20 + tr*np.log(tf/tr-1)
+            mean_bounds = {'A':(1e-3, 1e2),
+                           't0':(t0-50, t0+50),
+                           'tf':(tf-10, tf+10),
+                           'tr':(tr-10, tr+10),
+                           }
+            mean_model = lcMeanModel(A=A, t0=t0, tf=tf, tr=tr, bounds=mean_bounds)
+
+        elif gp_mean=='gaussian':
+            A, t0, tb, ar, ad, s = y.max(), x[y==y.max()][0]-20, 20, 2, 2.5, 1.5
+            mean_bounds = {'A':(1e-3, 1e2),
+                   't0':(t0-50, t0+50),
+                   'tb':(tb-10, tb+10),
+                   'ar':(ar-1.0, ar+1.0),
+                   'ad':(ad-1.5, ad+1.5),
+                   's':(s-1.0, s+1.0),
+                   }
+            mean_model = lcMeanModel(A=A, t0=t0, tb=tb, ar=ar, ad=ad, s=s, bounds=mean_bounds)
+
     else:
         poly = np.poly1d(np.polyfit(x, y, 3))
         c1, c2, c3 = poly.coeffs[2], poly.coeffs[1], poly.coeffs[0]
         mean_bounds = {'c1':(-1e2, 1e2), 'c2':(-1e2, 1e2), 'c3':(-1e2, 1e2)}
         mean_model = manglingMeanModel(c1=c1, c2=c2, c3=c3, bounds=mean_bounds)
-        #mean_model = y.mean()
 
     var, length = np.var(y), np.diff(x).max()
-    bounds_var, bounds_length = [(np.log(1e-5), np.log(1e2))], [(np.log(1e-1), np.log(1e4))]
-    k1 = george.kernels.ConstantKernel(np.log(var), bounds=bounds_var)
-
     if kernel == 'matern52':
-        k2 = george.kernels.Matern52Kernel(length**2, metric_bounds=bounds_length)
+        ker = var * george.kernels.Matern52Kernel(length**2)
     elif kernel == 'matern32':
-        k2 = george.kernels.Matern32Kernel(length**2, metric_bounds=bounds_length)
+        ker = var * george.kernels.Matern32Kernel(length**2)
     elif kernel == 'squaredexp':
-        k2 = george.kernels.ExpSquaredKernel(length**2, metric_bounds=bounds_length)
+        ker = var * george.kernels.ExpSquaredKernel(length**2)
     else:
         raise ValueError(f'"{kernel}" is not a valid kernel.')
 
-    ker = k1*k2
+    #ker.freeze_parameter("k1:log_constant")
+    #ker.freeze_parameter("k2:metric:log_M_0_0")
+    # ['k1:log_constant', 'k2:metric:log_M_0_0']
+
     gp = george.GP(kernel=ker, mean=mean_model, fit_mean=True)
     # initial guess
     gp.compute(x, yerr)
