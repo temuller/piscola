@@ -121,7 +121,7 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
 
     timeout = time.time() + 10  # value for callback function
     args=(wave_array, sed_wave, sed_flux, obs_fluxes, norm, bands, filters, kernel, x_edges, timeout)
-    result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-3, ftol=1e-3, maxfev=40, iter_cb=timeout_callback)
+    result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-3, ftol=1e-3, maxfev=40)  # iter_cb=timeout_callback
 
     ###############################
     #### Use Optimized Results ####
