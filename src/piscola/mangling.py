@@ -56,7 +56,8 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
                                       filters[band]['response_type']) for band in bands])
 
     residuals = -2.5*np.log10(obs_flux/model_flux)
-    residuals[np.isnan(residuals)]= np.nanmean(residuals)  # replace nan with mean value, if any
+    residuals = np.nan_to_num(residuals, nan=np.nanmean(residuals))  # replace nan with mean value, if any
+
     return residuals
 
 
@@ -111,8 +112,8 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
     #### Optimise values ####
     #########################
     params = lmfit.Parameters()
-    # lmfit Parameters doesn't allow parameter names beginning with numbers so all digits are deleted
-    # just in case and quotes (') and dots (.) as well.
+    # lmfit Parameters doesn't allow parameter names beginning with numbers, so all digits are deleted.
+    # Quotes (') and dots (.) are always removed from the names.
     param_bands = [band.lstrip("0123456789\'.-").replace("'", "").replace(".", "") for band in bands]
 
     norm = flux_ratio_array.max()  # normalization avoids tiny numbers which cause problems with the minimization routine
@@ -153,8 +154,8 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
     interp_mangling_err = np.interp(mangled_wave, extended_wave_array, extended_flux_diffs)
     mangled_flux_err = np.sqrt(mangled_flux_err**2 + interp_mangling_err**2)
 
-    # add uncertainties from the observed (gp-fitted) fluxes per band
-    error_prop = np.r_[obs_errs[0], obs_errs, obs_errs[-1]]  # extrapolaton of the uncertainties
+    # add uncertainties from the observed (gp-fit) fluxes for each band
+    error_prop = np.r_[obs_errs[0], obs_errs, obs_errs[-1]]  # edges extrapolaton of the uncertainties
     interp_error_prop = np.interp(mangled_wave, extended_wave_array, error_prop)
     mangled_flux_err = np.sqrt(mangled_flux_err**2 + interp_error_prop**2)
 
@@ -176,5 +177,4 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
                         'kernel':kernel,
                         'result':result}
 
-    #return mangled_wave, mangled_flux, mangled_flux_err, mangling_results
     return mangling_results
