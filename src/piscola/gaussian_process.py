@@ -66,7 +66,7 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, x_edges=None, free_extra
                 dtf = A*B/C * Tf/self.tf
                 dtr = A*B/C**2 * Tf/self.tr * np.exp(-Tr)
                 dt0 = (np.exp(-t/self.tf + self.t0/self.tf + t/self.tr) *
-                   (self.tr*(np.exp(t/self.tr) + np.exp(self.t0/self.tr)) - self.tr*np.exp(self.t0/self.tr$
+                   (self.tr*(np.exp(t/self.tr) + np.exp(self.t0/self.tr)) - self.tr*np.exp(self.t0/self.tr)) /
                    (self.tr*self.tf*(np.exp(t/self.tr) + np.exp(self.t0/self.tr))**2)
                   )
 
