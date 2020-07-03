@@ -1296,7 +1296,7 @@ class sn(object):
             ax.set_ylim(y.min()*0.90, y.max()*1.05)
         elif plot_type=='mag':
             ax.set_ylabel('Apparent Magnitude', fontsize=16, family='serif')
-            ax.set_ylim(y.min()*0.98, y.max()*1.02)
+            ax.set_ylim(np.nanmin(y)*0.98, np.nanmax(y)*1.02)
             plt.gca().invert_yaxis()
         ax.minorticks_on()
         ax.tick_params(which='major', length=8, width=1, direction='in', top=True, right=True, labelsize=16)
