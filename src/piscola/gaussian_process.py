@@ -4,7 +4,7 @@ import scipy
 import emcee
 
 
-def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, x_edges=None, free_extrapolation=False, gp_mean='mean'):
+def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, gp_mean='mean', x_edges=None, free_extrapolation=False):
     """Fits data with gaussian process.
 
     The package 'george' is used for the gaussian process fit.
@@ -69,9 +69,10 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, x_edges=None, free_extra
                 dA = B/C
                 dtf = A*B/C * Tf/self.tf
                 dtr = A*B/C**2 * Tf/self.tr * np.exp(-Tr)
-                dt0 = np.exp(-t/self.tf + self.t0/self.tf + t/self.tr) *
+                dt0 = (np.exp(-t/self.tf + self.t0/self.tf + t/self.tr) *
                             (self.tr*(np.exp(t/self.tr) + np.exp(self.t0/self.tr)) - self.tr*np.exp(self.t0/self.tr)) /
                             (self.tr*self.tf*(np.exp(t/self.tr) + np.exp(self.t0/self.tr))**2)
+                        )
                 np.seterr(all='warn')
 
                 return np.array([dA, dt0, dtf, dtr])
@@ -96,8 +97,9 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, x_edges=None, free_extra
                 Tb_sad = Tb**(self.s*self.ad)
 
                 dA = Tb_ar * (1 + Tb_sad)**(-2/self.s)
-                dt0 = (2*self.A*self.ad * (Tb_sad + 1)**(-2/self.s - 1) * Tb_sad*Tb_ar/Tb)/self.tb -
+                dt0 = ((2*self.A*self.ad * (Tb_sad + 1)**(-2/self.s - 1) * Tb_sad*Tb_ar/Tb)/self.tb -
                                     (self.A*self.ar*Tb_ar/Tb * (Tb_sad + 1)**(-2/self.s))/self.tb
+                       )
                 dtb = dt0*Tb
                 dar = self.A * Tb_ar * np.log(Tb) * (Tb_sad + 1)**(-2/self.s)
                 dad = -2*self.A * np.log(Tb) * (Tb_sad + 1)**(-2/self.s - 1) * Tb_sad*Tb_ar
@@ -223,18 +225,18 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, x_edges=None, free_extra
         mean_bounds = {'c1':(-1e2, 1e2), 'c2':(-1e2, 1e2), 'c3':(-1e2, 1e2)}
         mean_model = manglingMeanModel(c1=c1, c2=c2, c3=c3, bounds=mean_bounds)
 
-    var, length = np.var(y), np.diff(x).max()
+    var, length_scale = np.var(y), np.diff(x).max()
     bounds_var, bounds_length = [(np.log(1e-6), np.log(10))], [(np.log(1), np.log(1e4))]
 
     # a constant kernel is used to allow adding bounds
     k1 = george.kernels.ConstantKernel(np.log(var), bounds=bounds_var)
 
     if kernel == 'matern52':
-        k2 = george.kernels.Matern52Kernel(length**2, metric_bounds=bounds_length)
+        k2 = george.kernels.Matern52Kernel(length_scale**2, metric_bounds=bounds_length)
     elif kernel == 'matern32':
-        k2 = george.kernels.Matern32Kernel(length**2, metric_bounds=bounds_length)
+        k2 = george.kernels.Matern32Kernel(length_scale**2, metric_bounds=bounds_length)
     elif kernel == 'squaredexp':
-        k2 = george.kernels.ExpSquaredKernel(length**2, metric_bounds=bounds_length)
+        k2 = george.kernels.ExpSquaredKernel(length_scale**2, metric_bounds=bounds_length)
     else:
         raise ValueError(f'"{kernel}" is not a valid kernel.')
 
