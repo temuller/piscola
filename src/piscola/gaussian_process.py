@@ -53,8 +53,10 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, gp_mean='mean', x_edges=
             parameter_names = ("A", "t0", "tf", "tr")
 
             def get_value(self, t):
+                np.seterr(all='ignore')
                 bazin_model = self.A * np.exp(-(t-self.t0)/self.tf) / (1 + np.exp(-(t-self.t0)/self.tr))
                 bazin_model = np.nan_to_num(bazin_model, nan=1e-6)  # prevents to output an error
+                np.seterr(all='warn')
 
                 return bazin_model
 
@@ -82,9 +84,11 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, gp_mean='mean', x_edges=
             parameter_names = ("A", "t0", "tb", "ar", "ad", "s")
 
             def get_value(self, t):
+                np.seterr(all='ignore')
                 Tb = (t-self.t0)/self.tb
                 zheng_model = self.A * Tb**self.ar * (1 + Tb**(self.s*self.ad))**(-2/self.s)
                 zheng_model = np.nan_to_num(zheng_model, nan=1e-6)  # prevents to output an error
+                np.seterr(all='warn')
 
                 return zheng_model
 
