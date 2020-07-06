@@ -53,9 +53,8 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, gp_mean='mean', x_edges=
             parameter_names = ("A", "t0", "tf", "tr")
 
             def get_value(self, t):
-                np.seterr(all='ignore')
                 bazin_model = self.A * np.exp(-(t-self.t0)/self.tf) / (1 + np.exp(-(t-self.t0)/self.tr))
-                np.seterr(all='warn')
+                bazin_model = np.nan_to_num(bazin_model, nan=1e-6)  # prevents to output an error
 
                 return bazin_model
 
@@ -83,10 +82,9 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, gp_mean='mean', x_edges=
             parameter_names = ("A", "t0", "tb", "ar", "ad", "s")
 
             def get_value(self, t):
-                np.seterr(all='ignore')
                 Tb = (t-self.t0)/self.tb
                 zheng_model = self.A * Tb**self.ar * (1 + Tb**(self.s*self.ad))**(-2/self.s)
-                np.seterr(all='warn')
+                zheng_model = np.nan_to_num(zheng_model, nan=1e-6)  # prevents to output an error
 
                 return zheng_model
 
@@ -201,21 +199,21 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, gp_mean='mean', x_edges=
         elif gp_mean=='bazin':
             A, tf, tr = y.max(), 40, 20
             t0 = 20 + tr*np.log(tf/tr-1)
-            mean_bounds = {'A':(1e-3, 1e2),
+            mean_bounds = {'A':(1e-3, 1e3),
                            't0':(t0-50, t0+50),
-                           'tf':(tf-10, tf+10),
-                           'tr':(tr-10, tr+10),
+                           'tf':(tf-35, tf+40),
+                           'tr':(tr-15, tr+20),
                            }
             mean_model = lcMeanModel(A=A, t0=t0, tf=tf, tr=tr, bounds=mean_bounds)
 
         elif gp_mean=='zheng':
             A, t0, tb, ar, ad, s = y.max(), x[y==y.max()][0]-20, 20, 2, 2.5, 1.5
-            mean_bounds = {'A':(1e-3, 1e2),
+            mean_bounds = {'A':(1e-3, 1e3),
                    't0':(t0-50, t0+50),
-                   'tb':(tb-10, tb+10),
-                   'ar':(ar-1.0, ar+1.0),
-                   'ad':(ad-1.5, ad+1.5),
-                   's':(s-1.0, s+1.0),
+                   'tb':(tb-15, tb+20),
+                   'ar':(ar-1.8, ar+3.0),
+                   'ad':(ad-2.3, ad+3.5),
+                   's':(s-1.3, s+3.0),
                    }
             mean_model = lcMeanModel(A=A, t0=t0, tb=tb, ar=ar, ad=ad, s=s, bounds=mean_bounds)
 
