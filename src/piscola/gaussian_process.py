@@ -194,7 +194,7 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, gp_mean='mean', x_edges=
 
         elif gp_mean=='gaussian':
             A, mu, log_sigma2 = y.max(), x[y==y.max()][0], np.log(10)
-            mean_bounds = {'A':(0.1, 10),
+            mean_bounds = {'A':(0.1, 100),
                            'mu':(mu-50, mu+50),
                            'log_sigma2':(np.log(10), np.log(60)),
                            }
@@ -203,7 +203,7 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, gp_mean='mean', x_edges=
         elif gp_mean=='bazin':
             A, tf, tr = y.max(), 40, 20
             t0 = 20 + tr*np.log(tf/tr-1)
-            mean_bounds = {'A':(0.1, 10),
+            mean_bounds = {'A':(0.1, 100),
                            't0':(t0-50, t0+50),
                            'tf':(tf-35, tf+40),
                            'tr':(tr-15, tr+20),
@@ -212,7 +212,7 @@ def fit_gp(x_data, y_data, yerr_data=1e-8, kernel=None, gp_mean='mean', x_edges=
 
         elif gp_mean=='zheng':
             A, t0, tb, ar, ad, s = y.max(), x[y==y.max()][0]-20, 20, 2, 2.5, 1.5
-            mean_bounds = {'A':(0.1, 10),
+            mean_bounds = {'A':(0.1, 100),
                    't0':(t0-50, t0+50),
                    'tb':(tb-15, tb+20),
                    'ar':(ar-1.8, ar+3.0),
