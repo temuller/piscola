@@ -13,7 +13,7 @@ language: python
 
 install:
   - pip install pytest
-  #- pip install astropy
+  - pip install astropy
   - pip install pybind11  # to avoid issues with george
   - pip install -r requirements.txt
   - python setup.py develop
