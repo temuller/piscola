@@ -1,1 +1,9 @@
 language: python
+
+install:
+  #- pip install -r requirements.txt
+  - conda config --add channels conda-forge
+  - conda install -c conda-forge numpy matplotlib pandas lmfit peakutils george emcee extinction sfdmap
+
+script:
+  - nosetests
