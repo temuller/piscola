@@ -13,15 +13,15 @@ language: python
 
 install:
   - pip install pytest
-  - pip install astropy
   - pip install pybind11  # to avoid issues with george
   - pip install -r requirements.txt
+  - pip install numpy --upgrade  # one of the packages downgrades numpy
   - python setup.py develop
 
   #- conda config --add channels conda-forge
-  #- conda create -n test_pisco python=$TRAVIS_PYTHON_VERSION numpy matplotlib pandas lmfit peakutils george emcee extinction sfdmap pytest
+  #- conda create -n test_pisco python=$TRAVIS_PYTHON_VERSION numpy matplotlib pandas lmfit peakutils george emcee extinction sfdmap astropy pytest
   #- source activate test_pisco
-  #- python setup.py install
+  #- python setup.py develop
 
 script:
   - pytest
