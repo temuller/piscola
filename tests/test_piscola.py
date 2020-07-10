@@ -6,7 +6,7 @@ class TestPiscola(unittest.TestCase):
         
     def test_lc_correction(self):
         
-        sn = pisco.sn_file('sn2001cz', directory='../data/')
+        sn = pisco.sn_file('sn2001cz')
         sn.normalize_data()
         sn.fit_lcs()
         sn.mangle_sed(-5, 15)
