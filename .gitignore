@@ -8,6 +8,8 @@ __pycache__
 # extra files
 test_piscola.ipynb
 
+.ipynb_checkpoints
+
 ### src ##
 src/*.egg-info
 src/piscola/__pycache__
