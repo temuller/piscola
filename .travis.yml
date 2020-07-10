@@ -10,6 +10,7 @@ language: python
 
 install:
   - pip install pytest
+  - pip install astropy
   - pip install pybind11  # to avoid issues with george
   - pip install -r requirements.txt
 
@@ -19,4 +20,4 @@ install:
   #- conda install -c conda-forge numpy matplotlib pandas lmfit peakutils george emcee extinction sfdmap nose
 
 script:
-  - pytest -q
+  - pytest
