@@ -647,13 +647,13 @@ class sn(object):
 
         # UNDER DEVELOPMENT
         else:
-            flux_array = np.hstack(np.array([self.data[band]['flux'] for band in self.bands]))
-            flux_err_array = np.hstack(np.array([self.data[band]['flux_err'] for band in self.bands]))
+            flux_array = np.hstack([self.data[band]['flux'] for band in self.bands])
+            flux_err_array = np.hstack([self.data[band]['flux_err'] for band in self.bands])
 
-            time_array = np.hstack(np.array([self.data[band]['mjd'] for band in self.bands]))
-            wave_array = np.hstack(np.array([[self.filters[band]['eff_wave']]*len(self.data[band]['mjd']) for band in self.bands]))
+            time_array = np.hstack([self.data[band]['mjd'] for band in self.bands])
+            wave_array = np.hstack([[self.filters[band]['eff_wave']]*len(self.data[band]['mjd']) for band in self.bands])
 
-            bands_waves = np.hstack(np.array([self.filters[band]['wave'] for band in self.bands]))
+            bands_waves = np.hstack([self.filters[band]['wave'] for band in self.bands])
             bands_edges = np.array([bands_waves.min(), bands_waves.max()])
 
             if fit_mag:
@@ -900,7 +900,7 @@ class sn(object):
         flux_ratios_dict = {band:obs_flux_dict[band]/self.sed_lcs[band]['flux'] for band in self.bands}
 
         wave_array = np.array([self.filters[band]['eff_wave'] for band in self.bands])
-        bands_waves = np.hstack(np.array([self.filters[band]['wave'] for band in self.bands]))
+        bands_waves = np.hstack([self.filters[band]['wave'] for band in self.bands])
         x_edges = np.array([bands_waves.min(), bands_waves.max()])  # to includes the edges of the reddest and bluest bands
 
         ################################
