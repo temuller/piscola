@@ -12,10 +12,10 @@ language: python
   #- conda info -a
 
 install:
-  - pip install pytest
+  #- pip install pytest
   - pip install pybind11  # to avoid issues with george
-  - pip install -r requirements.txt
-  - pip install numpy --upgrade  # one of the packages downgrades numpy
+  - pip install -U -r requirements.txt
+  #- pip install numpy --upgrade  # one of the packages downgrades numpy
   - python setup.py develop
 
   #- conda config --add channels conda-forge
