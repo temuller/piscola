@@ -17,3 +17,4 @@ src/piscola/__pycache__
 #src/piscola/filters
 #!src/piscola/filters/Bessell/*
 src/piscola/filters/filters.txt
+src/piscola/templates/conley09f/.ipynb_checkpoints
