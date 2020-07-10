@@ -1293,7 +1293,7 @@ class sn(object):
         ax.set_xlabel(f'Phase with respect to B-band peak [days]', fontsize=16, family='serif')
         ax.set_title(f'{self.name} ({band}, z={self.z:.5}, t0={self.tmax:.2f})', fontsize=16, family='serif')
         if plot_type=='flux':
-            ax.set_ylabel('Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
+            ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
             ax.set_ylim(y.min()*0.90, y.max()*1.05)
         elif plot_type=='mag':
             ax.set_ylabel('Apparent Magnitude', fontsize=16, family='serif')
