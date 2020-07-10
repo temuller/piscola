@@ -1158,7 +1158,7 @@ class sn(object):
             except:
                 tmax_offset = None
 
-            assert tmax_offset, "The peak of the corrected B-band light curve can not be calculated."
+            assert tmax_offset is not None, "The peak of the corrected B-band light curve can not be calculated."
 
             # compare tmax from the corrected restframe B-band to the initial estimation
             if np.abs(tmax_offset) >= 0.5:
