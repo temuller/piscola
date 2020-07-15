@@ -469,7 +469,7 @@ class sn(object):
                     bands2delete.append(band)
 
         self.delete_bands(bands2delete)  # delete bands with less than 3 data points after applying mask
-        assert self.bands, 'The SN has no data left after the mask was applied.'
+        assert len(self.bands) > 1, 'The SN has not enough data (either one or no bands) left after the mask was applied.'
 
 
     def plot_data(self, band_list=None, plot_type='mag', save=False, fig_name=None):
