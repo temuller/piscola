@@ -626,7 +626,7 @@ class sn(object):
             delta_eff0 = self.filters[self.pivot_band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave']
 
             # find the second closest band to restframe B-band for a more accurate tmax estimation
-            eff_wave_diff = np.array()[self.filters[band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave']) for band in self.bands])
+            eff_wave_diff = [self.filters[band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave']) for band in self.bands]
             pivot_index = self.bands.index(self.pivot_band)
             eff_wave_diff[pivot_index] = 1e6  # "remove" the pivot band to find the 2nd closest band
             # find a band at the "other side of B-band eff wave"
