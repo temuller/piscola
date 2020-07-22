@@ -609,7 +609,7 @@ class sn(object):
                     tmax = mmax = np.nan
                 self.lc_fits[band] = {'mjd':time, 'flux':flux, 'std':std, 'tmax':tmax, 'mmax':mmax}
 
-            tmax0 = self.lc_fits[self.pivot_band]['tmax']
+            tmax0 = self.lc_fits[self.pivot_band]['tmax']  # initil estimation of the peak
 
             bands = self.bands.copy()
             while np.isnan(tmax0):
@@ -623,22 +623,28 @@ class sn(object):
             assert not np.isnan(tmax0), f'Unable to obtain B-band peak for {self.name}!'
             self.tmax = self.tmax0 = np.round(tmax0, 2)
 
-            # find the second closest band to restframe B-band for a more accurate tmax estimation
-            '''delta_eff0 = np.abs(self.filters[self.pivot_band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave'])
+            delta_eff0 = self.filters[self.pivot_band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave']
 
-            rest_eff_waves = [self.filters[band]['eff_wave']/(1+self.z) for band in self.bands]
+            # find the second closest band to restframe B-band for a more accurate tmax estimation
+            eff_wave_diff = np.array()[self.filters[band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave']) for band in self.bands])
             pivot_index = self.bands.index(self.pivot_band)
-            rest_eff_waves[pivot_index] = 0.0  # "remove" the pivot band to find the 2nd closest band
-            next_band_ind = np.argmin(np.abs(rest_eff_waves - self.filters['Bessell_B']['eff_wave']))
+            eff_wave_diff[pivot_index] = 1e6  # "remove" the pivot band to find the 2nd closest band
+            # find a band at the "other side of B-band eff wave"
+            if delta_eff0 > 0.0:
+                next_band_ind = np.argmin([rew if rew>0 else 1e6 for rew in eff_wave_diff])
+            elif delta_eff0 < 0.0:
+                next_band_ind = np.argmax([rew for rew in eff_wave_diff if n<0])
+            else:
+                next_band_ind = pivot_index
             next_band = self.bands[next_band_ind]
 
             tmax1 = self.lc_fits[next_band]['tmax']
-            if np.isnan(tmax1) or delta_eff0 < 10:
+            if np.isnan(tmax1) or np.abs()delta_eff0 < 10:
                 self.tmax = np.round(tmax0, 2)
             else:
-                # estimate average of tmax from two bands
+                # estimate weighted average of tmax from two bands
                 w0 = 1/delta_eff0**2
-                delta_eff1 = np.abs(self.filters[next_band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave'])
+                delta_eff1 = eff_wave_diff[next_band_ind]
                 w1 = 1/delta_eff1**2
                 self.tmax = (tmax0*delta_eff0 + tmax1*delta_eff1)/(delta_eff0 + delta_eff1)  # weighted mean'''
 
@@ -789,7 +795,7 @@ class sn(object):
                     ax.fill_between(time, mag-err, mag+err, alpha=0.5, color=new_palette[i])
                     ax.set_ylabel(r'Apparent Magnitude [mag]', fontsize=16, family='serif')
 
-            ax.axvline(x=self.tmax0, color='r', linestyle='--')
+            ax.axvline(x=self.tmax0, color='k', linestyle='--', alpha=0.4)
             ax.axvline(x=self.tmax, color='k', linestyle='--')
             ax.minorticks_on()
             ax.tick_params(which='major', length=6, width=1, direction='in', top=True, right=True, labelsize=16)
@@ -1133,7 +1139,7 @@ class sn(object):
         self.corrected_lcs_fit = corrected_lcs_fit
 
 
-    def calculate_lc_params(self, maxiter=3):
+    def calculate_lc_params(self, maxiter=5):
         """Calculates the light-curves parameters.
 
         Estimation of B-band peak apparent magnitude (mb), stretch (dm15) and color ((B-V)max) parameters.
@@ -1158,10 +1164,10 @@ class sn(object):
             except:
                 tmax_offset = None
 
-            assert tmax_offset is not None, "The peak of the corrected B-band light curve can not be calculated."
+            assert tmax_offset is not None, "The peak of the rest-frame B-band light curve can not be calculated."
 
             # compare tmax from the corrected restframe B-band to the initial estimation
-            if np.abs(tmax_offset) >= 0.5:
+            if np.abs(tmax_offset) >= 0.2:
                 # update phase of the light curves
                 self.tmax -= tmax_offset
                 try:
