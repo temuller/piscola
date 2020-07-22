@@ -633,7 +633,10 @@ class sn(object):
             if delta_eff0 > 0.0:
                 next_band_ind = np.argmin([rew if rew>0 else 1e6 for rew in eff_wave_diff])
             elif delta_eff0 < 0.0:
-                next_band_ind = np.argmax([rew for rew in eff_wave_diff if rew<0])
+                try:
+                    next_band_ind = np.argmax([rew for rew in eff_wave_diff if rew<0])
+                except:
+                    next_band_ind = pivot_index
             else:
                 next_band_ind = pivot_index
             next_band = self.bands[next_band_ind]
