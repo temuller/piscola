@@ -639,7 +639,7 @@ class sn(object):
             next_band = self.bands[next_band_ind]
 
             tmax1 = self.lc_fits[next_band]['tmax']
-            if np.isnan(tmax1) or np.abs()delta_eff0 < 10:
+            if np.isnan(tmax1) or np.abs(delta_eff0) < 10:
                 self.tmax = np.round(tmax0, 2)
             else:
                 # estimate weighted average of tmax from two bands
