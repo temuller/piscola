@@ -1187,7 +1187,7 @@ class sn(object):
             else:
                 self.tmax_offset = tmax_offset
                 bmax_needs_check = False
-            self.tmax_err = tmax_offset + 0.5  # template has 1 day "cadence"
+            self.tmax_err = np.round(tmax_offset + 0.5, 2)  # template has 1 day "cadence"
 
             if iter>maxiter:
                 break
@@ -1212,9 +1212,9 @@ class sn(object):
         try:
             id_15 = np.where(phase_b==15.0)[0][0]
             B15 = -2.5*np.log10(flux_b[id_15]) + zp_b
-            B15_err = np.abs(2.5*flux_err_b[id_15]/(flux_b[id_15]*np.log(10)))
+            B15_err = np.abs(2.5*flux_err_b[id_15]/(flux_b[id_15]*np.log(10))) + 0.005  # the last term comes from the template error in one day uncertainty
             dm15 = B15 - mb
-            dm15err = np.sqrt(dmb**2 + B15_err**2) + 0.005  # the last term comes from the template error in one day uncertainty
+            dm15err = np.sqrt(dmb**2 + B15_err**2)
         except:
             dm15 = dm15err = np.nan
 
