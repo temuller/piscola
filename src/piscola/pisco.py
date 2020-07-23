@@ -629,27 +629,29 @@ class sn(object):
             eff_wave_diff = [self.filters[band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave'] for band in self.bands]
             pivot_index = self.bands.index(self.pivot_band)
             eff_wave_diff[pivot_index] = 1e6  # "remove" the pivot band to find the 2nd closest band
-            # find a band at the "other side of B-band eff wave"
-            if delta_eff0 > 0.0:
-                next_band_ind = np.argmin([rew if rew>0 else 1e6 for rew in eff_wave_diff])
-            elif delta_eff0 < 0.0:
-                try:
-                    next_band_ind = np.argmax([rew for rew in eff_wave_diff if rew<0])
-                except:
-                    next_band_ind = pivot_index
-            else:
-                next_band_ind = pivot_index
-            next_band = self.bands[next_band_ind]
 
+            # find a band at the "other side of B-band eff wave"
+            #if delta_eff0 > 0.0:
+            #    next_band_ind = np.argmin([rew if rew>0 else 1e6 for rew in eff_wave_diff])
+            #elif delta_eff0 < 0.0:
+            #    try:
+            #        next_band_ind = np.argmax([rew for rew in eff_wave_diff if rew<0])
+            #    except:
+            #        next_band_ind = pivot_index
+            #else:
+            #    next_band_ind = pivot_index
+
+            next_band_ind = np.argmin(np.array(eff_wave_diff))
+            next_band = self.bands[next_band_ind]
             tmax1 = self.lc_fits[next_band]['tmax']
-            if np.isnan(tmax1) or np.abs(delta_eff0) < 10:
-                self.tmax = np.round(tmax0, 2)
-            else:
+
+            if not np.isnan(tmax1):
                 # estimate weighted average of tmax from two bands
                 w0 = 1/delta_eff0**2
                 delta_eff1 = eff_wave_diff[next_band_ind]
                 w1 = 1/delta_eff1**2
-                self.tmax = (tmax0*delta_eff0 + tmax1*delta_eff1)/(delta_eff0 + delta_eff1)  # weighted mean'''
+                wtmax = (tmax0*w0 + tmax1*w1)/(w0 + w1)  # weighted mean
+                self.tmax = self.tmax0 = np.round(wtmax, 2)
 
             for band in self.bands:
                 self.lc_fits[band]['phase'] = (self.lc_fits[band]['mjd'] - self.tmax)/(1+self.z)
@@ -1172,7 +1174,7 @@ class sn(object):
             # compare tmax from the corrected restframe B-band to the initial estimation
             if np.abs(tmax_offset) >= 0.2:
                 # update phase of the light curves
-                self.tmax -= tmax_offset
+                self.tmax = np.round(self.tmax - tmax_offset, 2)
                 try:
                     self.lc_fits['phaseXwave'].T[0] -= tmax_offset
                 except:
@@ -1185,6 +1187,7 @@ class sn(object):
             else:
                 self.tmax_offset = tmax_offset
                 bmax_needs_check = False
+            self.tmax_err = tmax_offset + 0.5  # template has 1 day "cadence"
 
             if iter>maxiter:
                 break
@@ -1203,7 +1206,7 @@ class sn(object):
         phase_b, flux_b, flux_err_b = self.corrected_lcs[bessell_b]['phase'], self.corrected_lcs[bessell_b]['flux'], self.corrected_lcs[bessell_b]['err']
         id_bmax = np.where(phase_b==0.0)[0][0]
         mb = -2.5*np.log10(flux_b[id_bmax]) + zp_b
-        dmb = np.abs(2.5*flux_err_b[id_bmax]/(flux_b[id_bmax]*np.log(10)))
+        dmb = np.abs(2.5*flux_err_b[id_bmax]/(flux_b[id_bmax]*np.log(10))) + 0.005  # the last term comes from the template error in one day uncertainty
 
         # Stretch parameter
         try:
@@ -1211,7 +1214,7 @@ class sn(object):
             B15 = -2.5*np.log10(flux_b[id_15]) + zp_b
             B15_err = np.abs(2.5*flux_err_b[id_15]/(flux_b[id_15]*np.log(10)))
             dm15 = B15 - mb
-            dm15err = np.sqrt(dmb**2 + B15_err**2)
+            dm15err = np.sqrt(dmb**2 + B15_err**2) + 0.005  # the last term comes from the template error in one day uncertainty
         except:
             dm15 = dm15err = np.nan
 
@@ -1228,7 +1231,7 @@ class sn(object):
             V0 = -2.5*np.log10(flux_v[id_v0]) + zp_v
             V0err = np.abs(2.5*flux_err_v[id_v0]/(flux_v[id_v0]*np.log(10)))
             color = mb - V0
-            dcolor = np.sqrt(dmb**2 + V0err**2)
+            dcolor = np.sqrt(dmb**2 + V0err**2) + 0.011  # the last term comes from the template error in one day uncertainty
         except:
             color = dcolor = np.nan
 
