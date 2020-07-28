@@ -574,7 +574,7 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel1='matern52', kernel2='matern52', gp_mean='mean', fit_1d=True, fit_mag=False, use_mcmc=True):
+    def fit_lcs(self, kernel1='matern52', kernel2='matern52', gp_mean='mean', fit_2d=0, fit_mag=0, use_mcmc=0):
         """Fits the data for each band using gaussian process
 
         The fits are done independently for each band. The initial B-band peak time is estimated with
@@ -592,9 +592,9 @@ class sn(object):
 
         self.calc_pivot()
 
-        if fit_1d:
+        if not fit_2d:
             for band in self.bands:
-                time, flux, std = fit_gp(self.data[band]['mjd'], self.data[band]['flux'],
+                time, flux, std = gp_lc_fit(self.data[band]['mjd'], self.data[band]['flux'],
                                          self.data[band]['flux_err'], kernel=kernel1, gp_mean=gp_mean)
 
                 try:
@@ -674,17 +674,16 @@ class sn(object):
                 time_array = time_array[mask]
                 wave_array = wave_array[mask]
 
-                timeXwave, mu, std = fit_2dgp(time_array, wave_array, mag_array, mag_err_array,
+                timeXwave, mu, std = gp_2d_fit(time_array, wave_array, mag_array, mag_err_array,
                                                 kernel1=kernel1, kernel2=kernel2, x2_edges=bands_edges, use_mcmc=use_mcmc)
                 mu = 10**(-0.4*mu)
                 std = np.abs(mu*0.4*np.log(10)*std)
 
             else:
-                timeXwave, mu, std = fit_2dgp(time_array, wave_array, flux_array, flux_err_array,
+                timeXwave, mu, std = gp_2d_fit(time_array, wave_array, flux_array, flux_err_array,
                                                 kernel1=kernel1, kernel2=kernel2, x2_edges=bands_edges, use_mcmc=use_mcmc)
 
             self.lc_fits['timeXwave'], self.lc_fits['mu'], self.lc_fits['std'] = timeXwave, mu, std
-
 
             ########################
             ##### Caculate Peak ####
@@ -699,7 +698,7 @@ class sn(object):
                 peakidxs = peak.indexes(flux, thres=.3, min_dist=5//(time[1]-time[0]))
                 # pick the index of the first peak in case some band has 2 peaks (like IR bands)
                 idx_max = np.array([idx for idx in peakidxs if all(flux[:idx]<flux[idx])]).min()
-                self.tmax = np.round(time[idx_max], 2)
+                self.tmax = self.tmax0 = np.round(time[idx_max], 2)
 
                 phaseXwave = np.copy(timeXwave)
                 phaseXwave.T[0] = (timeXwave.T[0] - self.tmax)/(1 + self.z)
@@ -974,15 +973,15 @@ class sn(object):
         assert (phase in self.mangling_results.keys()), f'phase {phase} does not have a mangling result.'
 
         man = self.mangling_results[phase]
-        eff_waves = np.copy(man['init_vals']['waves'])
-        init_flux_ratios = np.copy(man['init_vals']['flux_ratios'])
-        flux_ratios_err = np.copy(man['init_vals']['flux_ratios_err'])
+        eff_waves = np.copy(man['init_flux_ratios']['waves'])
+        init_flux_ratios = np.copy(man['init_flux_ratios']['flux_ratios'])
+        flux_ratios_err = np.copy(man['init_flux_ratios']['flux_ratios_err'])
 
-        opt_flux_ratios = np.copy(man['opt_vals']['flux_ratios'])
-        obs_fluxes = np.copy(man['obs_vals']['fluxes'])
-        sed_fluxes = np.copy(man['sed_vals']['fluxes'])
+        opt_flux_ratios = np.copy(man['opt_flux_ratios']['flux_ratios'])
+        obs_fluxes = np.copy(man['obs_band_fluxes']['fluxes'])
+        sed_fluxes = np.copy(man['sed_band_fluxes']['fluxes'])
 
-        x, y, yerr = np.copy(man['opt_fit']['waves']), np.copy(man['opt_fit']['flux_ratios']), np.copy(man['opt_fit']['flux_ratios_err'])
+        x, y, yerr = np.copy(man['mangling_function']['waves']), np.copy(man['mangling_function']['flux_ratios']), np.copy(man['mangling_function']['flux_ratios_err'])
         mang_sed_wave, mang_sed_flux = man['mangled_sed']['wave'], man['mangled_sed']['flux']
         init_sed_wave, init_sed_flux = man['init_sed']['wave'], man['init_sed']['flux']
 
@@ -1136,7 +1135,7 @@ class sn(object):
         for band in self.filters.keys():
             try:
                 phases, fluxes, errs = corrected_lcs[band]['phase'], corrected_lcs[band]['flux'], corrected_lcs[band]['err']
-                phases_fit, fluxes_fit, _ = fit_gp(phases, fluxes, fluxes*1e-3)
+                phases_fit, fluxes_fit, _ = gp_lc_fit(phases, fluxes, fluxes*1e-3)
                 errs_fit = np.interp(phases_fit, phases, errs)  # linear extrapolation of errors
                 corrected_lcs_fit[band] = {'phase':phases_fit, 'flux':fluxes_fit, 'err':errs_fit}
             except:

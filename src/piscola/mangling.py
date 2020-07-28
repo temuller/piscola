@@ -1,5 +1,5 @@
 from .filter_integration import run_filter
-from .gaussian_process import fit_gp
+from .gaussian_process import fit_gp, gp_mf_fit
 from .spline import fit_spline
 
 import numpy as np
@@ -47,15 +47,14 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
     param_bands = [band.lstrip("0123456789\'.-").replace("'", "").replace(".", "") for band in bands]
     flux_ratio_array = np.array([params[band].value for band in param_bands])
 
-    x_pred, y_pred, yerr_pred = fit_gp(wave_array, flux_ratio_array, np.zeros_like(flux_ratio_array),
-                                        kernel=kernel, x_edges=x_edges)
+    x_pred, y_pred, yerr_pred = gp_mf_fit(wave_array, flux_ratio_array, yerr_data=0.0, kernel=kernel, x_edges=x_edges)
 
     interp_sed_flux = np.interp(x_pred, sed_wave, sed_flux)
     mangled_wave, mangled_flux = x_pred, (y_pred*norm)*interp_sed_flux
     model_flux = np.array([run_filter(mangled_wave, mangled_flux, filters[band]['wave'], filters[band]['transmission'],
                                       filters[band]['response_type']) for band in bands])
 
-    residuals = -2.5*np.log10(obs_flux/model_flux)
+    residuals = np.abs(2.5*np.log10(obs_flux/model_flux))
     residuals = np.nan_to_num(residuals, nan=np.nanmean(residuals))  # replace nan with mean value, if any
 
     return residuals
@@ -122,15 +121,14 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
 
     timeout = time.time() + 10  # value for callback function
     args=(wave_array, sed_wave, sed_flux, obs_fluxes, norm, bands, filters, kernel, x_edges, timeout)
-    result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-3, ftol=1e-3, max_nfev=40)  # iter_cb=timeout_callback
+    result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-5, ftol=1e-5, max_nfev=80)  # iter_cb=timeout_callback
 
     ###############################
     #### Use Optimized Results ####
     ###############################
     opt_flux_ratio = np.array([result.params[band].value for band in param_bands]) * norm
 
-    x_pred, y_pred, yerr_pred = fit_gp(wave_array, opt_flux_ratio, np.zeros_like(opt_flux_ratio),
-                                        kernel=kernel, x_edges=x_edges)
+    x_pred, y_pred, yerr_pred = gp_mf_fit(wave_array, opt_flux_ratio, yerr_data=0.0, kernel=kernel, x_edges=x_edges)
 
     interp_sed_flux = np.interp(x_pred, sed_wave, sed_flux)
     mangled_wave, mangled_flux, mangled_flux_err = x_pred, y_pred*interp_sed_flux, yerr_pred*interp_sed_flux
@@ -166,12 +164,12 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
                                filters[band]['wave'], filters[band]['transmission'], filters[band]['response_type']))
     sed_fluxes = np.array(sed_fluxes)
 
-    mangling_results = {'init_vals':{'waves':wave_array, 'flux_ratios':flux_ratio_array, 'flux_ratios_err':0.0},
-                        'opt_vals':{'waves':wave_array, 'flux_ratios':opt_flux_ratio, 'flux_ratios_err':0.0},
+    mangling_results = {'init_flux_ratios':{'waves':wave_array, 'flux_ratios':flux_ratio_array, 'flux_ratios_err':0.0},
+                        'opt_flux_ratios':{'waves':wave_array, 'flux_ratios':opt_flux_ratio, 'flux_ratios_err':0.0},
                         'flux_ratios':flux_diff_ratios,
-                        'sed_vals':{'waves':wave_array, 'fluxes':sed_fluxes},
-                        'obs_vals':{'waves':wave_array, 'fluxes':obs_fluxes},
-                        'opt_fit':{'waves':x_pred, 'flux_ratios':y_pred, 'flux_ratios_err':yerr_pred},
+                        'sed_band_fluxes':{'waves':wave_array, 'fluxes':sed_fluxes},
+                        'obs_band_fluxes':{'waves':wave_array, 'fluxes':obs_fluxes},
+                        'mangling_function':{'waves':x_pred, 'flux_ratios':y_pred, 'flux_ratios_err':yerr_pred},
                         'init_sed':{'wave':sed_wave, 'flux':sed_flux},
                         'mangled_sed':{'wave':mangled_wave, 'flux':mangled_flux, 'flux_err':mangled_flux_err},
                         'kernel':kernel,
