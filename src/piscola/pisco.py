@@ -574,7 +574,7 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel1='matern52', kernel2='matern52', gp_mean='mean', fit_2d=0, fit_mag=0, use_mcmc=0):
+    def fit_lcs(self, kernel1='matern52', kernel2='matern52', gp_mean='mean', fit_2d=False, fit_mag=False, use_mcmc=False):
         """Fits the data for each band using gaussian process
 
         The fits are done independently for each band. The initial B-band peak time is estimated with
@@ -654,7 +654,7 @@ class sn(object):
                 self.tmax = self.tmax0 = np.round(wtmax, 2)
 
             for band in self.bands:
-                self.lc_fits[band]['phase'] = (self.lc_fits[band]['mjd'] - self.tmax)/(1+self.z)
+                self.lc_fits[band]['phase'] = (self.lc_fits[band]['mjd']-self.tmax) / (1+self.z)
 
         # UNDER DEVELOPMENT
         else:
@@ -854,7 +854,7 @@ class sn(object):
     ######################### Light Curves Correction ##########################
     ############################################################################
 
-    def mangle_sed(self, min_phase=-15, max_phase=30, kernel='squaredexp', correct_extinction=True):
+    def mangle_sed(self, min_phase=-15, max_phase=30, kernel='squaredexp', gp_mean='poly', correct_extinction=True):
         """Mangles the SED with the given method to match the SN magnitudes.
 
         Parameters
@@ -900,6 +900,7 @@ class sn(object):
         for band in self.bands:
             self.sed_lcs[band]['flux'] = np.array(self.sed_lcs[band]['flux'])
             self.sed_lcs[band]['phase'] = sed_phases
+            self.sed_lcs[band]['mjd'] = sed_phases*(1+self.z) + self.tmax
 
         ###################################
         ####### set-up for mangling #######
@@ -927,7 +928,7 @@ class sn(object):
 
             # mangling routine including optimisation
             mangling_results = mangle(wave_array, flux_ratios_array, sed_epoch_wave, sed_epoch_flux,
-                                        obs_fluxes, obs_errs, self.bands, self.filters, kernel=kernel, x_edges=x_edges)
+                                        obs_fluxes, obs_errs, self.bands, self.filters, kernel, gp_mean, x_edges)
 
             # precision of the mangling function
             mag_diffs = {band:-2.5*np.log10(mangling_results['flux_ratios'][i]) if mangling_results['flux_ratios'][i] > 0
@@ -1164,7 +1165,7 @@ class sn(object):
             try:
                 peakidxs = peak.indexes(b_flux, thres=.3, min_dist=5//(b_phase[1]-b_phase[0]))
                 idx_max = np.array([idx for idx in peakidxs if all(b_flux[:idx]<b_flux[idx])]).min()
-                tmax_offset = np.round(b_phase[idx_max], 2)
+                tmax_offset = np.round(b_phase[idx_max] - 0.0, 2)
             except:
                 tmax_offset = None
 
@@ -1173,7 +1174,7 @@ class sn(object):
             # compare tmax from the corrected restframe B-band to the initial estimation
             if np.abs(tmax_offset) >= 0.2:
                 # update phase of the light curves
-                self.tmax = np.round(self.tmax - tmax_offset, 2)
+                self.tmax = np.round(self.tmax + tmax_offset, 2)
                 try:
                     self.lc_fits['phaseXwave'].T[0] -= tmax_offset
                 except:
@@ -1185,8 +1186,8 @@ class sn(object):
                 self.calculate_corrected_lcs()
             else:
                 self.tmax_offset = tmax_offset
+                self.tmax_err = np.round(np.abs(tmax_offset) + 0.5, 2)  # template has 1 day "cadence"
                 bmax_needs_check = False
-            self.tmax_err = np.round(tmax_offset + 0.5, 2)  # template has 1 day "cadence"
 
             if iter>maxiter:
                 break

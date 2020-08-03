@@ -6,7 +6,7 @@ import numpy as np
 import lmfit
 import time
 
-def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filters, kernel, x_edges, timeout):
+def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filters, kernel, gp_mean, x_edges):
     """Residual functions for the SED mangling minimization routine.
 
     Lmfit works in such a way that each parameters needs to have a residual value. In the case of the
@@ -47,7 +47,7 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
     param_bands = [band.lstrip("0123456789\'.-").replace("'", "").replace(".", "") for band in bands]
     flux_ratio_array = np.array([params[band].value for band in param_bands])
 
-    x_pred, y_pred, yerr_pred = gp_mf_fit(wave_array, flux_ratio_array, yerr_data=0.0, kernel=kernel, x_edges=x_edges)
+    x_pred, y_pred, yerr_pred = gp_mf_fit(wave_array, flux_ratio_array, yerr_data=0.0, kernel=kernel, gp_mean=gp_mean, x_edges=x_edges)
 
     interp_sed_flux = np.interp(x_pred, sed_wave, sed_flux)
     mangled_wave, mangled_flux = x_pred, (y_pred*norm)*interp_sed_flux
@@ -60,18 +60,7 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
     return residuals
 
 
-def timeout_callback(params, iter, resid, *args, **kws):
-    """ Callback function for the minimization.
-
-    This function will stop the minimization after certain amount of time has passed.
-    """
-
-    timeout = args[-1]
-    if time.time() > timeout:
-        return True  # abort the minimization
-
-
-def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_errs, bands, filters, kernel, x_edges):
+def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_errs, bands, filters, kernel, gp_mean, x_edges):
     """Mangling routine.
 
     A mangling of the SED is done by minimizing the the difference between the "observed" fluxes and the fluxes
@@ -119,16 +108,15 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
     for val, band in zip(flux_ratio_array/norm, param_bands):
         params.add(band, value=val, min=0) # , max=val*1.2)   # tighten this constrains for a smoother(?) mangling
 
-    timeout = time.time() + 10  # value for callback function
-    args=(wave_array, sed_wave, sed_flux, obs_fluxes, norm, bands, filters, kernel, x_edges, timeout)
-    result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-5, ftol=1e-5, max_nfev=80)  # iter_cb=timeout_callback
+    args=(wave_array, sed_wave, sed_flux, obs_fluxes, norm, bands, filters, kernel, gp_mean, x_edges)
+    result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-5, ftol=1e-5, max_nfev=80) 
 
     ###############################
     #### Use Optimized Results ####
     ###############################
     opt_flux_ratio = np.array([result.params[band].value for band in param_bands]) * norm
 
-    x_pred, y_pred, yerr_pred = gp_mf_fit(wave_array, opt_flux_ratio, yerr_data=0.0, kernel=kernel, x_edges=x_edges)
+    x_pred, y_pred, yerr_pred = gp_mf_fit(wave_array, opt_flux_ratio, yerr_data=0.0, kernel=kernel, gp_mean=gp_mean, x_edges=x_edges)
 
     interp_sed_flux = np.interp(x_pred, sed_wave, sed_flux)
     mangled_wave, mangled_flux, mangled_flux_err = x_pred, y_pred*interp_sed_flux, yerr_pred*interp_sed_flux
