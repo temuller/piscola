@@ -1,3 +1,4 @@
+
 import piscola
 from .filter_integration import *
 from .gaussian_process import *
@@ -574,7 +575,7 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel1='matern52', kernel2='matern52', gp_mean='mean', fit_2d=False, fit_mag=False, use_mcmc=False):
+    def fit_lcs(self, kernel1='matern52', kernel2='squaredexp', gp_mean='mean', fit_2d=False, fit_mag=False, use_mcmc=False):
         """Fits the data for each band using gaussian process
 
         The fits are done independently for each band. The initial B-band peak time is estimated with
@@ -854,7 +855,7 @@ class sn(object):
     ######################### Light Curves Correction ##########################
     ############################################################################
 
-    def mangle_sed(self, min_phase=-15, max_phase=30, kernel='squaredexp', gp_mean='poly', correct_extinction=True):
+    def mangle_sed(self, min_phase=-15, max_phase=30, kernel='squaredexp', gp_mean='mean', correct_extinction=True):
         """Mangles the SED with the given method to match the SN magnitudes.
 
         Parameters
@@ -1094,7 +1095,7 @@ class sn(object):
         if verbose:
             print(f'Mangling results, i.e., difference between mangled SED and "observed" magnitudes, at phase {phase}:')
             for band, diff in man['mag_diff'].items():
-                print(f'{band}: {diff:.4f} [mags]')
+                print(f'{band}: {np.round(diff, 4):.4f} [mags]')
 
 
     def calculate_corrected_lcs(self):
