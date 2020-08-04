@@ -1034,37 +1034,39 @@ class sn(object):
             norm2 = 1  # for SEDs
             index = (len(bands)-1)//2  # index of the band to do relative comparison
 
-            init_sed_flux2 = init_sed_flux/sed_fluxes[index]
-            mang_sed_flux2 = mang_sed_flux/obs_fluxes[index]
-            sed_fluxes2 =sed_fluxes/sed_fluxes[index]
-            obs_fluxes2 = obs_fluxes/obs_fluxes[index]
+            init_norm = np.sum(init_sed_wave*init_sed_flux)/np.sum(init_sed_wave)
+            init_sed_flux2 = init_sed_flux/init_norm
+            sed_fluxes2 =sed_fluxes/init_norm
+
+            obs_norm = np.sum(mang_sed_wave*mang_sed_flux)/np.sum(mang_sed_wave)
+            mang_sed_flux2 = mang_sed_flux/obs_norm
+            obs_fluxes2 = obs_fluxes/obs_norm
+
+            bands_norm = init_sed_flux2.max()
 
             # filters
             for i, band in enumerate(bands):
                 wave, trans = self.filters[band]['wave'], self.filters[band]['transmission']
-                if i==index:
-                    ax3.plot(wave, trans/trans.max()*norm, color='b', alpha=0.4)
-                else:
-                    ax3.plot(wave, trans/trans.max()*norm, color='k', alpha=0.4)
+                ax3.plot(wave, trans/trans.max()*bands_norm, color='k', alpha=0.4)
 
             # mangling function
-            ax.plot(x, y/opt_flux_ratios[index], 'green')
-            ax.fill_between(x, (y-yerr)/opt_flux_ratios[index], (y+yerr)/opt_flux_ratios[index], alpha=0.2, color='green')
+            ax.plot(x, y/(obs_norm/init_norm), 'green')
+            ax.fill_between(x, (y-yerr)/(obs_norm/init_norm), (y+yerr)/(obs_norm/init_norm), alpha=0.2, color='green')
             indexes = [np.argmin(np.abs(x-wave_val)) for wave_val in eff_waves]
-            ax.plot(eff_waves, y[indexes]/opt_flux_ratios[index], 'sg')
+            ax.plot(eff_waves, y[indexes]/(obs_norm/init_norm), 'sg', ms=8, mec='k')
 
             # initial sed and fluxes
-            ax3.plot(init_sed_wave, init_sed_flux2*norm2, '--k')  # initial sed
-            ax3.plot(eff_waves, sed_fluxes2*norm2, 'ok', ms=12, label='Initial SED values', alpha=0.8, fillstyle='none')  # initial sed fluxes
+            ax3.plot(init_sed_wave, init_sed_flux2, '--k', lw=3)  # initial sed
+            ax3.plot(eff_waves, sed_fluxes2, 'ok', ms=14, label='Initial SED values', alpha=0.8, fillstyle='none')  # initial sed fluxes
 
             # optimized sed and fluxes
-            ax3.plot(mang_sed_wave, mang_sed_flux2*norm2, 'red')  # mangled sed
-            ax3.plot(eff_waves, obs_fluxes2*norm2,'*r', ms=12, label='Mangled SED values')  # optimized fluxes
+            ax3.plot(mang_sed_wave, mang_sed_flux2, 'red', lw=3)  # mangled sed
+            ax3.plot(eff_waves, obs_fluxes2,'*r', ms=14, mec='k', label='Mangled SED values')  # optimized fluxes
 
             ax.set_xlabel(r'Observer-frame Wavelength [$\AA$]', fontsize=16, family='serif')
             ax.set_ylabel(r'Scaled Mangling Function', fontsize=16, family='serif', color='g')
             ax.set_xlim(x.min(), x.max())
-            ax.set_ylim((y/opt_flux_ratios[index]).min()*0.8, (y/opt_flux_ratios[index]).max()*1.2)
+            ax.set_ylim((y/(obs_norm/init_norm)).min()*0.8, (y/(obs_norm/init_norm)).max()*1.2)
             ax.tick_params(which='both', length=8, width=1, direction='in', labelsize=16)
             ax.tick_params(which='minor', length=4)
             ax.tick_params(axis='y', which='both', colors='g')
