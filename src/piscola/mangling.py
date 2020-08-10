@@ -109,7 +109,7 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
         params.add(band, value=val, min=0) # , max=val*1.2)   # tighten this constrains for a smoother(?) mangling
 
     args=(wave_array, sed_wave, sed_flux, obs_fluxes, norm, bands, filters, kernel, gp_mean, x_edges)
-    result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-5, ftol=1e-5, max_nfev=80)
+    result = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-4, ftol=1e-4, max_nfev=80)
 
     ###############################
     #### Use Optimized Results ####

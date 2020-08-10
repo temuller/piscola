@@ -781,7 +781,8 @@ class sn(object):
                     ax.errorbar(data_time, data_flux, data_std, fmt='o', capsize=3, color=new_palette[i],label=band)
                     ax.plot(time, flux,'-', color=new_palette[i])
                     ax.fill_between(time, flux-std, flux+std, alpha=0.5, color=new_palette[i])
-                    ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
+                    #ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
+                    ax.set_ylabel(r'Scaled Flux', fontsize=16, family='serif')
 
                 elif plot_type=='mag':
                     # avoid non-positive numbers in logarithm
@@ -841,7 +842,8 @@ class sn(object):
 
                 fig.text(0.5, 0.95, f'{self.name} (z = {self.z:.5})', ha='center', fontsize=20, family='serif')
                 fig.text(0.5, 0.04, 'Modified Julian Date', ha='center', fontsize=18, family='serif')
-                fig.text(0.04, 0.5, r'Flux [erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]', va='center', rotation='vertical', fontsize=18, family='serif')
+                #fig.text(0.04, 0.5, r'Flux [erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]', va='center', rotation='vertical', fontsize=18, family='serif')
+                fig.text(0.04, 0.5, r'Scaled Flux', va='center', rotation='vertical', fontsize=18, family='serif')
 
         if save:
             if fig_name is None:

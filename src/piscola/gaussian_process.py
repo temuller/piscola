@@ -308,14 +308,6 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', gp_mean='mean'
     # initial guess
     gp.compute(x, yerr)
 
-    # optimization routine for hyperparameters
-    # p0 = gp.get_parameter_vector()
-    # bounds = gp.get_parameter_bounds()
-    # results = scipy.optimize.minimize(neg_log_like, p0, jac=grad_neg_log_like,
-    #                                         method="L-BFGS-B", options={'maxiter':30},
-    #                                         bounds=bounds)
-    # gp.set_parameter_vector(results.x)
-
     step = 1/x_norm
     x_pred = np.arange(x_min, x_max+step, step)
 
