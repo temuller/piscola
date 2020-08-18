@@ -25,7 +25,7 @@ class bazin_lcMeanModel(george.modeling.Model):
     parameter_names = ("A", "t0", "tf", "tr")
 
     def get_value(self, t):
-        np.seterr(all='ignore')
+        np.seterr(all='ignore')  # ifnore NaN warnings
         bazin_model = self.A * np.exp(-(t-self.t0)/self.tf) / (1 + np.exp(-(t-self.t0)/self.tr))
         bazin_model = np.nan_to_num(bazin_model, nan=1e-6)  # prevents to output an error
         np.seterr(all='warn')
@@ -34,18 +34,23 @@ class bazin_lcMeanModel(george.modeling.Model):
 
     # This method is to compute the gradient of the objective.
     def compute_gradient(self, t):
-        np.seterr(all='ignore')
-        Tf = (t-self.t0)/self.tf
-        Tr = (t-self.t0)/self.tr
+        np.seterr(all='ignore')  # ifnore NaN warnings
+        A = self.A
+        t0 = self.t0
+        tf = self.tf
+        tr = self.tr
+
+        Tf = (t-t0)/tf
+        Tr = (t-t0)/tr
         B = np.exp(-Tf)
         C = 1 + np.exp(-Tr)
 
         dA = B/C
-        dtf = A*B/C * Tf/self.tf
-        dtr = A*B/C**2 * Tf/self.tr * np.exp(-Tr)
-        dt0 = (np.exp(-t/self.tf + self.t0/self.tf + t/self.tr) *
-                    (self.tr*(np.exp(t/self.tr) + np.exp(self.t0/self.tr)) - self.tr*np.exp(self.t0/self.tr)) /
-                    (self.tr*self.tf*(np.exp(t/self.tr) + np.exp(self.t0/self.tr))**2)
+        dtf = A*B/C * Tf/tf
+        dtr = A*B/C**2 * Tf/tr * np.exp(-Tr)
+        dt0 = (np.exp(-t/tf + t0/tf + t/tr) *
+                    (tr*(np.exp(t/tr) + np.exp(t0/tr)) - tr*np.exp(t0/tr)) /
+                    (tr*tf*(np.exp(t/tr) + np.exp(t0/tr))**2)
                 )
         np.seterr(all='warn')
 
@@ -56,7 +61,7 @@ class zheng_lcMeanModel(george.modeling.Model):
     parameter_names = ("A", "t0", "tb", "ar", "ad", "s")
 
     def get_value(self, t):
-        np.seterr(all='ignore')
+        np.seterr(all='ignore')  # ifnore NaN warnings
         Tb = (t-self.t0)/self.tb
         zheng_model = self.A * Tb**self.ar * (1 + Tb**(self.s*self.ad))**(-2/self.s)
         zheng_model = np.nan_to_num(zheng_model, nan=1e-6)  # prevents to output an error
@@ -66,20 +71,27 @@ class zheng_lcMeanModel(george.modeling.Model):
 
     # This method is to compute the gradient of the objective.
     def compute_gradient(self, t):
-        np.seterr(all='ignore')
-        Tb = (t-self.t0)/self.tb
-        Tb_ar = Tb**self.ar
-        Tb_sad = Tb**(self.s*self.ad)
+        np.seterr(all='ignore')  # ifnore NaN warnings
+        A = self.A
+        t0 = self.t0
+        tb = self.tb
+        ar = self.ar
+        ad = self.ad
+        s = self.s
 
-        dA = Tb_ar * (1 + Tb_sad)**(-2/self.s)
-        dt0 = ((2*self.A*self.ad * (Tb_sad + 1)**(-2/self.s - 1) * Tb_sad*Tb_ar/Tb)/self.tb -
-                            (self.A*self.ar*Tb_ar/Tb * (Tb_sad + 1)**(-2/self.s))/self.tb
+        Tb = (t-t0)/tb
+        Tb_ar = Tb**ar
+        Tb_sad = Tb**(s*ad)
+
+        dA = Tb_ar * (1 + Tb_sad)**(-2/s)
+        dt0 = ((2*A*ad * (Tb_sad + 1)**(-2/s - 1) * Tb_sad*Tb_ar/Tb)/tb -
+                            (A*ar*Tb_ar/Tb * (Tb_sad + 1)**(-2/s))/tb
                )
         dtb = dt0*Tb
-        dar = self.A * Tb_ar * np.log(Tb) * (Tb_sad + 1)**(-2/self.s)
-        dad = -2*self.A * np.log(Tb) * (Tb_sad + 1)**(-2/self.s - 1) * Tb_sad*Tb_ar
-        ds = self.A * Tb_ar * (Tb_sad + 1)**(-2/self.s) * (2*np.log(Tb_sad + 1)/self.s**2
-                                                       - 2*self.ad*np.log(Tb)*Tb_sad/(self.s*(Tb_sad + 1)))
+        dar = A * Tb_ar * np.log(Tb) * (Tb_sad + 1)**(-2/s)
+        dad = -2*A * np.log(Tb) * (Tb_sad + 1)**(-2/s - 1) * Tb_sad*Tb_ar
+        ds = A * Tb_ar * (Tb_sad + 1)**(-2/s) * (2*np.log(Tb_sad + 1)/s**2
+                                                       - 2*ad*np.log(Tb)*Tb_sad/(s*(Tb_sad + 1)))
         np.seterr(all='warn')
 
         return np.array([dA, dt0, dtb, dar, dad, ds])
@@ -389,8 +401,6 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kerne
 
     ker1, ker2 = kernels_dict[kernel1], kernels_dict[kernel2]
     ker = var * ker1(length1**2, ndim=2, axes=0) * ker2(length2**2, ndim=2, axes=1)
-    #ker.freeze_parameter('k1:k2:metric:log_M_0_0')
-    #ker.freeze_parameter('k2:metric:log_M_0_0')
 
     mean_function =  y.mean()
     gp = george.GP(kernel=ker, mean=mean_function, fit_mean=True)
@@ -427,7 +437,7 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kerne
     if np.any(x2_edges):
         x2_edges = np.copy(x2_edges)
         x2_edges /= x2_norm
-        x2_min, x2_max = x2_edges[0], x2_edges[-1]
+        x2_min, x2_max = x2_edges[0] - 200/x2_norm, x2_edges[-1] + 200/x2_norm
     else:
         x2_min, x2_max = x2.min(), x2.max()
 
@@ -435,8 +445,8 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kerne
     x1_max = np.ceil(x1_max*x1_norm)/x1_norm
     x2_min = np.floor(x2_min*x2_norm)/x2_norm
     x2_max = np.ceil(x2_max*x2_norm)/x2_norm
-    step1 = 0.1/x1_norm
-    step2 = 10/x2_norm
+    step1 = 0.1/x1_norm  # in days
+    step2 = 10/x2_norm  # in angstroms
 
     X_predict = np.array(np.meshgrid(np.arange(x1_min, x1_max+step1, step1),
                              np.arange(x2_min, x2_max+step2, step2))).reshape(2, -1).T

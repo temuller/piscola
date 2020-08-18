@@ -1,5 +1,6 @@
-### piscola ##
-# installation packages
+### piscola ###
+
+### installation ###
 build
 dist
 __pycache__
@@ -11,10 +12,13 @@ test_piscola.ipynb
 .ipynb_checkpoints
 tests/__pycache__
 
-### src ##
+### src ###
 src/*.egg-info
 src/piscola/__pycache__
 #src/piscola/filters
 #!src/piscola/filters/Bessell/*
 src/piscola/filters/filters.txt
 src/piscola/templates/conley09f/.ipynb_checkpoints
+
+### docs ###
+docs/_build

@@ -575,7 +575,7 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel1='matern52', kernel2='squaredexp', gp_mean='mean', fit_2d=False, fit_mag=False, use_mcmc=False):
+    def fit_lcs(self, kernel='matern52', kernel2='squaredexp', gp_mean='mean', fit_2d=False, fit_mag=False, use_mcmc=False):
         """Fits the data for each band using gaussian process
 
         The fits are done independently for each band. The initial B-band peak time is estimated with
@@ -676,13 +676,13 @@ class sn(object):
                 wave_array = wave_array[mask]
 
                 timeXwave, mu, std = gp_2d_fit(time_array, wave_array, mag_array, mag_err_array,
-                                                kernel1=kernel1, kernel2=kernel2, x2_edges=bands_edges, use_mcmc=use_mcmc)
+                                                kernel1=kernel, kernel2=kernel2, x2_edges=bands_edges, use_mcmc=use_mcmc)
                 mu = 10**(-0.4*mu)
                 std = np.abs(mu*0.4*np.log(10)*std)
 
             else:
                 timeXwave, mu, std = gp_2d_fit(time_array, wave_array, flux_array, flux_err_array,
-                                                kernel1=kernel1, kernel2=kernel2, x2_edges=bands_edges, use_mcmc=use_mcmc)
+                                                kernel1=kernel, kernel2=kernel2, x2_edges=bands_edges, use_mcmc=use_mcmc)
 
             self.lc_fits['timeXwave'], self.lc_fits['mu'], self.lc_fits['std'] = timeXwave, mu, std
 

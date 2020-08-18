@@ -17,9 +17,9 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'piscola'
-copyright = '2019, Tomás Enrique Müller Bravo'
-author = 'Tomás Enrique Müller Bravo'
+project = 'PISCOLA'
+copyright = '2020, Tomás E. Müller Bravo'
+author = 'Tomás E. Müller Bravo'
 
 # The full version, including alpha/beta/rc tags
 release = 'v1.0'
