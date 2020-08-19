@@ -2,12 +2,13 @@
 
 **Type Ia Supernova Light-curve fitting code in python**
 
-.. image:: https://img.shields.io/badge/GitHub-temuller%2Fpiscola-blue.svg?style=flat
-    :target: https://github.com/temuller/piscola
-.. image:: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
-    :target: https://github.com/temuller/piscola/blob/master/LICENSE
-.. image:: http://img.shields.io/travis/temuller/piscola/master.svg?style=flat
-    :target: https://travis-ci.org/temuller/piscola
+
+[![repo](https://img.shields.io/badge/GitHub-temuller%2Fpiscola-blue.svg?style=flat)(https://github.com/temuller/piscola)]
+[![license](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)(https://github.com/temuller/piscola/blob/master/LICENSE)]
+[![ci](http://img.shields.io/travis/temuller/piscola/master.svg?style=flat)(https://travis-ci.org/temuller/piscola)]
+
+
+Read the documentation at: `piscola.readthedocs.io <http://piscola.readthedocs.io/>`_.
 
 Dependencies:
   - python 3.6+
