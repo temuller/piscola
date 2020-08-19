@@ -596,7 +596,7 @@ class sn(object):
         if not fit_2d:
             for band in self.bands:
                 time, flux, std = gp_lc_fit(self.data[band]['mjd'], self.data[band]['flux'],
-                                         self.data[band]['flux_err'], kernel=kernel1, gp_mean=gp_mean)
+                                         self.data[band]['flux_err'], kernel=kernel, gp_mean=gp_mean)
 
                 try:
                     peakidxs = peak.indexes(flux, thres=.3, min_dist=5//(time[1]-time[0]))
