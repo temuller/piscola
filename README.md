@@ -8,7 +8,7 @@
 [![ci](http://img.shields.io/travis/temuller/piscola/master.svg?style=flat)](https://travis-ci.org/temuller/piscola)
 
 
-Read the documentation at: `piscola.readthedocs.io <http://piscola.readthedocs.io/>`_.
+Read the documentation at: [piscola.readthedocs.io](http://piscola.readthedocs.io/).
 
 Dependencies:
   - python 3.6+
