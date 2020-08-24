@@ -3,9 +3,6 @@
 Environment configuration
 =============================
 
-Conda virtual env
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 The preferred option to setup your environment is through conda environment as follows:
 
 .. code::

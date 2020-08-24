@@ -3,6 +3,9 @@
 Basic Example
 ========================
 
+Simple usage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 In here we show how to use PISCOLA in the simplest way possible.
 
 As always, we start by importing the necessary packages.
@@ -79,7 +82,8 @@ Finally, we can check the estimated light-curves parameters and plot the rest-fr
 	t_peak = 53278.19 +/- 0.58
 
 
-Putting it all together...
+Putting it all together
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: python
 
