@@ -12,6 +12,8 @@ PISCOLA is being actively developed in `a public repository on GitHub
 
 .. image:: https://img.shields.io/badge/GitHub-temuller%2Fpiscola-blue.svg?style=flat
     :target: https://github.com/temuller/piscola
+.. image:: https://readthedocs.org/projects/piscola/badge/?version=latest&style=flat
+    :target: https://piscola.readthedocs.io/en/latest/?badge=latest
 .. image:: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
     :target: https://github.com/temuller/piscola/blob/master/LICENSE
 .. image:: http://img.shields.io/travis/temuller/piscola/master.svg?style=flat

@@ -4,30 +4,22 @@
 
 
 [![repo](https://img.shields.io/badge/GitHub-temuller%2Fpiscola-blue.svg?style=flat)](https://github.com/temuller/piscola)
+[![documentation status](https://readthedocs.org/projects/piscola/badge/?version=latest&style=flat)](https://piscola.readthedocs.io/en/latest/?badge=latest)
 [![license](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/temuller/piscola/blob/master/LICENSE)
 [![ci](http://img.shields.io/travis/temuller/piscola/master.svg?style=flat)](https://travis-ci.org/temuller/piscola)
 
 
 Read the documentation at: [piscola.readthedocs.io](http://piscola.readthedocs.io/).
 
-Dependencies:
-  - python 3.6+
-  - numpy
-  - matplotlib
-  - pandas
-  - lmfit
-  - peakutils
-  - george
-  - emcee
-  - extinction
-  - sfdmap
-  - astropy
+The dependencies are listed in `requirements.txt`.
   
 It is recommended to create a conda environment:
 
-	`conda config --add channels conda-forge`
+```
+$ conda config --add channels conda-forge
 
-	`conda create -n pisco numpy matplotlib pandas lmfit peakutils george emcee extinction sfdmap astropy`
+$ conda create -n pisco numpy matplotlib pandas lmfit peakutils george emcee extinction sfdmap astropy
+```
 
 Otherwise, you can install the dependencies by typing `pip install -r requirements.txt` on your terminal.
 
