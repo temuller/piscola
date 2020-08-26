@@ -359,7 +359,7 @@ class sn(object):
         bands : list
             List of bands.
         verbose : bool, default 'False'
-            If 'True', a warning is given when a band from 'bands' was found within the SN bands.
+            If 'True', a warning is given when a band from 'bands' is not found within the SN bands.
 
         """
 
@@ -389,8 +389,8 @@ class sn(object):
 
         Parameters
         ----------
-        template : str, default 'conley09f'
-            Template name.
+        template : str, default 'jla'
+            Template name. E.g., 'jla', 'conley09f', etc..
 
         """
         # This can be modified to accept other templates
@@ -415,23 +415,23 @@ class sn(object):
     def mask_data(self, band_list=None, mask_snr=True, snr=5, mask_phase=False, min_phase=-20, max_phase=40):
         """Mask the data with the given S/N and/or within the given range of days respect to maximum in B band.
 
-        NOTE: Bands with less than 3 data points, after mask is applied, will be deleted.
+        NOTE: Bands with less or equal than 3 data points, after mask is applied, will be deleted.
 
         Parameters
         ----------
         band_list : list, default 'None'
+            List of bands to plot. If 'None', band list is set to 'self.bands'.
         mask_snr : bool, default 'True'
-            If 'True', keeps the flux values with S/N greater or equal to the threshold 'snr'.
+            If 'True', keeps the flux values with S/N greater or equal to 'snr'.
         snr : float, default '5'
             S/N threshold applied to mask data.
         mask_phase : bool, default 'False'
             If 'True', keeps the flux values within the given phase range set by 'min_phase' and 'max_phase'.
-             An initial estimation of the peak is needed first (can be set manually).
-        min_phase : float, default '-20'
-            Minimum phase threshold applied to mask data.
-        max_phase : float, default '40'
-            Maximum phase threshold applied to mask data.
-            List of bands to mask. If 'None', the mask is applied to all bands in self.bands
+            An initial estimation of the peak is needed first (can be set manually).
+        min_phase : int, default '-20'
+            Minimum phase limit applied to mask data.
+        max_phase : int, default '40'
+            Maximum phase limit applied to mask data.
         """
 
         if band_list is None:
@@ -480,14 +480,14 @@ class sn(object):
 
         Parameters
         ----------
-        band_list : list, default 'None'
-            List of filters to plot. If 'None', band list is set to 'self.bands'.
+        band_list : list, default None
+            List of bands to plot. If None, band list is set to 'self.bands'.
         plot_type : str, default 'mag'
-            Type of value plotted: either 'mag' or 'flux'.
+            Type of value used for the data: either 'mag' or 'flux'.
         save : bool, default 'False'
             If true, saves the plot into a file.
-        fig_name : str, default 'None'
-            Name of the saved plot. If 'None' is used the name of the file will be ''{self.name}_sed{self.phase}.png'.
+        fig_name : str, default None
+            Name of the saved plot. If None is used the name of the file will be '{self.name}_sed{self.phase}.png'.
             Only works if 'save' is set to 'True'.
 
         """
@@ -521,7 +521,7 @@ class sn(object):
             if plot_type=='flux':
                 time, flux, err = np.copy(self.data[band]['mjd']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
                 flux, err = flux/y_norm, err/y_norm
-                ax.errorbar(time, flux, err, fmt='o', capsize=3, label=band, color=new_palette[i])
+                ax.errorbar(time, flux, err, fmt='o', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
                 ylabel = r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp
             elif plot_type=='mag':
                 ylabel = 'Apparent Magnitude'
@@ -530,7 +530,7 @@ class sn(object):
                 mag = -2.5*np.log10(self.data[band]['flux'][mask]) + self.data[band]['zp']
                 err = np.abs(2.5*self.data[band]['flux_err'][mask]/(self.data[band]['flux'][mask]*np.log(10)))
 
-                ax.errorbar(mjd, mag, err, fmt='o', capsize=3, label=band, color=new_palette[i])
+                ax.errorbar(mjd, mag, err, fmt='o', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
 
         ax.set_ylabel(ylabel, fontsize=16, family='serif')
         ax.set_xlabel('Modified Julian Date', fontsize=16, family='serif')
@@ -558,6 +558,12 @@ class sn(object):
 
         Fluxes are converted to physical units by calculating the ZPs according to the
         magnitude system, either AB, BD17 or Vega.
+
+        Parameters
+        ----------
+        offsets_file : str, default None
+            File to use for the bands calibration of the zero point. If None, the default file is used (either
+            'bd17_sys_zps.dat' or 'ab_sys_zps.dat', depending on the band).
         """
 
         for band in self.bands:
@@ -575,7 +581,7 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel='matern52', kernel2='squaredexp', gp_mean='mean', fit_2d=False, fit_mag=False, use_mcmc=False):
+    def fit_lcs(self, kernel='matern52', kernel2='squaredexp', gp_mean='mean', fit_2d=True, fit_mag=True, use_mcmc=False):
         """Fits the data for each band using gaussian process
 
         The fits are done independently for each band. The initial B-band peak time is estimated with
@@ -584,8 +590,19 @@ class sn(object):
         Parameters
         ----------
         kernel : str, default 'matern52'
-            Kernel to be used with gaussian process. Possible choices are: 'matern52', 'matern32', 'squaredexp'.
-
+            Kernel to be used to fit the light curves with gaussian process. E.g., 'matern52', 'matern32', 'squaredexp'.
+        kernel2 : str, default 'squaredexp'
+            Kernel to be used in the wavelength axis when fitting in 2D with gaussian process. E.g., 'matern52', 'matern32', 'squaredexp'.
+        gp_mean : str, default 'mean'
+            Mean function to be used when fitting in 1D with gaussian process. The default uses a constant function
+            equal to the mean flux. Possible choices are: 'mean', 'gaussian', 'bazin', 'zheng'. 'bazin' implements the model from
+            Bazin et al. (2011) while 'zheng' implements the model from Zheng et al. (2018).
+        fit_2d : bool, default 'True'
+            Wether to fit in 1D or 2D with gaussian process.
+        fit_mag : bool, default 'True'
+            If 'True' and fit_2d=True, the data is fit in magnitude space. This is recommended for 2D fit.
+        use_mcmc : bool, default 'False'
+            If 'True', MCMC is used for the 2D gaussian process fit, otherwise, a simple minimization with scipy.optimize is used.
         """
         ########################
         ####### GP Fit #########
@@ -631,17 +648,6 @@ class sn(object):
             pivot_index = self.bands.index(self.pivot_band)
             eff_wave_diff[pivot_index] = 1e6  # "remove" the pivot band to find the 2nd closest band
 
-            # find a band at the "other side of B-band eff wave"
-            #if delta_eff0 > 0.0:
-            #    next_band_ind = np.argmin([rew if rew>0 else 1e6 for rew in eff_wave_diff])
-            #elif delta_eff0 < 0.0:
-            #    try:
-            #        next_band_ind = np.argmax([rew for rew in eff_wave_diff if rew<0])
-            #    except:
-            #        next_band_ind = pivot_index
-            #else:
-            #    next_band_ind = pivot_index
-
             next_band_ind = np.argmin(np.array(eff_wave_diff))
             next_band = self.bands[next_band_ind]
             tmax1 = self.lc_fits[next_band]['tmax']
@@ -657,7 +663,6 @@ class sn(object):
             for band in self.bands:
                 self.lc_fits[band]['phase'] = (self.lc_fits[band]['mjd']-self.tmax) / (1+self.z)
 
-        # UNDER DEVELOPMENT
         else:
             flux_array = np.hstack([self.data[band]['flux'] for band in self.bands])
             flux_err_array = np.hstack([self.data[band]['flux_err'] for band in self.bands])
@@ -738,10 +743,12 @@ class sn(object):
         ----------
         plot_together : bool, default 'True'
             If 'True', plots the bands together in one plot. Otherwise, each band is plotted separately.
+        plot_type : str, default 'mag'
+            Type of value used for the data: either 'mag' or 'flux'.
         save : bool, default 'False'
-            If true, saves the plot into a file.
+            If 'True', saves the plot into a file.
         fig_name : str, default 'None'
-            Name of the saved plot. If 'None' is used the name of the file will be ''{self.name}_sed{self.phase}.png'.
+            Name of the saved plot. If 'None' is used the name of the file will be '{self.name}_sed{self.phase}.png'.
             Only works if 'save' is set to 'True'.
 
         """
@@ -778,8 +785,9 @@ class sn(object):
                     flux, std = flux/y_norm, std/y_norm
                     data_flux, data_std = data_flux/y_norm, data_std/y_norm
 
-                    ax.errorbar(data_time, data_flux, data_std, fmt='o', capsize=3, color=new_palette[i],label=band)
-                    ax.plot(time, flux,'-', color=new_palette[i])
+                    ax.errorbar(data_time, data_flux, data_std, fmt='o', mec='k', capsize=3, capthick=2, ms=8,
+                                    elinewidth=3, color=new_palette[i],label=band)
+                    ax.plot(time, flux,'-', color=new_palette[i], lw=2, zorder=16)
                     ax.fill_between(time, flux-std, flux+std, alpha=0.5, color=new_palette[i])
                     #ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
                     ax.set_ylabel(r'Scaled Flux', fontsize=16, family='serif')
@@ -796,8 +804,9 @@ class sn(object):
                     data_mag = -2.5*np.log10(data_flux) + self.data[band]['zp']
                     data_err = np.abs(2.5*data_std/(data_flux*np.log(10)))
 
-                    ax.errorbar(data_time, data_mag, data_err, fmt='o', capsize=3, color=new_palette[i],label=band)
-                    ax.plot(time, mag,'-', color=new_palette[i])
+                    ax.errorbar(data_time, data_mag, data_err, fmt='o', mec='k', capsize=3, capthick=2, ms=8,
+                                elinewidth=3, color=new_palette[i],label=band)
+                    ax.plot(time, mag,'-', color=new_palette[i], lw=2, zorder=16)
                     ax.fill_between(time, mag-err, mag+err, alpha=0.5, color=new_palette[i])
                     ax.set_ylabel(r'Apparent Magnitude [mag]', fontsize=16, family='serif')
 
@@ -827,8 +836,9 @@ class sn(object):
                 ax = plt.subplot(gs[k,j])
 
                 time, flux, std = self.lc_fits[band]['mjd'], self.lc_fits[band]['flux'], self.lc_fits[band]['std']
-                ax.errorbar(self.data[band]['mjd'], self.data[band]['flux'], self.data[band]['flux_err'], fmt='ok')
-                ax.plot(time, flux,'-')
+                ax.errorbar(self.data[band]['mjd'], self.data[band]['flux'], self.data[band]['flux_err'], fmt='og',
+                                capsize=3, capthick=2, ms=8, elinewidth=3, mec='k')
+                ax.plot(time, flux,'-', lw=2, zorder=16, color='k')
                 ax.fill_between(time, flux-std, flux+std, alpha=0.5)
 
                 ax.axvline(x=self.tmax, color='r', linestyle='--')
@@ -840,10 +850,10 @@ class sn(object):
                 ax.tick_params(which='major', length=6, width=1, direction='in', top=True, right=True)
                 ax.tick_params(which='minor', length=3, width=1, direction='in', top=True, right=True)
 
-                fig.text(0.5, 0.95, f'{self.name} (z = {self.z:.5})', ha='center', fontsize=20, family='serif')
-                fig.text(0.5, 0.04, 'Modified Julian Date', ha='center', fontsize=18, family='serif')
-                #fig.text(0.04, 0.5, r'Flux [erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]', va='center', rotation='vertical', fontsize=18, family='serif')
-                fig.text(0.04, 0.5, r'Scaled Flux', va='center', rotation='vertical', fontsize=18, family='serif')
+            fig.text(0.5, 0.95, f'{self.name} (z = {self.z:.5})', ha='center', fontsize=20, family='serif')
+            fig.text(0.5, 0.04, 'Modified Julian Date', ha='center', fontsize=18, family='serif')
+            #fig.text(0.04, 0.5, r'Flux [erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]', va='center', rotation='vertical', fontsize=18, family='serif')
+            fig.text(0.04, 0.5, r'Scaled Flux', va='center', rotation='vertical', fontsize=18, family='serif')
 
         if save:
             if fig_name is None:
@@ -862,13 +872,18 @@ class sn(object):
 
         Parameters
         ----------
+        min_phase : int, default '-15'
+            Minimum phase to mangle.
+        max_phase : int, default '30'
+            Maximum phase to mangle.
         kernel : str, default 'squaredexp'
-            Kernel to be used for the gaussian process fit.  Possible choices are: 'matern52',
+            Kernel to be used for the gaussian process fit of the mangling function.  E.g, 'matern52',
             'matern32', 'squaredexp'.
-        method: str, default 'gp'
-            Method to mangle the SED: either 'gp' for gaussian process or 'spline' for spline.
-            NOTE: 'spline' method does not return correct errors, this needs to be fixed in the future.
-
+        gp_mean: str, default 'mean'
+            Mean function to be used when fitting with gaussian process. The default uses a constant function
+            equal to the mean of the values. Possible choices are: 'mean', 'poly'. 'poly' uses a 3rd degree polynomial function.
+        correct_extinction: bool, default 'True'
+            Whether or not to correct for Milky Way extinction.
         """
 
         phases = np.arange(min_phase, max_phase+1, 1)
@@ -954,15 +969,15 @@ class sn(object):
         self.corrected_sed.flux = self.corrected_sed.flux.values*(1+self.z)
 
 
-    def plot_mangling_function(self, phase=0.0, mangling_function_only=False, verbose=True, save=False, fig_name=None):
+    def plot_mangling_function(self, phase=0, mangling_function_only=False, verbose=True, save=False, fig_name=None):
         """Plot the mangling function for a given phase.
 
         Parameters
         ----------
-        band_list : list, default 'None'
-            List of filters to plot. If 'None', band list is set to 'self.bands'.
-        mangle_only : bool, default 'True'
-            If 'True', only plots the mangling function, else, plots the SEDs and filters as well (randomly scaled).
+        phase : int, default '0'
+            Phase to plot the mangling function. By default it plots the mangling function at B-band peak.
+        mangle_only : bool, default 'False'
+            If 'True', only plots the mangling function, else, plots the SEDs and filters as well (with scaled values).
         verbose : bool, default 'True'
             If 'True', returns the difference between the magnitudes from the fits and the magnitudes from the
             modified SED after mangling, for each of the bands in 'band_list'.
@@ -1102,8 +1117,10 @@ class sn(object):
                 print(f'{band}: {np.round(diff, 4):.4f} [mags]')
 
 
-    def calculate_corrected_lcs(self):
+    def _calculate_corrected_lcs(self):
         """Calculates the SN light curves applying extinction and k-corrections.
+
+        Note: this function is used inside self.calculate_lc_params()
         """
 
         corrected_lcs = {}
@@ -1155,9 +1172,14 @@ class sn(object):
         Estimation of B-band peak apparent magnitude (mb), stretch (dm15) and color ((B-V)max) parameters.
         An interpolation of the corrected light curves is done as well as part of this process.
 
+        Parameters
+        ----------
+        maxiter : int, default '5'
+            Maximum number of iteration of the correction process to estimate an accurate B-band peak.
+
         """
 
-        self.calculate_corrected_lcs()
+        self._calculate_corrected_lcs()
 
         ########################################
         ########### Check B-band max ###########
@@ -1188,7 +1210,7 @@ class sn(object):
                     self.lc_fits[band]['phase'] -= tmax_offset
                 # re-do mangling
                 self.mangle_sed(**self.user_input['mangle_sed'])
-                self.calculate_corrected_lcs()
+                self._calculate_corrected_lcs()
             else:
                 self.tmax_offset = tmax_offset
                 self.tmax_err = np.round(np.abs(tmax_offset) + 0.5, 2)  # template has 1 day "cadence"
@@ -1244,7 +1266,7 @@ class sn(object):
                               'dm15err':dm15err, 'color':color, 'dcolor':dcolor}
 
 
-    def display_results(self, band=None, plot_type='mag', save=False, fig_name=None):
+    def display_results(self, band='Bessell_B', plot_type='mag', save=False, fig_name=None):
         """Displays the rest-frame light curve for the given band.
 
         Plots the rest-frame band light curve together with a gaussian fit to it. The parameters estimated with
@@ -1252,8 +1274,10 @@ class sn(object):
 
         Parameters
         ----------
-        band : str, default 'None'
-            Name of the band to be plotted. If 'None', band is set to 'Bessell_B'.
+        band : str, default 'Bessell_B'
+            Name of the band to be plotted.
+        plot_type : str, default 'mag'
+            Type of value used for the data: either 'mag' or 'flux'.
         save : bool, default 'False'
             If true, saves the plot into a file.
         fig_name : str, default 'None'
@@ -1299,9 +1323,10 @@ class sn(object):
 
 
         f, ax = plt.subplots(figsize=(8,6))
-        ax.errorbar(x, y, yerr, fmt='-.o', capsize=3, color='k')
-        ax.plot(x_fit, y_fit, 'r-', alpha=0.7)
-        ax.fill_between(x_fit, y_fit+yerr_fit, y_fit-yerr_fit, alpha=0.5, color='r')
+        ax.errorbar(x, y, yerr, fmt='-.o', color='k', ecolor='k', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, zorder=16)
+        #ax.errorbar(x, y, yerr, fmt='-..', color='k')
+        ax.plot(x_fit, y_fit, 'c-', alpha=0.7)
+        ax.fill_between(x_fit, y_fit+yerr_fit, y_fit-yerr_fit, alpha=0.5, color='c')
 
         ax.text(0.75, 0.9,r'm$_B^{\rm max}$=%.3f$\pm$%.3f'%(mb, dmb), ha='center', va='center', fontsize=15, transform=ax.transAxes)
         ax.text(0.75, 0.8,r'$\Delta$m$_{15}$($B$)=%.3f$\pm$%.3f'%(dm15, dm15err), ha='center', va='center', fontsize=15, transform=ax.transAxes)
@@ -1331,6 +1356,8 @@ class sn(object):
 
     def do_magic(self):
         """Applies the whole correction process with default settings to obtain restframe light curves and light-curve parameters.
+
+        Note: this is meant to be used for "quick" fits.
         """
         self.normalize_data()
         self.fit_lcs()

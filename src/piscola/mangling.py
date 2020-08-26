@@ -17,26 +17,26 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
     ----------
     params : lmfit.Parameters()
         Flux values for each band to be minimized.
-    eff_waves: array
+    wave_array: array
         Effective wavelengths of the bands.
-    flux_ratio_err : array
-        "Observed" flux error values divided by the SED template values.
     sed_wave : array
         SED wavelength range
     sed_flux : array
         SED flux density values.
     obs_flux : array
         "Observed" flux values.
-    obs_flux_err : array
-        "Observed" flux error values.
+    norm : float
+        Normalization value to improve minimization.
     bands : list
         List of bands to performe minimization.
     filters : dictionary
         Dictionary with all the filters's information. Same format as 'sn.filters'.
     kernel : str
         Kernel to be used with the gaussian process. Possible choices are: 'matern52', 'matern32', 'squaredexp'.
-    method : str
-        Fitting method. Either 'gp' for gaussian process or 'spline' for spline.
+    gp_mean : str
+        Mean function to be used with the kernel.
+    x_edges : array-like
+        Minimum and maximum x-axis values. These are used to extrapolate both edges.
 
     Returns
     -------
@@ -68,31 +68,33 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
 
     Parameters
     ----------
-    flux_ratio : array
+    wave_array: array
+        Effective wavelengths of the bands.
+    flux_ratio_array : array
         "Observed" flux values divided by the SED template values.
-    flux_ratio_err : array
-        "Observed" flux error values divided by the SED template values.
     sed_wave : array
         SED wavelength range
     sed_flux : array
         SED flux density values.
+    obs_fluxes : array
+        "Observed" flux values.
+    obs_errs : array
+        "Observed" flux error values.
     bands : list
         List of bands to performe minimization.
     filters : dictionary
         Dictionary with all the filters's information. Same format as 'sn.filters'.
-    obs_flux : array
-        "Observed" flux values.
-    obs_flux_err : array
-        "Observed" flux error values.
     kernel : str
         Kernel to be used with the gaussian process. Possible choices are: 'matern52', 'matern32', 'squaredexp'.
-    method : str
-        Fitting method. Either 'gp' for gaussian process or 'spline' for spline.
+    gp_mean : str
+        Mean function to be used with the kernel.
+    x_edges : array-like
+        Minimum and maximum x-axis values. These are used to extrapolate both edges.
 
     Returns
     -------
     Returns the mangled/modified SED with 1-sigma standard deviation and all the results
-    from the mangling routine (these can plotted later to check the results).
+    from the mangling routine (these can be plotted later to check the results).
 
     """
 

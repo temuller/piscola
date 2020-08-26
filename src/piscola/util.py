@@ -40,6 +40,23 @@ def trim_filters(response):
 def extrapolate_mangling_edges(x, y, yerr, x_edges, extra_extension=0.0):
     """"
     Extrapolates the edges of y acording to the giving edges in x (x_edges).
+
+    Parameters
+    ----------
+    x_data : array
+        Independent values.
+    y_data : array
+        Dependent values.
+    yerr_data : array, int
+        Dependent value errors.
+    x_edges: array-like
+        Minimum and maximum x-axis values. These are used to extrapolate both edges.
+    extra_extension: float
+        This value is added to extend the edges even more. It might look redundant, but it has its purpose.
+
+    Returns
+    -------
+    Extrapolated x, y and yerr.
     """
 
     x_min, x_max = x_edges

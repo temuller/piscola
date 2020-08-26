@@ -123,13 +123,13 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52', gp_mean='mean'):
         Dependent values.
     yerr_data : array, int
         Dependent value errors.
-    kernel : str, default 'squaredexp'
-        Kernel to be used with the gaussian process. Possible choices are: 'matern52', 'matern32', 'squaredexp'.
+    kernel : str, default 'matern52'
+        Kernel to be used with the gaussian process. E.g., 'matern52', 'matern32', 'squaredexp'.
         If left default, 'matern52' is used to fit light curves and 'squaredexp' for the mangling function.
-    mangling: bool, default 'False'
-        If 'True', the fit is set to adjust the mangling function.
-    x_edges: array-like, default 'None'
-        Minimum and maximum x-axis values. These are used to extrapolate both edges if 'mangling==True'.
+    gp_mean: str, default 'mean'
+        Mean function to be used when fitting in 1D with gaussian process. The default uses a constant function
+        equal to the mean flux. Possible choices are: 'mean', 'gaussian', 'bazin', 'zheng'. 'bazin' implements the model from
+        Bazin et al. (2011) while 'zheng' implements the model from Zheng et al. (2018).
 
     Returns
     -------
@@ -248,12 +248,12 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', gp_mean='mean'
     yerr_data : array, int
         Dependent value errors.
     kernel : str, default 'squaredexp'
-        Kernel to be used with the gaussian process. Possible choices are: 'matern52', 'matern32', 'squaredexp'.
-        If left default, 'matern52' is used to fit light curves and 'squaredexp' for the mangling function.
-    mangling: bool, default 'False'
-        If 'True', the fit is set to adjust the mangling function.
+        Kernel to be used with the gaussian process. E.g., 'matern52', 'matern32', 'squaredexp'.
+    gp_mean: str, default 'mean'
+        Mean function to be used when fitting with gaussian process. The default uses a constant function
+        equal to the mean of the values. Possible choices are: 'mean', 'poly'. 'poly' uses a 3rd degree polynomial function.
     x_edges: array-like, default 'None'
-        Minimum and maximum x-axis values. These are used to extrapolate both edges if 'mangling==True'.
+        Minimum and maximum x-axis values. These are used to extrapolate both edges.
 
     Returns
     -------
@@ -330,9 +330,11 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', gp_mean='mean'
 
 
 def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kernel2='squaredexp',
-                var=None, length1=None, length2=None, x1_edges=None, x2_edges=None, optimization=1, use_mcmc=0):
-    """Fits data with gaussian process.
+                var=None, length1=None, length2=None, x1_edges=None, x2_edges=None, optimization=True, use_mcmc=False):
+    """Fits a mangling function in 2D with gaussian process.
+
     The package 'george' is used for the gaussian process fit.
+
     Parameters
     ----------
     x_data : array
@@ -341,13 +343,24 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kerne
         Dependent values.
     yerr_data : array, int
         Dependent value errors.
-    kernel : str, default 'squaredexp'
-        Kernel to be used with the gaussian process. Possible choices are: 'matern52', 'matern32', 'squaredexp'.
-        If left default, 'matern52' is used to fit light curves and 'squaredexp' for the mangling function.
-    mangling: bool, default 'False'
-        If 'True', the fit is set to adjust the mangling function.
-    x_edges: array-like, default 'None'
-        Minimum and maximum x-axis values. These are used to extrapolate both edges if 'mangling==True'.
+    kernel1 : str, default 'matern52'
+        Kernel to be used to fit the light curves with gaussian process. E.g., 'matern52', 'matern32', 'squaredexp'.
+    kernel2 : str, default 'squaredexp'
+        Kernel to be used in the wavelength axis when fitting in 2D with gaussian process. E.g., 'matern52', 'matern32', 'squaredexp'.
+    var: float, default 'None'
+        Variance of the kernel to be used.
+    length1: float, default 'None'
+        Length scale (in time-axis) of the kernel to be used.
+    length2: float, default 'None'
+        Length scale (in time-axis) of the kernel to be used.
+    x1_edges: array-like, default 'None'
+        Minimum and maximum time-axis values. These are used to extrapolate both edges.
+    x2_edges: array-like, default 'None'
+        Minimum and maximum wavelength-axis values. These are used to extrapolate both edges.
+    optimization: bool, default 'True'
+        Whether or not to optimize the gaussian process hyperparameters. This is used to fit the light curves.
+    use_mcmc: bool, default 'False'
+        Whether or not to use MCMC in the optimization of the gaussian process hyperparameters.
     Returns
     -------
     Returns the interpolated independent and dependent values with the 1-sigma standard deviation.
