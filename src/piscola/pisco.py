@@ -306,7 +306,7 @@ class sn(object):
         if filter_list is None:
             filter_list = self.bands
 
-        f, ax = plt.subplots(figsize=(8,6))
+        fig, ax = plt.subplots(figsize=(8,6))
         for band in filter_list:
             norm = self.filters[band]['transmission'].max()
             ax.plot(self.filters[band]['wave'], self.filters[band]['transmission']/norm, label=band)
@@ -322,7 +322,7 @@ class sn(object):
         plt.legend(loc='upper right', bbox_to_anchor=(1.2, 1.0))
 
         if save:
-            f.tight_layout()
+            fig.tight_layout()
             plt.savefig('plots/filters.png')
 
         plt.show()
@@ -473,7 +473,7 @@ class sn(object):
         assert len(self.bands) > 1, 'The SN has not enough data (either one or no bands) left after the mask was applied.'
 
 
-    def plot_data(self, band_list=None, plot_type='mag', save=False, fig_name=None):
+    def plot_data(self, band_list=None, plot_type='flux', save=False, fig_name=None, outformat='png'):
         """Plot the SN light curves.
 
         Negative fluxes are masked out if magnitudes are plotted.
@@ -482,13 +482,15 @@ class sn(object):
         ----------
         band_list : list, default None
             List of bands to plot. If None, band list is set to 'self.bands'.
-        plot_type : str, default 'mag'
+        plot_type : str, default 'flux'
             Type of value used for the data: either 'mag' or 'flux'.
         save : bool, default 'False'
             If true, saves the plot into a file.
         fig_name : str, default None
-            Name of the saved plot. If None is used the name of the file will be '{self.name}_sed{self.phase}.png'.
+            Name of the saved plot. If None is used the name of the file will be '{self.name}_lcs.{outformat}'.
             Only works if 'save' is set to 'True'.
+        outformat : str, default 'png'
+            Output file format.
 
         """
 
@@ -516,12 +518,12 @@ class sn(object):
             ymin_lim = np.nanmin(plot_lim_vals)*0.98
             ymax_lim = np.nanmax(plot_lim_vals)*1.02
 
-        f, ax = plt.subplots(figsize=(8,6))
+        fig, ax = plt.subplots(figsize=(8,6))
         for i, band in enumerate(band_list):
             if plot_type=='flux':
                 time, flux, err = np.copy(self.data[band]['mjd']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
                 flux, err = flux/y_norm, err/y_norm
-                ax.errorbar(time, flux, err, fmt='o', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
+                ax.errorbar(time, flux, err, fmt='o', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
                 ylabel = r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp
             elif plot_type=='mag':
                 ylabel = 'Apparent Magnitude'
@@ -530,11 +532,11 @@ class sn(object):
                 mag = -2.5*np.log10(self.data[band]['flux'][mask]) + self.data[band]['zp']
                 err = np.abs(2.5*self.data[band]['flux_err'][mask]/(self.data[band]['flux'][mask]*np.log(10)))
 
-                ax.errorbar(mjd, mag, err, fmt='o', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
+                ax.errorbar(mjd, mag, err, fmt='o', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
 
         ax.set_ylabel(ylabel, fontsize=16, family='serif')
         ax.set_xlabel('Modified Julian Date', fontsize=16, family='serif')
-        ax.set_title(f'{self.name} (z = {self.z:.5})', fontsize=18, family='serif')
+        ax.set_title(f'{self.name}\nz = {self.z:.5}', fontsize=18, family='serif')
         ax.minorticks_on()
         ax.tick_params(which='major', length=8, width=1, direction='in', top=True, right=True, labelsize=16)
         ax.tick_params(which='minor', length=4, width=1, direction='in', top=True, right=True, labelsize=16)
@@ -546,8 +548,8 @@ class sn(object):
 
         if save:
             if fig_name is None:
-                fig_name = f'{self.name}_lcs.png'
-            f.tight_layout()
+                fig_name = f'{self.name}_lcs.{outformat}'
+            fig.tight_layout()
             plt.savefig(f'plots/{fig_name}')
 
         plt.show()
@@ -732,7 +734,7 @@ class sn(object):
                 except:
                     self.lc_fits[band]['tmax'] = self.lc_fits[band]['mmax'] = np.nan
 
-    def plot_fits(self, plot_together=True, plot_type='mag', save=False, fig_name=None):
+    def plot_fits(self, plot_together=True, plot_type='flux', save=False, fig_name=None, outformat='png'):
         """Plots the light-curves fits results.
 
         Plots the observed data for each band together with the gaussian process fits. The initial B-band
@@ -743,13 +745,15 @@ class sn(object):
         ----------
         plot_together : bool, default 'True'
             If 'True', plots the bands together in one plot. Otherwise, each band is plotted separately.
-        plot_type : str, default 'mag'
+        plot_type : str, default 'flux'
             Type of value used for the data: either 'mag' or 'flux'.
         save : bool, default 'False'
             If 'True', saves the plot into a file.
         fig_name : str, default 'None'
-            Name of the saved plot. If 'None' is used the name of the file will be '{self.name}_sed{self.phase}.png'.
+            Name of the saved plot. If 'None' is used the name of the file will be '{self.name}_lc_fits.{outformat}'.
             Only works if 'save' is set to 'True'.
+        outformat : str, default 'png'
+            Output file format.
 
         """
 
@@ -789,8 +793,8 @@ class sn(object):
                                     elinewidth=3, color=new_palette[i],label=band)
                     ax.plot(time, flux,'-', color=new_palette[i], lw=2, zorder=16)
                     ax.fill_between(time, flux-std, flux+std, alpha=0.5, color=new_palette[i])
-                    #ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
-                    ax.set_ylabel(r'Scaled Flux', fontsize=16, family='serif')
+                    ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
+                    #ax.set_ylabel(r'Scaled Flux', fontsize=16, family='serif')
 
                 elif plot_type=='mag':
                     # avoid non-positive numbers in logarithm
@@ -817,7 +821,7 @@ class sn(object):
             ax.tick_params(which='minor', length=3, width=1, direction='in', top=True, right=True, labelsize=16)
             ax.set_xlabel('Modified Julian Date', fontsize=16, family='serif')
 
-            ax.set_title(f'{self.name} (z = {self.z:.5})', fontsize=18, family='serif')
+            ax.set_title(f'{self.name}\nz = {self.z:.5}', fontsize=18, family='serif')
             ax.legend(fontsize=13, loc='upper right')
             ax.set_ylim(ymin_lim, ymax_lim)
 
@@ -852,12 +856,12 @@ class sn(object):
 
             fig.text(0.5, 0.95, f'{self.name} (z = {self.z:.5})', ha='center', fontsize=20, family='serif')
             fig.text(0.5, 0.04, 'Modified Julian Date', ha='center', fontsize=18, family='serif')
-            #fig.text(0.04, 0.5, r'Flux [erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]', va='center', rotation='vertical', fontsize=18, family='serif')
-            fig.text(0.04, 0.5, r'Scaled Flux', va='center', rotation='vertical', fontsize=18, family='serif')
+            fig.text(0.04, 0.5, r'Flux [erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]', va='center', rotation='vertical', fontsize=18, family='serif')
+            #fig.text(0.04, 0.5, r'Scaled Flux', va='center', rotation='vertical', fontsize=18, family='serif')
 
         if save:
             if fig_name is None:
-                fig_name = f'{self.name}_lcfits.png'
+                fig_name = f'{self.name}_lc_fits.{outformat}'
             fig.tight_layout()
             plt.savefig(f'plots/{fig_name}')
 
@@ -969,7 +973,7 @@ class sn(object):
         self.corrected_sed.flux = self.corrected_sed.flux.values*(1+self.z)
 
 
-    def plot_mangling_function(self, phase=0, mangling_function_only=False, verbose=True, save=False, fig_name=None):
+    def plot_mangling_function(self, phase=0, mangling_function_only=False, verbose=True, save=False, fig_name=None, outformat='png'):
         """Plot the mangling function for a given phase.
 
         Parameters
@@ -984,8 +988,10 @@ class sn(object):
         save : bool, default 'False'
             If true, saves the plot into a file.
         fig_name : str, default 'None'
-            Name of the saved plot. If 'None' is used the name of the file will be ''{self.name}_sed{self.phase}.png'.
+            Name of the saved plot. If 'None' is used the name of the file will be '{self.name}_mangling_phase{phase}.{outformat}'.
             Only works if 'save' is set to 'True'.
+        outformat : str, default 'png'
+            Output file format.
 
         """
 
@@ -1008,7 +1014,7 @@ class sn(object):
         bands = man['mag_diff'].keys()
 
         if mangling_function_only:
-            f, ax = plt.subplots(figsize=(8,6))
+            fig, ax = plt.subplots(figsize=(8,6))
             ax2 = ax.twiny()
 
             exp = np.round(np.log10(init_flux_ratios.max()), 0)
@@ -1043,7 +1049,7 @@ class sn(object):
             ax.legend(loc='upper right', fontsize=12)
 
         else:
-            f, ax = plt.subplots(figsize=(8,6))
+            fig, ax = plt.subplots(figsize=(8,6))
             ax2 = ax.twiny()
             ax3 = ax.twinx()
 
@@ -1105,8 +1111,8 @@ class sn(object):
 
         if save:
             if fig_name is None:
-                fig_name = f'{self.name}_mangling_phase{phase}.png'
-            f.tight_layout()
+                fig_name = f'{self.name}_mangling_phase{phase}.{outformat}'
+            fig.tight_layout()
             plt.savefig(f'plots/{fig_name}')
 
         plt.show()
@@ -1213,7 +1219,7 @@ class sn(object):
                 self._calculate_corrected_lcs()
             else:
                 self.tmax_offset = tmax_offset
-                self.tmax_err = np.round(np.abs(tmax_offset) + 0.5, 2)  # template has 1 day "cadence"
+                self.tmax_err = np.round(np.abs(tmax_offset) + 0.5, 2)  # template has 1 day "cadence", so we assume 0.5 days error
                 bmax_needs_check = False
 
             if iter>maxiter:
@@ -1266,7 +1272,7 @@ class sn(object):
                               'dm15err':dm15err, 'color':color, 'dcolor':dcolor}
 
 
-    def display_results(self, band='Bessell_B', plot_type='mag', save=False, fig_name=None):
+    def display_results(self, band='Bessell_B', plot_type='mag', display_params=False, save=False, fig_name=None, outformat='png'):
         """Displays the rest-frame light curve for the given band.
 
         Plots the rest-frame band light curve together with a gaussian fit to it. The parameters estimated with
@@ -1278,11 +1284,15 @@ class sn(object):
             Name of the band to be plotted.
         plot_type : str, default 'mag'
             Type of value used for the data: either 'mag' or 'flux'.
+        display_params : bool, default 'False'
+            If 'True', the light-curves parameters are displayed in the plot.
         save : bool, default 'False'
-            If true, saves the plot into a file.
+            If 'True', saves the plot into a file.
         fig_name : str, default 'None'
-            Name of the saved plot. If 'None' is used the name of the file will be ''{self.name}_sed{self.phase}.png'.
+            Name of the saved plot. If 'None' is used the name of the file will be '{self.name}_restframe_{band}.{outformat}'.
             Only works if 'save' is set to 'True'.
+        outformat : str, default 'png'
+            Output file format.
 
         """
 
@@ -1301,7 +1311,7 @@ class sn(object):
         x = np.copy(self.corrected_lcs[band]['phase'])
         y = np.copy(self.corrected_lcs[band]['flux'])
         yerr = np.copy(self.corrected_lcs[band]['err'])
-        zp = np.copy(self.corrected_lcs[band]['zp'])
+        zp = self.corrected_lcs[band]['zp']
         x_fit = np.copy(self.corrected_lcs_fit[band]['phase'])
         y_fit = np.copy(self.corrected_lcs_fit[band]['flux'])
         yerr_fit = np.copy(self.corrected_lcs_fit[band]['err'])
@@ -1322,18 +1332,18 @@ class sn(object):
             y_fit = -2.5*np.log10(y_fit) + zp
 
 
-        f, ax = plt.subplots(figsize=(8,6))
+        fig, ax = plt.subplots(figsize=(8,6))
         ax.errorbar(x, y, yerr, fmt='-.o', color='k', ecolor='k', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, zorder=16)
-        #ax.errorbar(x, y, yerr, fmt='-..', color='k')
         ax.plot(x_fit, y_fit, 'c-', alpha=0.7)
         ax.fill_between(x_fit, y_fit+yerr_fit, y_fit-yerr_fit, alpha=0.5, color='c')
 
-        ax.text(0.75, 0.9,r'm$_B^{\rm max}$=%.3f$\pm$%.3f'%(mb, dmb), ha='center', va='center', fontsize=15, transform=ax.transAxes)
-        ax.text(0.75, 0.8,r'$\Delta$m$_{15}$($B$)=%.3f$\pm$%.3f'%(dm15, dm15err), ha='center', va='center', fontsize=15, transform=ax.transAxes)
-        ax.text(0.75, 0.7,r'($B-V$)$_{\rm max}$=%.3f$\pm$%.3f'%(color, dcolor), ha='center', va='center', fontsize=15, transform=ax.transAxes)
+        if display_params:
+            ax.text(0.75, 0.9,r'm$_B^{\rm max}$=%.3f$\pm$%.3f'%(mb, dmb), ha='center', va='center', fontsize=15, transform=ax.transAxes)
+            ax.text(0.75, 0.8,r'$\Delta$m$_{15}$($B$)=%.3f$\pm$%.3f'%(dm15, dm15err), ha='center', va='center', fontsize=15, transform=ax.transAxes)
+            ax.text(0.75, 0.7,r'($B-V$)$_{\rm max}$=%.3f$\pm$%.3f'%(color, dcolor), ha='center', va='center', fontsize=15, transform=ax.transAxes)
 
         ax.set_xlabel(f'Phase with respect to B-band peak [days]', fontsize=16, family='serif')
-        ax.set_title(f'{self.name} ({band}, z={self.z:.5}, t0={self.tmax:.2f})', fontsize=16, family='serif')
+        ax.set_title(f'{self.name}\n{band}, z={self.z:.5}, t0={self.tmax:.2f}', fontsize=16, family='serif')
         if plot_type=='flux':
             ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
             ax.set_ylim(y.min()*0.90, y.max()*1.05)
@@ -1347,8 +1357,8 @@ class sn(object):
 
         if save:
             if fig_name is None:
-                fig_name = f'{self.name}_{band}_results.png'
-            f.tight_layout()
+                fig_name = f'{self.name}_restframe_{band}.{outformat}'
+            fig.tight_layout()
             plt.savefig(f'plots/{fig_name}')
 
         plt.show()
