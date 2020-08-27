@@ -6,3 +6,6 @@ from . import gaussian_process
 from . import mangling
 from . import spline
 from . import util
+
+
+__version__ = "1.0"
