@@ -18,7 +18,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/temuller/piscola",
     packages=['piscola'],
-    #package_dir={'': 'piscola'},
+    #packages=setuptools.find_packages(),
     python_requires=">=3.6",
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -27,8 +27,10 @@ setuptools.setup(
     ],
     install_requires=requirements,
     #dependency_links=['https://github.com/kbarbary/extinction/tarball/master#egg=extinction'],
-    #package_data={'piscola' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*", "sfddata-master/*", "README.md", "LICENSE"]},
-    package_data={'' : ["README.md", "LICENSE"]},
+    package_data={'' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*"]},
+    #package_data={'piscola' : ["templates/*.dat"]},
     include_package_data=True,
-    zip_safe=True
+    use_scm_version=True,
+    setup_requires=['setuptools_scm'],
+    zip_safe=True,
 )

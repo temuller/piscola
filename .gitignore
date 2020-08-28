@@ -10,6 +10,7 @@ __pycache__
 test_piscola.ipynb
 
 .ipynb_checkpoints
+.eggs
 tests/__pycache__
 
 ### src ###
