@@ -335,7 +335,7 @@ class sn(object):
 
         if save:
             fig.tight_layout()
-            plt.savefig('plots/filters.png')
+            plt.savefig('filters.png')
 
         plt.show()
 
@@ -562,7 +562,7 @@ class sn(object):
             if fig_name is None:
                 fig_name = f'{self.name}_lcs.{outformat}'
             fig.tight_layout()
-            plt.savefig(f'plots/{fig_name}')
+            plt.savefig(fig_name)
 
         plt.show()
 
@@ -871,7 +871,7 @@ class sn(object):
             if fig_name is None:
                 fig_name = f'{self.name}_lc_fits.{outformat}'
             fig.tight_layout()
-            plt.savefig(f'plots/{fig_name}')
+            plt.savefig(fig_name)
 
         plt.show()
 
@@ -1121,7 +1121,7 @@ class sn(object):
             if fig_name is None:
                 fig_name = f'{self.name}_mangling_phase{phase}.{outformat}'
             fig.tight_layout()
-            plt.savefig(f'plots/{fig_name}')
+            plt.savefig(fig_name)
 
         plt.show()
 
@@ -1364,7 +1364,7 @@ class sn(object):
             if fig_name is None:
                 fig_name = f'{self.name}_restframe_{band}.{outformat}'
             fig.tight_layout()
-            plt.savefig(f'plots/{fig_name}')
+            plt.savefig(fig_name)
 
         plt.show()
 
