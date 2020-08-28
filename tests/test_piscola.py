@@ -1,12 +1,12 @@
 import unittest
-import piscola as pisco
+import piscola
 import numpy as np
 
 class TestPiscola(unittest.TestCase):
 
     def test_lc_correction(self):
 
-        sn = pisco.call_sn('03D1au')
+        sn = piscola.call_sn('03D1au')
         sn.normalize_data()
         sn.fit_lcs()
         sn.mangle_sed(-5, 15)
