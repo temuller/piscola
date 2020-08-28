@@ -13,12 +13,10 @@ test_piscola.ipynb
 tests/__pycache__
 
 ### src ###
-src/*.egg-info
-src/piscola/__pycache__
-#src/piscola/filters
-#!src/piscola/filters/Bessell/*
-src/piscola/filters/filters.txt
-src/piscola/templates/conley09f/.ipynb_checkpoints
+piscola/*.egg-info
+piscola/__pycache__
+#piscola/filters
+#piscola/filters/Bessell/*
 
 ### docs ###
 docs/_build
