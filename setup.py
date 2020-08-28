@@ -18,7 +18,6 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/temuller/piscola",
     packages=['piscola'],
-    #packages=setuptools.find_packages(),
     python_requires=">=3.6",
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -26,9 +25,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=requirements,
-    #dependency_links=['https://github.com/kbarbary/extinction/tarball/master#egg=extinction'],
-    package_data={'' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*"]},
-    #package_data={'piscola' : ["templates/*.dat"]},
+    #package_data={'' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*"]},
     include_package_data=True,
     use_scm_version=True,
     setup_requires=['setuptools_scm'],
