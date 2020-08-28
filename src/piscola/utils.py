@@ -1,8 +1,56 @@
 import numpy as np
 
-def trim_filters(response):
+def flux2mag(flux, zp, flux_err=None):
+    """Converts fluxes to magnitudes, propagating errors if given.
+
+    Parameters
+    ----------
+    flux : array
+        Array of fluxes.
+    zp : float or array
+        Zero points.
+    flux_err : array, default 'None'
+        Array of flux errors.
+
+    Returns
+    -------
+    Magnitudes and their errors (only if 'flux_err' is given)
     """
-    Trim the leading and trailing zeros from a 1-D array or sequence, leaving
+
+    mag = -2.5*np.log10(flux) + zp
+
+    if flux_err is not None:
+        mag_err = np.abs( 2.5*flux_err/(flux*np.log(10)) )
+        return mag, mag_err
+    return mag
+
+def mag2flux(mag, zp, mag_err=None):
+    """Converts magnitudes to fluxes, propagating errors if given.
+
+    Parameters
+    ----------
+    mag : array
+        Array of magnitudes.
+    zp : float or array
+        Zero points.
+    mag_err : array, default 'None'
+        Array of magnitude errors.
+
+    Returns
+    -------
+    Fluxes and their errors (only if 'mag_err' is given)
+    """
+
+    flux = 10**( -0.4*(mag-zp) )
+
+
+    if mag_err is not None:
+        flux_err =  np.abs( flux*0.4*np.log(10)*mag_err )
+        return flux, flux_err
+    return flux
+
+def trim_filters(response):
+    """Trim the leading and trailing zeros from a 1-D array or sequence, leaving
     one zero on each side. This is a modified version of numpy.trim_zeros.
 
     Parameters
@@ -38,8 +86,7 @@ def trim_filters(response):
 
 
 def extrapolate_mangling_edges(x, y, yerr, x_edges, extra_extension=0.0):
-    """"
-    Extrapolates the edges of y acording to the giving edges in x (x_edges).
+    """"Extrapolates the edges of y acording to the giving edges in x (x_edges).
 
     Parameters
     ----------
