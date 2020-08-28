@@ -3,7 +3,7 @@ import george
 import scipy
 import emcee
 
-from .util import extrapolate_mangling_edges
+from .utils import extrapolate_mangling_edges
 
 class gaussian_lcMeanModel(george.modeling.Model):
     """Gaussian light curve model."""

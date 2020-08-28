@@ -1,15 +1,13 @@
 
 import piscola
-from .filter_integration import *
-from .gaussian_process import *
-from .spline import *
-from .extinction_correction import *
-from .mangling import *
-from .util import *
+from .filter_utils import integrate_filter, calc_eff_wave, calc_pivot_wave, calc_zp, filter_effective_range
+from .gaussian_process import gp_lc_fit, gp_2d_fit
+from .extinction_correction import redden, deredden
+from .mangling import mangle
+from .utils import trim_filters, flux2mag, mag2flux
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
-from matplotlib.ticker import AutoMinorLocator
 from peakutils import peak
 import pandas as pd
 import numpy as np
@@ -20,14 +18,14 @@ import os
 
 ### Initialisation functions ###
 
-def initialise(file_name):
+def initialise_sn(sn_file):
     """Initialise the 'sn' object.
 
-    The object is initialise with all the necessary information like filters, fluxes, etc.
+    The object is initialised with all the necessary information like filters, fluxes, etc.
 
     Parameters
     ----------
-    file_name : str
+    sn_file : str
         Name of the SN or SN file.
 
     Returns
@@ -36,14 +34,14 @@ def initialise(file_name):
 
     """
 
-    name, z, ra, dec = pd.read_csv(file_name, delim_whitespace=True, nrows=1).iloc[0].values
-    sn_file = pd.read_csv(file_name, delim_whitespace=True, skiprows=2)
-    sn_file.columns = sn_file.columns.str.lower()
+    name, z, ra, dec = pd.read_csv(sn_file, delim_whitespace=True, nrows=1).iloc[0].values
+    sn_df = pd.read_csv(sn_file, delim_whitespace=True, skiprows=2)
+    sn_df.columns = sn_df.columns.str.lower()
 
     # call sn object
     sn_obj = sn(name, z=z, ra=ra, dec=dec)
     sn_obj.set_sed_template()  # Set the SED template to be used in the entire process
-    sn_obj.bands = [band for band in list(sn_file['band'].unique())]
+    sn_obj.bands = [band for band in list(sn_df['band'].unique())]
     sn_obj.call_filters()
 
     # order bands by effective wavelength (estimated from the SED template)
@@ -53,7 +51,7 @@ def initialise(file_name):
 
     # add data to each band
     for band in sn_obj.bands:
-        band_info = sn_file[sn_file['band']==band]
+        band_info = sn_df[sn_df['band']==band]
         if len(band_info['flux'].values) >= 3:
             sn_obj.data[band] = {'mjd':band_info['mjd'].values,
                                  'flux':band_info['flux'].values,
@@ -66,24 +64,29 @@ def initialise(file_name):
     return sn_obj
 
 
-def sn_file(str, directory='data/'):
+def call_sn(sn_file, directory='data'):
     """Loads a supernova from a file.
 
     Parameters
     ----------
+    sn_file: str
+        Name of the SN or SN file.
     directory : str, default 'data/'
-        Directory where to look for the SN data files.
+        Directory where to look for the SN file unless the full or relative path is given in 'sn_file'.
 
     """
 
-    if os.path.isfile(directory+str):
-        return initialise(directory+str)
+    # if sn_file is the file name
+    if os.path.isfile(os.path.join(directory, sn_file)):
+        return initialise_sn(os.path.join(directory, sn_file))
 
-    elif os.path.isfile(directory+str+'.dat'):
-        return initialise(directory+str+'.dat')
+    # if sn_file is the SN name
+    elif os.path.isfile(os.path.join(directory, sn_file) + '.dat'):
+        return initialise_sn(os.path.join(directory, sn_file) + '.dat')
 
-    elif os.path.isfile(str):
-        return initialise(str)
+    # if sn_file is the file name with full or relative path
+    elif os.path.isfile(sn_file):
+        return initialise_sn(sn_file)
 
     else:
         raise ValueError(f'{str} was not a valid SN name or file.')
@@ -95,6 +98,8 @@ def load_sn(name, path=None):
     ----------
     name : str
         Name of the SN object.
+    path: str
+        Path where to save the SN file given the 'name'.
 
     Returns
     -------
@@ -103,10 +108,10 @@ def load_sn(name, path=None):
     """
 
     if path is None:
-        with open(name + '.pisco', 'rb') as file:
+        with open(f'{name}.pisco', 'rb') as file:
             return pickle.load(file)
     else:
-        with open(path + name + '.pisco', 'rb') as file:
+        with open(os.path.join(path, name) + '.pisco', 'rb') as file:
             return pickle.load(file)
 
 ################################################################################
@@ -162,17 +167,25 @@ class sn(object):
     def __setstate__(self, d):
         self.__dict__.update(d)
 
-    def save(self, name=None, path=None):
-        '''Saves a SN object into a pickle file'''
+    def save_sn(self, name=None, path=None):
+        """Saves a SN object into a pickle file
+
+        Parameters
+        ----------
+        name : str
+            Name of the SN object. If no name is given, the name is set to 'self.name'.
+        path: str
+            Path where to save the SN file given the 'name'.
+        """
 
         if name is None:
             name = self.name
 
         if path is None:
-            with open(name + '.pisco', 'wb') as pfile:
+            with open(f'{name}.pisco', 'wb') as pfile:
                 pickle.dump(self, pfile, pickle.HIGHEST_PROTOCOL)
         else:
-            with open(path + name + '.pisco', 'wb') as pfile:
+            with open(os.path.join(path, name) + '.pisco', 'wb') as pfile:
                 pickle.dump(self, pfile, pickle.HIGHEST_PROTOCOL)
 
 
@@ -192,7 +205,7 @@ class sn(object):
         for band in self.bands:
             file = f'{band}.dat'
 
-            for root, dirs, files in os.walk(path + '/filters/'):
+            for root, dirs, files in os.walk(os.path.join(path, 'filters')):
                 if file in files:
                     wave0, transmission0 = np.loadtxt(os.path.join(root, file)).T
                     # linearly interpolate filters
@@ -210,7 +223,7 @@ class sn(object):
                                           'response_type':response_type}
 
         # add Bessell filters
-        file_paths = [file for file in glob.glob(path + '/filters/Bessell/*.dat')]
+        file_paths = [file for file in glob.glob(os.path.join(path, 'filters/Bessell/*.dat'))]
 
         for file_path in file_paths:
             band = os.path.basename(file_path).split('.')[0]
@@ -239,7 +252,6 @@ class sn(object):
             List of bands.
         response_type : str, default 'photon'
             Response type of the filter. The only options are: 'photon' and 'energy'.
-            Only the Bessell filters use energy response type.
 
         """
 
@@ -248,14 +260,14 @@ class sn(object):
         sed_df = sed_df[sed_df.phase==0.0]
         sed_wave, sed_flux = sed_df.wave.values, sed_df.flux.values
 
-        if isinstance(filter_list, str) and os.path.isdir(f'{path}/filters/{filter_list}'):
+        filters_path = os.path.join(path, 'filters')
+        filters_sub_path = os.path.join(filters_path, filter_list)
+        if isinstance(filter_list, str) and os.path.isdir(filters_sub_path):
             # add directory
-            path = piscola.__path__[0]
-            path = f'{path}/filters/{filter_list}'
-            for file in os.listdir(path):
+            for file in os.listdir(filters_sub_path):
                 if file[-4:]=='.dat':
                     band = file.split('.')[0]
-                    wave0, transmission0 = np.loadtxt(os.path.join(path, file)).T
+                    wave0, transmission0 = np.loadtxt(os.path.join(filters_sub_path, file)).T
                     # linearly interpolate filters
                     wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max()-wave0.min()))
                     transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
@@ -274,7 +286,7 @@ class sn(object):
             for band in filter_list:
                 file = f'{band}.dat'
 
-                for root, dirs, files in os.walk(path + '/filters/'):
+                for root, dirs, files in os.walk(os.path.join(path, 'filters')):
                     if file in files:
                         wave0, transmission0 = np.loadtxt(os.path.join(root, file)).T
                         # linearly interpolate filters
@@ -380,8 +392,9 @@ class sn(object):
         """Prints all the available SED templates in the 'templates' directory"""
 
         path = piscola.__path__[0]
-        print('The list of available SED templates are:', [name for name in os.listdir(path + "/templates/")
-                                                           if os.path.isdir(f"{path}/templates/{name}")])
+        template_path = os.path.join(path, "templates")
+        print('The list of available SED templates are:', [name for name in os.listdir(template_path)
+                                                           if os.path.isdir(os.path.join(template_path, f"{name}"))])
 
 
     def set_sed_template(self, template='jla'):
@@ -395,7 +408,7 @@ class sn(object):
         """
         # This can be modified to accept other templates
         path = piscola.__path__[0]
-        file = f'{path}/templates/{template}/snflux_1a.dat'
+        file = os.path.join(path, f'templates/{template}/snflux_1a.dat')
         self.sed['info'] = pd.read_csv(file, delim_whitespace=True, names=['phase', 'wave', 'flux'])
         self.sed['name'] = template
 
@@ -512,8 +525,8 @@ class sn(object):
                 ymin_lim *= 1.1/0.9
             ymax_lim = plot_lim_vals.max()*1.1
         elif plot_type=='mag':
-            plot_lim_vals = [[np.min(-2.5*np.log10(np.abs(self.data[band]['flux'])) + self.data[band]['zp']),
-                              np.max(-2.5*np.log10(np.abs(self.data[band]['flux'])) + self.data[band]['zp'])] for band in self.bands]
+            plot_lim_vals = [[np.nanmin(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])),
+                              np.nanmax(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp']))] for band in self.bands]
             plot_lim_vals = np.ndarray.flatten(np.array(plot_lim_vals))
             ymin_lim = np.nanmin(plot_lim_vals)*0.98
             ymax_lim = np.nanmax(plot_lim_vals)*1.02
@@ -529,8 +542,7 @@ class sn(object):
                 ylabel = 'Apparent Magnitude'
                 mask = np.where(self.data[band]['flux'] > 0)
                 mjd = self.data[band]['mjd'][mask]
-                mag = -2.5*np.log10(self.data[band]['flux'][mask]) + self.data[band]['zp']
-                err = np.abs(2.5*self.data[band]['flux_err'][mask]/(self.data[band]['flux'][mask]*np.log(10)))
+                mag, err = flux2mag(self.data[band]['flux'][mask], self.data[band]['zp'], self.data[band]['flux_err'][mask])
 
                 ax.errorbar(mjd, mag, err, fmt='o', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
 
@@ -677,15 +689,13 @@ class sn(object):
 
             if fit_mag:
                 mask = flux_array >= 0.0
-                mag_array = -2.5*np.log10(flux_array[mask])
-                mag_err_array = np.abs(2.5*flux_err_array[mask]/(flux_array[mask]*np.log(10)))
+                mag_array, mag_err_array = flux2mag(flux_array[mask], 0.0, flux_err_array[mask])  # ZPs are not necessary for fitting
                 time_array = time_array[mask]
                 wave_array = wave_array[mask]
 
                 timeXwave, mu, std = gp_2d_fit(time_array, wave_array, mag_array, mag_err_array,
                                                 kernel1=kernel, kernel2=kernel2, x2_edges=bands_edges, use_mcmc=use_mcmc)
-                mu = 10**(-0.4*mu)
-                std = np.abs(mu*0.4*np.log(10)*std)
+                mu, std = mag2flux(mu, 0.0, std)
 
             else:
                 timeXwave, mu, std = gp_2d_fit(time_array, wave_array, flux_array, flux_err_array,
@@ -773,8 +783,8 @@ class sn(object):
                     ymin_lim *= 1.1/0.9
                 ymax_lim = plot_lim_vals.max()*1.05
             elif plot_type=='mag':
-                plot_lim_vals = [[-2.5*np.log10(np.abs(self.data[band]['flux']).min()) + self.data[band]['zp'],
-                                  -2.5*np.log10(np.abs(self.data[band]['flux']).max()) + self.data[band]['zp']] for band in self.bands]
+                plot_lim_vals = [[np.nanmin(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])),
+                                  np.nanmax(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp']))] for band in self.bands]
                 plot_lim_vals = np.ndarray.flatten(np.array(plot_lim_vals))
                 ymin_lim = np.nanmin(plot_lim_vals)*0.98
                 ymax_lim = np.nanmax(plot_lim_vals)*1.02
@@ -803,10 +813,8 @@ class sn(object):
                     data_mask = data_flux > 0
                     data_time, data_flux, data_std = data_time[data_mask], data_flux[data_mask], data_std[data_mask]
 
-                    mag = -2.5*np.log10(flux) + self.data[band]['zp']
-                    err = np.abs(2.5*std/(flux*np.log(10)))
-                    data_mag = -2.5*np.log10(data_flux) + self.data[band]['zp']
-                    data_err = np.abs(2.5*data_std/(data_flux*np.log(10)))
+                    mag, err = flux2mag(flux, self.data[band]['zp'], std)
+                    data_mag, data_err = flux2mag(data_flux, self.data[band]['zp'], data_std)
 
                     ax.errorbar(data_time, data_mag, data_err, fmt='o', mec='k', capsize=3, capthick=2, ms=8,
                                 elinewidth=3, color=new_palette[i],label=band)
@@ -915,7 +923,7 @@ class sn(object):
         for phase in sed_phases:
             phase_df = sed_df[sed_df.phase==phase]
             for band in self.bands:
-                band_flux = run_filter(phase_df.wave.values, phase_df.flux.values, self.filters[band]['wave'],
+                band_flux = integrate_filter(phase_df.wave.values, phase_df.flux.values, self.filters[band]['wave'],
                                        self.filters[band]['transmission'], self.filters[band]['response_type'])
                 self.sed_lcs[band]['flux'].append(band_flux)
 
@@ -1144,9 +1152,9 @@ class sn(object):
             bands_err = []
             for band in self.filters.keys():
                 try:
-                    bands_flux.append(run_filter(phase_wave, phase_flux, self.filters[band]['wave'], self.filters[band]['transmission'],
+                    bands_flux.append(integrate_filter(phase_wave, phase_flux, self.filters[band]['wave'], self.filters[band]['transmission'],
                                                                     self.filters[band]['response_type']))
-                    bands_err.append(run_filter(phase_wave, phase_err, self.filters[band]['wave'], self.filters[band]['transmission'],
+                    bands_err.append(integrate_filter(phase_wave, phase_err, self.filters[band]['wave'], self.filters[band]['transmission'],
                                                                     self.filters[band]['response_type']))
                 except:
                     bands_flux.append(np.nan)
@@ -1238,16 +1246,16 @@ class sn(object):
         # B-band peak apparent magnitude
         phase_b, flux_b, flux_err_b = self.corrected_lcs[bessell_b]['phase'], self.corrected_lcs[bessell_b]['flux'], self.corrected_lcs[bessell_b]['err']
         id_bmax = np.where(phase_b==0.0)[0][0]
-        mb = -2.5*np.log10(flux_b[id_bmax]) + zp_b
-        dmb = np.abs(2.5*flux_err_b[id_bmax]/(flux_b[id_bmax]*np.log(10))) + 0.005  # the last term comes from the template error in one day uncertainty
+        mb, mb_err = flux2mag(flux_b[id_bmax], zp_b, flux_err_b[id_bmax])
+        mb_err += 0.005  # the last term comes from the template error in one day uncertainty
 
         # Stretch parameter
         try:
             id_15 = np.where(phase_b==15.0)[0][0]
-            B15 = -2.5*np.log10(flux_b[id_15]) + zp_b
-            B15_err = np.abs(2.5*flux_err_b[id_15]/(flux_b[id_15]*np.log(10))) + 0.005  # the last term comes from the template error in one day uncertainty
+            B15, B15_err = flux2mag(flux_b[id_15], zp_b, flux_err_b[id_15])
+            B15_err += 0.005  # the last term comes from the template error in one day uncertainty
             dm15 = B15 - mb
-            dm15err = np.sqrt(dmb**2 + B15_err**2)
+            dm15err = np.sqrt(mb_err**2 + B15_err**2)
         except:
             dm15 = dm15err = np.nan
 
@@ -1261,14 +1269,14 @@ class sn(object):
             phase_v, flux_v, flux_err_v = self.corrected_lcs[bessell_v]['phase'], self.corrected_lcs[bessell_v]['flux'], self.corrected_lcs[bessell_v]['err']
 
             id_v0 = np.where(phase_v==0.0)[0][0]
-            V0 = -2.5*np.log10(flux_v[id_v0]) + zp_v
-            V0err = np.abs(2.5*flux_err_v[id_v0]/(flux_v[id_v0]*np.log(10)))
+            V0, V0_err = flux2mag(flux_v[id_v0], zp_v, flux_err_v[id_v0])
+            V0_err += 0.011  # the last term comes from the template error in one day uncertainty
             color = mb - V0
-            dcolor = np.sqrt(dmb**2 + V0err**2) + 0.011  # the last term comes from the template error in one day uncertainty
+            dcolor = np.sqrt(mb_err**2 + V0_err**2)
         except:
             color = dcolor = np.nan
 
-        self.lc_parameters = {'mb':mb, 'dmb':dmb, 'dm15':dm15,
+        self.lc_parameters = {'mb':mb, 'dmb':mb_err, 'dm15':dm15,
                               'dm15err':dm15err, 'color':color, 'dcolor':dcolor}
 
 
@@ -1326,11 +1334,8 @@ class sn(object):
 
         elif plot_type=='mag':
             # y, yerr, y_fit, yerr_fit variables get reassigned
-            yerr = np.abs(2.5*yerr/(y*np.log(10)))
-            y = -2.5*np.log10(y) + zp
-            yerr_fit = np.abs(2.5*yerr_fit/(y_fit*np.log(10)))
-            y_fit = -2.5*np.log10(y_fit) + zp
-
+            y, yerr = flux2mag(y, zp, yerr)
+            y_fit, yerr_fit = flux2mag(y_fit, zp, yerr_fit)
 
         fig, ax = plt.subplots(figsize=(8,6))
         ax.errorbar(x, y, yerr, fmt='-.o', color='k', ecolor='k', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, zorder=16)

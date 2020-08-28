@@ -1,4 +1,4 @@
-from .filter_integration import run_filter
+from .filter_utils import integrate_filter
 from .gaussian_process import gp_mf_fit
 from .spline import fit_spline
 
@@ -51,7 +51,7 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
 
     interp_sed_flux = np.interp(x_pred, sed_wave, sed_flux)
     mangled_wave, mangled_flux = x_pred, (y_pred*norm)*interp_sed_flux
-    model_flux = np.array([run_filter(mangled_wave, mangled_flux, filters[band]['wave'], filters[band]['transmission'],
+    model_flux = np.array([integrate_filter(mangled_wave, mangled_flux, filters[band]['wave'], filters[band]['transmission'],
                                       filters[band]['response_type']) for band in bands])
 
     residuals = np.abs(2.5*np.log10(obs_flux/model_flux))
@@ -131,7 +131,7 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
     flux_diffs = []
     flux_diff_ratios = []
     for band, obs_flux in zip(bands, obs_fluxes):
-        model_flux = run_filter(mangled_wave, mangled_flux,
+        model_flux = integrate_filter(mangled_wave, mangled_flux,
                                 filters[band]['wave'], filters[band]['transmission'], filters[band]['response_type'])
         flux_diffs.append(obs_flux - model_flux)
         flux_diff_ratios.append(obs_flux/model_flux)
@@ -150,7 +150,7 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
     # Save Results
     sed_fluxes = []
     for band in bands:
-        sed_fluxes.append(run_filter(sed_wave, sed_flux,
+        sed_fluxes.append(integrate_filter(sed_wave, sed_flux,
                                filters[band]['wave'], filters[band]['transmission'], filters[band]['response_type']))
     sed_fluxes = np.array(sed_fluxes)
 

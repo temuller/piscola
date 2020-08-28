@@ -1,5 +1,5 @@
 import piscola
-from .filter_integration import run_filter
+from .filter_utils import integrate_filter
 import extinction
 import sfdmap
 
@@ -103,8 +103,8 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86):
     flux = 100
     deredden_flux = deredden(filter_wave, flux, ra, dec, scaling=scaling)
 
-    f1 = run_filter(filter_wave, flux, filter_wave, filter_response)
-    f2 = run_filter(filter_wave, deredden_flux, filter_wave, filter_response)
+    f1 = integrate_filter(filter_wave, flux, filter_wave, filter_response)
+    f2 = integrate_filter(filter_wave, deredden_flux, filter_wave, filter_response)
     A = -2.5*np.log10(f1/f2)
 
     return A
