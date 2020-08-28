@@ -6,7 +6,7 @@ import piscola
 #h = const.cgs.codata2014.h.value
 #c = const.c.to(u.AA/u.s).value
 
-def run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type='photon'):
+def integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type='photon'):
     """Calcultes the flux density of an SED given a filter response.
 
     Parameters
@@ -151,7 +151,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, o
         c = 2.99792458e18  # speed of light in [Angstroms/s]
         ab_wave = np.arange(1000, 250000, 5)
         ab_flux = 3631e-23*c/ab_wave**2  # in [erg s^-1 cm^-2 A^-1]
-        f_ab = run_filter(ab_wave, ab_flux, filter_wave, filter_response, response_type)
+        f_ab = integrate_filter(ab_wave, ab_flux, filter_wave, filter_response, response_type)
 
         # get ZP offsets
         with open(file_path, 'rt') as ab_file:
@@ -163,12 +163,12 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, o
 
     elif mag_sys.lower() == 'vega':
         spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.dat').T
-        f_vega = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
+        f_vega = integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
         zp = 2.5*np.log10(f_vega)
 
     elif mag_sys.lower() == 'bd17':
         spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/bd_17d4708_stisnic_005.dat').T
-        f_bd17 = run_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
+        f_bd17 = integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
 
         # get ZP offsets
         with open(file_path, 'rt') as bd17_file:
