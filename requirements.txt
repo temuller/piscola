@@ -1,10 +1,12 @@
+numpy
 matplotlib
+scipy
 pandas
 lmfit
 peakutils
-george
 emcee
-extinction
 sfdmap
 astropy
-numpy
+pybind11
+george
+extinction
