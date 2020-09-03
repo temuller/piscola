@@ -595,7 +595,7 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel='matern52', kernel2='squaredexp', gp_mean='mean', fit_2d=True, fit_mag=True, use_mcmc=False):
+    def fit_lcs(self, kernel='matern52', kernel2='matern52', gp_mean='mean', fit_2d=True, fit_mag=True, use_mcmc=False):
         """Fits the data for each band using gaussian process
 
         The fits are done independently for each band. The initial B-band peak time is estimated with
