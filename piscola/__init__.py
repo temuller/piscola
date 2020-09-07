@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .sn import call_sn, initialise_sn, load_sn
+from .sn import call_sn, initialise_sn, load_sn, sn
 from . import extinction_correction
 from . import filter_utils
 from . import gaussian_process

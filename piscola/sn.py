@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import piscola
 from .filter_utils import integrate_filter, calc_eff_wave, calc_pivot_wave, calc_zp, filter_effective_range
@@ -19,7 +20,7 @@ import os
 ### Initialisation functions ###
 
 def initialise_sn(sn_file):
-    """Initialise the 'sn' object.
+    """Initialise the :func:`sn` object.
 
     The object is initialised with all the necessary information like filters, fluxes, etc.
 
@@ -30,7 +31,7 @@ def initialise_sn(sn_file):
 
     Returns
     -------
-    New 'sn' object.
+    New :func:`sn` object.
 
     """
 
@@ -71,8 +72,8 @@ def call_sn(sn_file, directory='data'):
     ----------
     sn_file: str
         Name of the SN or SN file.
-    directory : str, default 'data/'
-        Directory where to look for the SN file unless the full or relative path is given in 'sn_file'.
+    directory : str, default ``data/``
+        Directory where to look for the SN file unless the full or relative path is given in ``sn_file``.
 
     """
 
@@ -92,18 +93,18 @@ def call_sn(sn_file, directory='data'):
         raise ValueError(f'{str} was not a valid SN name or file.')
 
 def load_sn(name, path=None):
-    """Loads a 'sn' oject that was previously saved as a pickle file.
+    """Loads a :func:`sn` oject that was previously saved as a pickle file.
 
     Parameters
     ----------
     name : str
         Name of the SN object.
     path: str
-        Path where to save the SN file given the 'name'.
+        Path where to save the SN file given the ``name``.
 
     Returns
     -------
-    'sn' object previously saved as a pickle file.
+    :func:`sn` object previously saved as a pickle file.
 
     """
 
@@ -173,9 +174,9 @@ class sn(object):
         Parameters
         ----------
         name : str
-            Name of the SN object. If no name is given, the name is set to 'self.name'.
+            Name of the SN object. If no name is given, ``name`` is set to ``self.name``.
         path: str
-            Path where to save the SN file given the 'name'.
+            Path where to save the SN file given the ``name``.
         """
 
         if name is None:
@@ -249,9 +250,9 @@ class sn(object):
         Parameters
         ----------
         filter_list : list
-            List of bands.
-        response_type : str, default 'photon'
-            Response type of the filter. The only options are: 'photon' and 'energy'.
+            List of filters.
+        response_type : str, default ``photon``
+            Response type of the filter. The options are: ``photon`` and ``energy``.
 
         """
 
@@ -308,9 +309,9 @@ class sn(object):
 
         Parameters
         ----------
-        filter_list : list, default 'None'
+        filter_list : list, default ``None``
             List of bands.
-        save : bool, default 'False'
+        save : bool, default ``False``
             If true, saves the plot into a file.
 
         """
@@ -348,7 +349,7 @@ class sn(object):
 
         Parameters
         ----------
-        filter_list : list, default 'None'
+        filter_list : list, default ``None``
             List of bands.
 
         """
@@ -370,8 +371,8 @@ class sn(object):
         ----------
         bands : list
             List of bands.
-        verbose : bool, default 'False'
-            If 'True', a warning is given when a band from 'bands' is not found within the SN bands.
+        verbose : bool, default ``False``
+            If ``True``, a warning is given when a band from ``bands_list`` is not found within the SN bands.
 
         """
 
@@ -389,7 +390,7 @@ class sn(object):
     ############################################################################
 
     def print_sed_templates(self):
-        """Prints all the available SED templates in the 'templates' directory"""
+        """Prints all the available SED templates in the ``templates`` directory"""
 
         path = piscola.__path__[0]
         template_path = os.path.join(path, "templates")
@@ -402,8 +403,8 @@ class sn(object):
 
         Parameters
         ----------
-        template : str, default 'jla'
-            Template name. E.g., 'jla', 'conley09f', etc..
+        template : str, default ``jla``
+            Template name. E.g., ``jla``, ``conley09f``, etc.
 
         """
         # This can be modified to accept other templates
@@ -426,24 +427,24 @@ class sn(object):
     ############################################################################
 
     def mask_data(self, band_list=None, mask_snr=True, snr=5, mask_phase=False, min_phase=-20, max_phase=40):
-        """Mask the data with the given S/N and/or within the given range of days respect to maximum in B band.
+        """Mask the data with the given signal-to-noise (S/N) and/or within the given range of days respect to maximum in B band.
 
         NOTE: Bands with less or equal than 3 data points, after mask is applied, will be deleted.
 
         Parameters
         ----------
-        band_list : list, default 'None'
-            List of bands to plot. If 'None', band list is set to 'self.bands'.
-        mask_snr : bool, default 'True'
-            If 'True', keeps the flux values with S/N greater or equal to 'snr'.
-        snr : float, default '5'
+        band_list : list, default ``None``
+            List of bands to plot. If ``None``, band list is set to ``self.bands``.
+        mask_snr : bool, default ``True``
+            If ``True``, keeps the flux values with S/N greater or equal to ``snr``.
+        snr : float, default ``5``
             S/N threshold applied to mask data.
-        mask_phase : bool, default 'False'
-            If 'True', keeps the flux values within the given phase range set by 'min_phase' and 'max_phase'.
+        mask_phase : bool, default ``False``
+            If ``True``, keeps the flux values within the given phase range set by ``min_phase`` and ``max_phase``.
             An initial estimation of the peak is needed first (can be set manually).
-        min_phase : int, default '-20'
+        min_phase : int, default ``-20``
             Minimum phase limit applied to mask data.
-        max_phase : int, default '40'
+        max_phase : int, default ``40``
             Maximum phase limit applied to mask data.
         """
 
@@ -493,16 +494,16 @@ class sn(object):
 
         Parameters
         ----------
-        band_list : list, default None
-            List of bands to plot. If None, band list is set to 'self.bands'.
-        plot_type : str, default 'flux'
-            Type of value used for the data: either 'mag' or 'flux'.
-        save : bool, default 'False'
+        band_list : list, default ``None``
+            List of bands to plot. If ``None``, band list is set to ``self.bands``.
+        plot_type : str, default ``flux``
+            Type of value used for the data: either ``mag`` or ``flux``.
+        save : bool, default ``False``
             If true, saves the plot into a file.
-        fig_name : str, default None
-            Name of the saved plot. If None is used the name of the file will be '{self.name}_lcs.{outformat}'.
-            Only works if 'save' is set to 'True'.
-        outformat : str, default 'png'
+        fig_name : str, default ``None``
+            Name of the saved plot. If None is used the name of the file will be '{``self.name``}_lcs.{``outformat``}'.
+            Only works if ``save`` is set to ``True``.
+        outformat : str, default ``png``
             Output file format.
 
         """
@@ -571,13 +572,13 @@ class sn(object):
         """Normalize the fluxes and zero-points (ZPs).
 
         Fluxes are converted to physical units by calculating the ZPs according to the
-        magnitude system, either AB, BD17 or Vega.
+        magnitude system, either **AB**, **BD17** or **Vega**.
 
         Parameters
         ----------
-        offsets_file : str, default None
-            File to use for the bands calibration of the zero point. If None, the default file is used (either
-            'bd17_sys_zps.dat' or 'ab_sys_zps.dat', depending on the band).
+        offsets_file : str, default ``None``
+            File to use for the bands calibration of the zero point. If ``None``, the default file is used (either
+            ``bd17_sys_zps.dat`` or ``ab_sys_zps.dat``, depending on the band).
         """
 
         for band in self.bands:
@@ -603,20 +604,20 @@ class sn(object):
 
         Parameters
         ----------
-        kernel : str, default 'matern52'
-            Kernel to be used to fit the light curves with gaussian process. E.g., 'matern52', 'matern32', 'squaredexp'.
-        kernel2 : str, default 'squaredexp'
-            Kernel to be used in the wavelength axis when fitting in 2D with gaussian process. E.g., 'matern52', 'matern32', 'squaredexp'.
-        gp_mean : str, default 'mean'
+        kernel : str, default ``matern52``
+            Kernel to be used to fit the light curves with gaussian process. E.g., ``matern52``, ``matern32``, ``squaredexp``.
+        kernel2 : str, default ``squaredexp``
+            Kernel to be used in the wavelength axis when fitting in 2D with gaussian process. E.g., ``matern52``, ``matern32``, ``squaredexp``.
+        gp_mean : str, default ``mean``
             Mean function to be used when fitting in 1D with gaussian process. The default uses a constant function
-            equal to the mean flux. Possible choices are: 'mean', 'gaussian', 'bazin', 'zheng'. 'bazin' implements the model from
-            Bazin et al. (2011) while 'zheng' implements the model from Zheng et al. (2018).
-        fit_2d : bool, default 'True'
+            equal to the mean flux. Possible choices are: ``mean``, ``gaussian``, ``bazin``, ``zheng``. ``bazin`` implements the model from
+            Bazin et al. (2011) while ``zheng`` implements the model from Zheng et al. (2018).
+        fit_2d : bool, default ``True``
             Wether to fit in 1D or 2D with gaussian process.
-        fit_mag : bool, default 'True'
-            If 'True' and fit_2d=True, the data is fit in magnitude space. This is recommended for 2D fit.
-        use_mcmc : bool, default 'False'
-            If 'True', MCMC is used for the 2D gaussian process fit, otherwise, a simple minimization with scipy.optimize is used.
+        fit_mag : bool, default ``True``
+            If ``True`` and ``fit_2d=True``, the data is fit in magnitude space. This is recommended for 2D fit.
+        use_mcmc : bool, default ``False``
+            If ``True``, MCMC (:func:`emcee`) is used for the 2D gaussian process fit, otherwise, a simple minimization with :func:`scipy.optimize` is used.
         """
         ########################
         ####### GP Fit #########
@@ -753,16 +754,16 @@ class sn(object):
 
         Parameters
         ----------
-        plot_together : bool, default 'True'
-            If 'True', plots the bands together in one plot. Otherwise, each band is plotted separately.
-        plot_type : str, default 'flux'
-            Type of value used for the data: either 'mag' or 'flux'.
-        save : bool, default 'False'
-            If 'True', saves the plot into a file.
-        fig_name : str, default 'None'
-            Name of the saved plot. If 'None' is used the name of the file will be '{self.name}_lc_fits.{outformat}'.
-            Only works if 'save' is set to 'True'.
-        outformat : str, default 'png'
+        plot_together : bool, default ``True``
+            If ``True``, plots the bands together in one plot. Otherwise, each band is plotted separately.
+        plot_type : str, default ``flux``
+            Type of value used for the data: either ``mag`` or ``flux``.
+        save : bool, default ``False``
+            If ``True``, saves the plot into a file.
+        fig_name : str, default ``None``
+            Name of the saved plot. If ``None`` is used the name of the file will be '{``self.name``}_lc_fits.{``outformat``}'.
+            Only works if ``save`` is set to ``True``.
+        outformat : str, default ``png``
             Output file format.
 
         """
@@ -884,17 +885,17 @@ class sn(object):
 
         Parameters
         ----------
-        min_phase : int, default '-15'
+        min_phase : int, default ``-15``
             Minimum phase to mangle.
-        max_phase : int, default '30'
+        max_phase : int, default ``30``
             Maximum phase to mangle.
-        kernel : str, default 'squaredexp'
-            Kernel to be used for the gaussian process fit of the mangling function.  E.g, 'matern52',
-            'matern32', 'squaredexp'.
-        gp_mean: str, default 'mean'
+        kernel : str, default ``squaredexp``
+            Kernel to be used for the gaussian process fit of the mangling function.  E.g, ``matern52``,
+            ``matern32``, ``squaredexp``.
+        gp_mean: str, default ``mean``
             Mean function to be used when fitting with gaussian process. The default uses a constant function
-            equal to the mean of the values. Possible choices are: 'mean', 'poly'. 'poly' uses a 3rd degree polynomial function.
-        correct_extinction: bool, default 'True'
+            equal to the mean of the values. Possible choices are: ``mean``, ``poly``. ``poly`` uses a 3rd degree polynomial function.
+        correct_extinction: bool, default ``True``
             Whether or not to correct for Milky Way extinction.
         """
 
@@ -986,19 +987,19 @@ class sn(object):
 
         Parameters
         ----------
-        phase : int, default '0'
+        phase : int, default ``0``
             Phase to plot the mangling function. By default it plots the mangling function at B-band peak.
-        mangle_only : bool, default 'False'
-            If 'True', only plots the mangling function, else, plots the SEDs and filters as well (with scaled values).
-        verbose : bool, default 'True'
-            If 'True', returns the difference between the magnitudes from the fits and the magnitudes from the
-            modified SED after mangling, for each of the bands in 'band_list'.
-        save : bool, default 'False'
+        mangle_only : bool, default ``False``
+            If ``True``, only plots the mangling function, else, plots the SEDs and filters as well (with scaled values).
+        verbose : bool, default ``True``
+            If ``True``, returns the difference between the magnitudes from the fits and the magnitudes from the
+            modified SED after mangling, for each of the bands.
+        save : bool, default ``False``
             If true, saves the plot into a file.
-        fig_name : str, default 'None'
-            Name of the saved plot. If 'None' is used the name of the file will be '{self.name}_mangling_phase{phase}.{outformat}'.
-            Only works if 'save' is set to 'True'.
-        outformat : str, default 'png'
+        fig_name : str, default ``None``
+            Name of the saved plot. If ``None`` is used the name of the file will be '{``self.name``}_mangling_phase{``phase``}.{``outformat``}'.
+            Only works if ``save`` is set to ``True``.
+        outformat : str, default ``png``
             Output file format.
 
         """
@@ -1088,7 +1089,7 @@ class sn(object):
 
             # initial sed and fluxes
             ax3.plot(init_sed_wave, init_sed_flux2, '--k', lw=3)  # initial sed
-            ax3.plot(eff_waves, sed_fluxes2, 'ok', ms=14, label='Initial SED values', alpha=0.8, fillstyle='none')  # initial sed fluxes
+            ax3.plot(eff_waves, sed_fluxes2, 'ok', ms=14, label='Initial SED values', alpha=0.8, fillstyle='None')  # initial sed fluxes
 
             # optimized sed and fluxes
             ax3.plot(mang_sed_wave, mang_sed_flux2, 'red', lw=3)  # mangled sed
@@ -1134,7 +1135,7 @@ class sn(object):
     def _calculate_corrected_lcs(self):
         """Calculates the SN light curves applying extinction and k-corrections.
 
-        Note: this function is used inside self.calculate_lc_params()
+        Note: this function is used inside :func:`self.calculate_lc_params()`
         """
 
         corrected_lcs = {}
@@ -1183,12 +1184,12 @@ class sn(object):
     def calculate_lc_params(self, maxiter=5):
         """Calculates the light-curves parameters.
 
-        Estimation of B-band peak apparent magnitude (mb), stretch (dm15) and color ((B-V)max) parameters.
+        Estimation of B-band peak apparent magnitude (**mb**), stretch (**dm15**) and color (**(B-V)max**) parameters.
         An interpolation of the corrected light curves is done as well as part of this process.
 
         Parameters
         ----------
-        maxiter : int, default '5'
+        maxiter : int, default ``5``
             Maximum number of iteration of the correction process to estimate an accurate B-band peak.
 
         """
@@ -1288,18 +1289,18 @@ class sn(object):
 
         Parameters
         ----------
-        band : str, default 'Bessell_B'
+        band : str, default ``Bessell_B``
             Name of the band to be plotted.
-        plot_type : str, default 'mag'
-            Type of value used for the data: either 'mag' or 'flux'.
-        display_params : bool, default 'False'
-            If 'True', the light-curves parameters are displayed in the plot.
-        save : bool, default 'False'
-            If 'True', saves the plot into a file.
-        fig_name : str, default 'None'
-            Name of the saved plot. If 'None' is used the name of the file will be '{self.name}_restframe_{band}.{outformat}'.
-            Only works if 'save' is set to 'True'.
-        outformat : str, default 'png'
+        plot_type : str, default ``mag``
+            Type of value used for the data: either ``mag`` or ``flux``.
+        display_params : bool, default ``False``
+            If ``True``, the light-curves parameters are displayed in the plot.
+        save : bool, default ``False``
+            If ``True``, saves the plot into a file.
+        fig_name : str, default ``None``
+            Name of the saved plot. If ``None`` is used the name of the file will be '{``self.name``}_restframe_{``band``}.{``outformat``}'.
+            Only works if ``save`` is set to ``True``.
+        outformat : str, default ``png``
             Output file format.
 
         """
