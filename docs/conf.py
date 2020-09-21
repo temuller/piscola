@@ -1,6 +1,9 @@
 import sphinx_rtd_theme
 import piscola
+import sys
 
+# to be able to import piscola
+sys.path.insert(0, os.path.abspath('.'))
 
 # -- Project information -----------------------------------------------------
 
