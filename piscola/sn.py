@@ -396,7 +396,7 @@ class sn(object):
         path = piscola.__path__[0]
         template_path = os.path.join(path, "templates")
         print('The list of available SED templates are:', [name for name in os.listdir(template_path)
-                                                           if os.path.isdir(os.path.join(template_path, f"{name}"))])
+                                                           if os.path.isdir(os.path.join(template_path, name))])
 
 
     def set_sed_template(self, template='jla'):
