@@ -18,7 +18,7 @@ PISCOLA uses its own format for a SN file (explained in the advanced implementat
 
 .. code:: python
 
-	sn = piscola.sn_file('03D1au')
+	sn = piscola.call_sn('03D1au')
 	print(sn)
 	print(f'Observed bands: {sn.bands}')
 
@@ -96,7 +96,7 @@ Putting it all together
 
 .. code:: python
 
-	sn = piscola.sn_file('03D1au')
+	sn = piscola.call_sn('03D1au')
 
 	sn.normalize_data()
 	sn.fit_lcs()
