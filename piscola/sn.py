@@ -77,20 +77,21 @@ def call_sn(sn_file, directory='data'):
 
     """
 
+    sn_full_path = os.path.join(directory, sn_file)
     # if sn_file is the file name
-    if os.path.isfile(os.path.join(directory, sn_file)):
-        return initialise_sn(os.path.join(directory, sn_file))
+    if os.path.isfile(sn_full_path):
+        return initialise_sn(sn_full_path)
 
     # if sn_file is the SN name
-    elif os.path.isfile(os.path.join(directory, sn_file) + '.dat'):
-        return initialise_sn(os.path.join(directory, sn_file) + '.dat')
+    elif os.path.isfile(sn_full_path + '.dat'):
+        return initialise_sn(sn_full_path + '.dat')
 
     # if sn_file is the file name with full or relative path
     elif os.path.isfile(sn_file):
         return initialise_sn(sn_file)
 
     else:
-        raise ValueError(f'{str} was not a valid SN name or file.')
+        raise ValueError(f'{sn_file} was not a valid SN name or file.')
 
 def load_sn(name, path=None):
     """Loads a :func:`sn` oject that was previously saved as a pickle file.
