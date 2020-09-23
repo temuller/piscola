@@ -107,6 +107,6 @@ Or, if you want a "quick" implementation, following the same steps as above and 
 
 .. code:: python
 
-	sn = piscola.sn_file('03D1au')
+	sn = piscola.call_sn('03D1au')
 	sn.do_magic()
 
