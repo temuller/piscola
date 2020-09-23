@@ -71,7 +71,7 @@ def deredden(wave, flux, ra, dec, scaling=0.86):
     r_v  = 3.1
     a_v = r_v*ebv
     ext = extinction.fitzpatrick99(wave, a_v, r_v)
-    deredden_flux = extinction.apply(-ext, flux) #removes extinction from flux
+    deredden_flux = extinction.remove(ext, flux) #removes extinction from flux
 
     return deredden_flux
 
