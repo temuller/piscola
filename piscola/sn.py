@@ -1090,7 +1090,8 @@ class sn(object):
 
             # initial sed and fluxes
             ax3.plot(init_sed_wave, init_sed_flux2, '--k', lw=3)  # initial sed
-            ax3.plot(eff_waves, sed_fluxes2, 'ok', ms=14, label='Initial SED values', alpha=0.8, fillstyle='None')  # initial sed fluxes
+            ax3.plot(eff_waves, sed_fluxes2, 'ok', ms=14, label='Initial SED values',
+                                                alpha=0.8, fillstyle='none', markeredgewidth=2)  # initial sed fluxes
 
             # optimized sed and fluxes
             ax3.plot(mang_sed_wave, mang_sed_flux2, 'red', lw=3)  # mangled sed
