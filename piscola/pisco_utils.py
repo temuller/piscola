@@ -1,6 +1,6 @@
 import numpy as np
 
-def flux2mag(flux, zp, flux_err=None):
+def flux2mag(flux, zp, flux_err=0.0):
     """Converts fluxes to magnitudes, propagating errors if given.
 
     Parameters
@@ -9,22 +9,20 @@ def flux2mag(flux, zp, flux_err=None):
         Array of fluxes.
     zp : float or array
         Zero points.
-    flux_err : array, default 'None'
+    flux_err : array, default ``0.0``
         Array of flux errors.
 
     Returns
     -------
-    Magnitudes and their errors (only if 'flux_err' is given)
+    Magnitudes and their errors.
     """
 
     mag = -2.5*np.log10(flux) + zp
+    mag_err = np.abs( 2.5*flux_err/(flux*np.log(10)) )
 
-    if flux_err is not None:
-        mag_err = np.abs( 2.5*flux_err/(flux*np.log(10)) )
-        return mag, mag_err
-    return mag
+    return mag, mag_err
 
-def mag2flux(mag, zp, mag_err=None):
+def mag2flux(mag, zp, mag_err=0.0):
     """Converts magnitudes to fluxes, propagating errors if given.
 
     Parameters
@@ -33,21 +31,18 @@ def mag2flux(mag, zp, mag_err=None):
         Array of magnitudes.
     zp : float or array
         Zero points.
-    mag_err : array, default 'None'
+    mag_err : array, default ``0.0``
         Array of magnitude errors.
 
     Returns
     -------
-    Fluxes and their errors (only if 'mag_err' is given)
+    Fluxes and their errors.
     """
 
     flux = 10**( -0.4*(mag-zp) )
+    flux_err =  np.abs( flux*0.4*np.log(10)*mag_err )
 
-
-    if mag_err is not None:
-        flux_err =  np.abs( flux*0.4*np.log(10)*mag_err )
-        return flux, flux_err
-    return flux
+    return flux, flux_err
 
 def trim_filters(response):
     """Trim the leading and trailing zeros from a 1-D array or sequence, leaving
@@ -98,7 +93,7 @@ def extrapolate_mangling_edges(x, y, yerr, x_edges, extra_extension=0.0):
         Dependent value errors.
     x_edges: array-like
         Minimum and maximum x-axis values. These are used to extrapolate both edges.
-    extra_extension: float
+    extra_extension: float, default=``0.0``
         This value is added to extend the edges even more. It might look redundant, but it has its purpose.
 
     Returns
