@@ -7,7 +7,6 @@ peakutils
 emcee
 sfdmap
 extinction
-astropy
 pybind11
 george
 
