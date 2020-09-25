@@ -1,10 +1,5 @@
 import numpy as np
 import piscola
-#from astropy import units as u
-#from astropy import constants as const
-
-#h = const.cgs.codata2014.h.value
-#c = const.c.to(u.AA/u.s).value
 
 def integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type='photon'):
     """Calcultes the flux density of an SED given a filter response.
@@ -19,8 +14,8 @@ def integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response,
         Filter's wavelength range.
     filter_response : array
         Filter's response function.
-    response_type : str, default 'photon'
-        Filter's response type. Either 'photon' or 'energy'. Only the Bessell filters use 'energy'.
+    response_type : str, default ``photon'
+        Filter's response type. Either ``photon' or``'energy``. Only the Bessell filters use ``energy``.
 
     Returns
     -------
@@ -68,8 +63,8 @@ def calc_eff_wave(spectrum_wave, spectrum_flux, filter_wave, filter_response, re
         Filter's wavelength range.
     filter_response : array
         Filter's response function.
-    response_type : str, default 'photon'
-        Filter's response type. Either 'photon' or 'energy'. Only the Bessell filters use 'energy'.
+    response_type : str, default ``photon'
+        Filter's response type. Either ``photon' or``'energy``. Only the Bessell filters use ``energy``.
 
     Returns
     -------
@@ -89,7 +84,7 @@ def calc_eff_wave(spectrum_wave, spectrum_flux, filter_wave, filter_response, re
     return eff_wave
 
 
-def calc_pivot_wave(filter_wave, filter_response, response_type):
+def calc_pivot_wave(filter_wave, filter_response, response_type='photon'):
     """Calcultes the pivot wavelength for the given filter.
 
     Parameters
@@ -98,8 +93,8 @@ def calc_pivot_wave(filter_wave, filter_response, response_type):
         Filter's wavelength range.
     filter_response : array
         Filter's response function.
-    response_type : str, default 'photon'
-        Filter's response type. Either 'photon' or 'energy'. Only the Bessell filters use 'energy'.
+    response_type : str, default ``photon'
+        Filter's response type. Either ``photon' or``'energy``. Only the Bessell filters use ``energy``.
 
     Returns
     -------
@@ -118,7 +113,7 @@ def calc_pivot_wave(filter_wave, filter_response, response_type):
     return pivot_wave
 
 
-def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, offsets_file=None):
+def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, calibration_file=None):
     """Calculates the zero point in the AB, Vega or BD17 magnitude sytems.
 
     Parameters
@@ -127,12 +122,14 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, o
         Filter's wavelength range.
     filter_response : array
         Filter's response function.
-    response_type : str
-        Filter's response type. Either 'photon' or 'energy'. Only the Bessell filters use 'energy'.
+    response_type : str, default ``photon'
+        Filter's response type. Either ``photon' or``'energy``. Only the Bessell filters use ``energy``.
     mag_sys : str
-        Magnitude system. Either 'AB', 'Vega', 'BD17'.
+        Magnitude system. Either ``AB``, ``Vega``, ``BD17``.
     filter_name : str
-        Filter name. Used to estimate the zero point for the 'BD17' magnitude system.
+        Filter name. Used to estimate the zero point for the ``BD17`` magnitude system.
+    calibration_file: str, default ``None``
+        File with the magnitude system calibration for different set of filter.
 
     Returns
     -------
@@ -142,8 +139,8 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, o
 
     path = piscola.__path__[0]
 
-    if offsets_file:
-        file_path = f'{path}/templates/{offsets_file}'
+    if calibration_file:
+        file_path = f'{path}/templates/{calibration_file}'
     else:
         file_path = f'{path}/templates/{mag_sys.lower()}_sys_zps.dat'
 
@@ -162,12 +159,14 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, o
             raise ValueError(f'Could not find "{filter_name}" filter in {file_path}')
 
     elif mag_sys.lower() == 'vega':
-        spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/alpha_lyr_stis_005.dat').T
+        vega_sed_file = os.path.join(path, 'templates/alpha_lyr_stis_005.dat')
+        spectrum_wave, spectrum_flux = np.loadtxt(vega_sed_file).T
         f_vega = integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
         zp = 2.5*np.log10(f_vega)
 
     elif mag_sys.lower() == 'bd17':
-        spectrum_wave, spectrum_flux = np.loadtxt(path + '/templates/bd_17d4708_stisnic_005.dat').T
+        bd17_sed_file = os.path.join(path, 'templates/bd_17d4708_stisnic_005.dat')
+        spectrum_wave, spectrum_flux = np.loadtxt(bd17_sed_file).T
         f_bd17 = integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
 
         # get ZP offsets
@@ -191,12 +190,13 @@ def filter_effective_range(filter_response, percent=99.0):
     ----------
     filter_response : array
         Filter's response function.
-    percent : float, default '99.0'
+    percent : float, default ``99.0``
         Percentage of the filter's area that wants to be kept.
 
     Returns
     -------
-    Minimum and maximum indexes which contain the wanted area of the filter, independently.
+    Minimum and maximum indexes which contain the wanted area of the filter. Note that each
+    index contains the wanted area independently from the other.
 
     """
 
