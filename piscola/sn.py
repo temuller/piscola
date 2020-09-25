@@ -3,9 +3,9 @@
 import piscola
 from .filter_utils import integrate_filter, calc_eff_wave, calc_pivot_wave, calc_zp, filter_effective_range
 from .gaussian_process import gp_lc_fit, gp_2d_fit
-from .extinction_correction import redden, deredden
+from .extinction_correction import redden, deredden, calculate_ebv
 from .mangling import mangle
-from .utils import trim_filters, flux2mag, mag2flux
+from .pisco_utils import trim_filters, flux2mag, mag2flux
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
@@ -45,6 +45,9 @@ def initialise_sn(sn_file):
     sn_obj.bands = [band for band in list(sn_df['band'].unique())]
     sn_obj.call_filters()
 
+    # calculate MW reddening
+    sn_obj['mw_ebv'] = calculate_ebv(ra, dec)
+
     # order bands by effective wavelength (estimated from the SED template)
     eff_waves = [sn_obj.filters[band]['eff_wave'] for band in sn_obj.bands]
     sorted_idx = sorted(range(len(eff_waves)), key=lambda k: eff_waves[k])
@@ -61,7 +64,7 @@ def initialise_sn(sn_file):
                                  'mag_sys':band_info['mag_sys'].unique()[0],
                                 }
     sn_obj.bands = list(sn_obj.data.keys())  # to exclude removed bands
-    #sn_obj.calc_pivot()
+
     return sn_obj
 
 
@@ -527,8 +530,8 @@ class sn(object):
                 ymin_lim *= 1.1/0.9
             ymax_lim = plot_lim_vals.max()*1.1
         elif plot_type=='mag':
-            plot_lim_vals = [[np.nanmin(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])),
-                              np.nanmax(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp']))] for band in self.bands]
+            plot_lim_vals = [[np.nanmin(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])[0]),
+                              np.nanmax(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])[0])] for band in self.bands]
             plot_lim_vals = np.ndarray.flatten(np.array(plot_lim_vals))
             ymin_lim = np.nanmin(plot_lim_vals)*0.98
             ymax_lim = np.nanmax(plot_lim_vals)*1.02
@@ -785,8 +788,8 @@ class sn(object):
                     ymin_lim *= 1.1/0.9
                 ymax_lim = plot_lim_vals.max()*1.05
             elif plot_type=='mag':
-                plot_lim_vals = [[np.nanmin(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])),
-                                  np.nanmax(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp']))] for band in self.bands]
+                plot_lim_vals = [[np.nanmin(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])[0]),
+                                  np.nanmax(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])[0])] for band in self.bands]
                 plot_lim_vals = np.ndarray.flatten(np.array(plot_lim_vals))
                 ymin_lim = np.nanmin(plot_lim_vals)*0.98
                 ymax_lim = np.nanmax(plot_lim_vals)*1.02
@@ -881,7 +884,7 @@ class sn(object):
     ######################### Light Curves Correction ##########################
     ############################################################################
 
-    def mangle_sed(self, min_phase=-15, max_phase=30, kernel='squaredexp', gp_mean='mean', correct_extinction=True):
+    def mangle_sed(self, min_phase=-15, max_phase=30, kernel='squaredexp', gp_mean='mean', correct_extinction=True, scaling=0.86, reddening_law='fitzpatrick99'):
         """Mangles the SED with the given method to match the SN magnitudes.
 
         Parameters
@@ -898,12 +901,18 @@ class sn(object):
             equal to the mean of the values. Possible choices are: ``mean``, ``poly``. ``poly`` uses a 3rd degree polynomial function.
         correct_extinction: bool, default ``True``
             Whether or not to correct for Milky Way extinction.
+            Calibration of the Milky Way dust maps. Either ``0.86``
+        scaling : float, default ``0.86``
+            for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
+            dust map of Schlegel, ``Fikbeiner & Davis (1998).
+        reddening_law: str, default 'fitzpatrick99``
+            Reddening law.``fitzpatrick99`` for Fitzpatrick99 (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
         """
 
         phases = np.arange(min_phase, max_phase+1, 1)
 
         self.user_input['mangle_sed'] = {'min_phase':min_phase, 'max_phase':max_phase,
-                                            'kernel':kernel, 'correct_extinction':correct_extinction}
+                                            'kernel':kernel, 'correct_extinction':correct_extinction, 'scaling':scaling}
         lc_phases = self.lc_fits[self.pivot_band]['phase']
 
         ####################################
@@ -916,7 +925,7 @@ class sn(object):
         # first redshift the SED ("move" it in z) and then apply extinction from MW only
         sed_df.wave, sed_df.flux = sed_df.wave.values*(1+self.z), sed_df.flux.values/(1+self.z)
         if correct_extinction:
-            sed_df.flux = redden(sed_df.wave.values, sed_df.flux.values, self.ra, self.dec)
+            sed_df.flux = redden(sed_df.wave.values, sed_df.flux.values, self.ra, self.dec, scaling, reddening_law)
 
         self.sed_lcs = {band:{'flux':[], 'mjd':None, 'phase':None} for band in self.bands}
         sed_phases = sed_df.phase.unique()
@@ -978,7 +987,8 @@ class sn(object):
         # correct mangled SED for MW extinction first and then de-redshift it ("move" it back in z)
         self.corrected_sed = self.mangled_sed.copy()
         if correct_extinction:
-            self.corrected_sed.flux = deredden(self.corrected_sed.wave.values, self.corrected_sed.flux.values, self.ra, self.dec)
+            self.corrected_sed.flux = deredden(self.corrected_sed.wave.values, self.corrected_sed.flux.values,
+                                                                                    self.ra, self.dec, scaling, reddening_law)
         self.corrected_sed.wave = self.corrected_sed.wave.values/(1+self.z)
         self.corrected_sed.flux = self.corrected_sed.flux.values*(1+self.z)
 
