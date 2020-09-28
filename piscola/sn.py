@@ -46,7 +46,7 @@ def initialise_sn(sn_file):
     sn_obj.call_filters()
 
     # calculate MW reddening
-    sn_obj['mw_ebv'] = calculate_ebv(ra, dec)
+    sn_obj.mw_ebv = calculate_ebv(ra, dec)
 
     # order bands by effective wavelength (estimated from the SED template)
     eff_waves = [sn_obj.filters[band]['eff_wave'] for band in sn_obj.bands]
