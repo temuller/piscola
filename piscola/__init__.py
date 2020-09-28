@@ -5,7 +5,6 @@ from . import extinction_correction
 from . import filter_utils
 from . import gaussian_process
 from . import mangling
-from . import spline
 from . import utils
 
 
