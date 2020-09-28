@@ -5,7 +5,7 @@ from . import extinction_correction
 from . import filter_utils
 from . import gaussian_process
 from . import mangling
-from . import utils
+from . import pisco_utils
 
 
 __version__ = "0.1.0"
