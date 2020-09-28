@@ -5,6 +5,7 @@ import sfdmap
 
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
     """Reddens the given spectrum, given a right ascension and declination. Rv is assumed to be 3.1.
