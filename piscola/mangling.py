@@ -1,6 +1,5 @@
 from .filter_utils import integrate_filter
 from .gaussian_process import gp_mf_fit
-from .spline import fit_spline
 
 import numpy as np
 import lmfit
