@@ -124,7 +124,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, c
     filter_response : array
         Filter's response function.
     response_type : str, default ``photon'
-        Filter's response type. Either ``photon' or``'energy``. Only the Bessell filters use ``energy``.
+        Filter's response type. Either ``photon' or ``energy``. Only the Bessell filters use ``energy``.
     mag_sys : str
         Magnitude system. Either ``AB``, ``Vega``, ``BD17``.
     filter_name : str
