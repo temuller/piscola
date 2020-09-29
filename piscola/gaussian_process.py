@@ -173,7 +173,8 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52', gp_mean='mean'):
                        'mu':(mu-50, mu+50),
                        'log_sigma2':(np.log(10), np.log(60)),
                        }
-        mean_model = gaussian_lcMeanModel(A=A, mu=mu, log_sigma2=log_sigma2, bounds=mean_bounds)
+        #mean_model = gaussian_lcMeanModel(A=A, mu=mu, log_sigma2=log_sigma2, bounds=mean_bounds)
+        mean_model = gaussian_lcMeanModel(A=A, mu=mu, log_sigma2=log_sigma2)
     elif gp_mean=='bazin':
         A, tf, tr = y.max(), 40, 20
         t0 = 20 + tr*np.log(tf/tr-1)
@@ -182,7 +183,8 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52', gp_mean='mean'):
                        'tf':(tf-35, tf+40),
                        'tr':(tr-15, tr+20),
                        }
-        mean_model = bazin_lcMeanModel(A=A, t0=t0, tf=tf, tr=tr, bounds=mean_bounds)
+        #mean_model = bazin_lcMeanModel(A=A, t0=t0, tf=tf, tr=tr, bounds=mean_bounds)
+        mean_model = bazin_lcMeanModel(A=A, t0=t0, tf=tf, tr=tr)
     elif gp_mean=='zheng':
         A, t0, tb, ar, ad, s = y.max(), x[y==y.max()][0]-20, 20, 2, 2.5, 1.5
         mean_bounds = {'A':(0.1, 100),
@@ -192,7 +194,8 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52', gp_mean='mean'):
                'ad':(ad-2.3, ad+3.5),
                's':(s-1.3, s+3.0),
                }
-        mean_model = zheng_lcMeanModel(A=A, t0=t0, tb=tb, ar=ar, ad=ad, s=s, bounds=mean_bounds)
+        #mean_model = zheng_lcMeanModel(A=A, t0=t0, tb=tb, ar=ar, ad=ad, s=s, bounds=mean_bounds)
+        mean_model = zheng_lcMeanModel(A=A, t0=t0, tb=tb, ar=ar, ad=ad, s=s)
     else:
         raise ValueError(f'"{gp_mean}" is not a valid gaussian-process mean function for light-curve fitting.')
 
@@ -200,14 +203,18 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52', gp_mean='mean'):
     bounds_var, bounds_length = [(np.log(1e-6), np.log(10))], [(np.log(1e-8), np.log(1e2))]
 
     # a constant kernel is used to allow adding bounds
-    k1 = george.kernels.ConstantKernel(np.log(var), bounds=bounds_var)
+    #k1 = george.kernels.ConstantKernel(np.log(var), bounds=bounds_var)
+    k1 = george.kernels.ConstantKernel(np.log(var))
 
     if kernel == 'matern52':
-        k2 = george.kernels.Matern52Kernel(length_scale**2, metric_bounds=bounds_length)
+        #k2 = george.kernels.Matern52Kernel(length_scale**2, metric_bounds=bounds_length)
+        k2 = george.kernels.Matern52Kernel(length_scale**2)
     elif kernel == 'matern32':
-        k2 = george.kernels.Matern32Kernel(length_scale**2, metric_bounds=bounds_length)
+        #k2 = george.kernels.Matern32Kernel(length_scale**2, metric_bounds=bounds_length)
+        k2 = george.kernels.Matern32Kernel(length_scale**2)
     elif kernel == 'squaredexp':
-        k2 = george.kernels.ExpSquaredKernel(length_scale**2, metric_bounds=bounds_length)
+        #k2 = george.kernels.ExpSquaredKernel(length_scale**2, metric_bounds=bounds_length)
+        k2 = george.kernels.ExpSquaredKernel(length_scale**2)
     else:
         raise ValueError(f'"{kernel}" is not a valid kernel.')
 
