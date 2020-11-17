@@ -141,9 +141,9 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, c
     path = piscola.__path__[0]
 
     if calibration_file:
-        file_path = f'{path}/templates/{calibration_file}'
+        file_path = f'{path}/standards/{calibration_file}'
     else:
-        file_path = f'{path}/templates/{mag_sys.lower()}_sys_zps.dat'
+        file_path = f'{path}/standards/{mag_sys.lower()}_sys_zps.dat'
 
     if mag_sys.lower() == 'ab':
         c = 2.99792458e18  # speed of light in [Angstroms/s]
@@ -160,13 +160,13 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, c
             raise ValueError(f'Could not find "{filter_name}" filter in {file_path}')
 
     elif mag_sys.lower() == 'vega':
-        vega_sed_file = os.path.join(path, 'templates/alpha_lyr_stis_005.dat')
+        vega_sed_file = os.path.join(path, 'standards/alpha_lyr_stis_005.dat')
         spectrum_wave, spectrum_flux = np.loadtxt(vega_sed_file).T
         f_vega = integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
         zp = 2.5*np.log10(f_vega)
 
     elif mag_sys.lower() == 'bd17':
-        bd17_sed_file = os.path.join(path, 'templates/bd_17d4708_stisnic_005.dat')
+        bd17_sed_file = os.path.join(path, 'standards/bd_17d4708_stisnic_005.dat')
         spectrum_wave, spectrum_flux = np.loadtxt(bd17_sed_file).T
         f_bd17 = integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
 
