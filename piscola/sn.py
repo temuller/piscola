@@ -884,7 +884,8 @@ class sn(object):
     ######################### Light Curves Correction ##########################
     ############################################################################
 
-    def mangle_sed(self, min_phase=-15, max_phase=30, kernel='squaredexp', gp_mean='mean', correct_extinction=True, scaling=0.86, reddening_law='fitzpatrick99'):
+    def mangle_sed(self, min_phase=-15, max_phase=30, kernel='squaredexp', gp_mean='mean', linear_extrap=True,
+                            correct_extinction=True, scaling=0.86, reddening_law='fitzpatrick99'):
         """Mangles the SED with the given method to match the SN magnitudes.
 
         Parameters
@@ -899,6 +900,8 @@ class sn(object):
         gp_mean: str, default ``mean``
             Mean function to be used when fitting with gaussian process. The default uses a constant function
             equal to the mean of the values. Possible choices are: ``mean``, ``poly``. ``poly`` uses a 3rd degree polynomial function.
+        linear_extrap: bool, default ``True``
+            Type of extrapolation for the edges. Linear if ``True``, free if ``False``.
         correct_extinction: bool, default ``True``
             Whether or not to correct for Milky Way extinction.
             Calibration of the Milky Way dust maps. Either ``0.86``
@@ -969,7 +972,7 @@ class sn(object):
 
             # mangling routine including optimisation
             mangling_results = mangle(wave_array, flux_ratios_array, sed_epoch_wave, sed_epoch_flux,
-                                        obs_fluxes, obs_errs, self.bands, self.filters, kernel, gp_mean, x_edges)
+                                        obs_fluxes, obs_errs, self.bands, self.filters, kernel, gp_mean, x_edges, linear_extrap)
 
             # precision of the mangling function
             mag_diffs = {band:-2.5*np.log10(mangling_results['flux_ratios'][i]) if mangling_results['flux_ratios'][i] > 0

@@ -241,7 +241,7 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52', gp_mean='mean'):
     return x_pred*x_norm, mu*y_norm, std*y_norm
 
 
-def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', gp_mean='mean', x_edges=[1e3, 3e4]):
+def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', gp_mean='mean', x_edges=[1e3, 3e4], linear_extrap=True):
     """Fits a mangling function with gaussian process.
 
     The package ``george`` is used for the gaussian process fit.
@@ -254,17 +254,19 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', gp_mean='mean'
         Dependent values.
     yerr_data : array, default ``0.0``
         Dependent value errors.
-    kernel : str, default 'squaredexp'
-        Kernel to be used with the gaussian process. E.g., 'matern52', 'matern32', 'squaredexp'.
+    kernel : str, default ``squaredexp``
+        Kernel to be used with the gaussian process. E.g., ``matern52``, ``matern32``, ``squaredexp``.
     gp_mean: str, default ``mean``
         Mean function to be used when fitting with gaussian process. The default uses a constant function
         equal to the mean of the values. Possible choices are: ``mean``, ``poly``. ``poly`` uses a 3rd degree polynomial function.
     x_edges: array-like, default ``[1e3, 3e4]``
         Minimum and maximum x-axis values. These are used to extrapolate both edges.
+    linear_extrap: bool, default ``True``
+        Type of extrapolation for the edges. Linear if ``True``, free if ``False``.
 
     Returns
     -------
-    Returns the interpolated independent and dependent values with the 1-sigma standard deviation.
+    Returns the interpolated independent and dependent values with 1-sigma standard deviation.
 
     """
 
@@ -284,12 +286,15 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', gp_mean='mean'
         gp.set_parameter_vector(params)
         return -gp.grad_log_likelihood(y, quiet=True)
 
-    x, y, yerr = extrapolate_mangling_edges(np.copy(x_data), np.copy(y_data), np.copy(yerr_data), x_edges)
+    if linear_extrap:
+        x, y, yerr = extrapolate_mangling_edges(np.copy(x_data), np.copy(y_data), np.copy(yerr_data), x_edges)
+    else:
+        x, y, yerr = np.copy(x_data), np.copy(y_data), np.copy(yerr_data)
 
     # normalise the data for better results
     x_norm = 1e3
     x /= x_norm
-    x_min, x_max = x.min(), x.max()
+    x_min, x_max = np.array(x_edges)/x_norm
 
     y_norm = y.max()
     y /= y_norm
