@@ -265,47 +265,28 @@ class sn(object):
         sed_df = sed_df[sed_df.phase==0.0]
         sed_wave, sed_flux = sed_df.wave.values, sed_df.flux.values
 
-        filters_path = os.path.join(path, 'filters')
-        filters_sub_path = os.path.join(filters_path, filter_list)
-        if isinstance(filter_list, str) and os.path.isdir(filters_sub_path):
-            # add directory
-            for file in os.listdir(filters_sub_path):
-                if file[-4:]=='.dat':
-                    band = file.split('.')[0]
-                    wave0, transmission0 = np.loadtxt(os.path.join(filters_sub_path, file)).T
+        if type(filter_list)==str:
+            filter_list = [filter_list]
+            
+        for band in filter_list:
+            file = f'{band}.dat'
+
+            for root, dirs, files in os.walk(os.path.join(path, 'filters')):
+                if file in files:
+                    wave0, transmission0 = np.loadtxt(os.path.join(root, file)).T
                     # linearly interpolate filters
-                    wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max()-wave0.min()))
+                    wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max() - wave0.min()))
                     transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
                     # remove long tails of zero values on both edges
                     imin, imax = trim_filters(transmission)
                     wave, transmission = wave[imin:imax], transmission[imin:imax]
 
-                    self.filters[band] = {'wave':wave,
-                                          'transmission':transmission,
-                                          'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave, transmission,
-                                                                   response_type=response_type),
-                                          'response_type':response_type}
-
-        else:
-            # add filters in list
-            for band in filter_list:
-                file = f'{band}.dat'
-
-                for root, dirs, files in os.walk(os.path.join(path, 'filters')):
-                    if file in files:
-                        wave0, transmission0 = np.loadtxt(os.path.join(root, file)).T
-                        # linearly interpolate filters
-                        wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max()-wave0.min()))
-                        transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
-                        # remove long tails of zero values on both edges
-                        imin, imax = trim_filters(transmission)
-                        wave, transmission = wave[imin:imax], transmission[imin:imax]
-
-                        self.filters[band] = {'wave':wave,
-                                              'transmission':transmission,
-                                              'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave, transmission,
-                                                                       response_type=response_type),
-                                              'response_type':response_type}
+                    response_type = 'photon'
+                    self.filters[band] = {'wave': wave,
+                                          'transmission': transmission,
+                                          'eff_wave': calc_eff_wave(sed_wave, sed_flux, wave,
+                                                                    transmission, response_type=response_type),
+                                          'response_type': response_type}
 
 
     def plot_filters(self, filter_list=None, save=False):
