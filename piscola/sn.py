@@ -681,7 +681,7 @@ class sn(object):
 
             for band in self.bands:
                 self.lc_fits[band]['phase'] = (self.lc_fits[band]['mjd']-self.tmax) / (1+self.z)
-
+        # 2D GP fit
         else:
             flux_array = np.hstack([self.data[band]['flux'] for band in self.bands])
             flux_err_array = np.hstack([self.data[band]['flux_err'] for band in self.bands])
@@ -689,6 +689,7 @@ class sn(object):
             time_array = np.hstack([self.data[band]['mjd'] for band in self.bands])
             wave_array = np.hstack([[self.filters[band]['eff_wave']]*len(self.data[band]['mjd']) for band in self.bands])
 
+            time_edges = np.array([time_array.min()-5, time_array.max()+5])  # 5-days extrapolation of light-curves
             bands_waves = np.hstack([self.filters[band]['wave'] for band in self.bands])
             bands_edges = np.array([bands_waves.min(), bands_waves.max()])
 
@@ -698,8 +699,8 @@ class sn(object):
                 time_array = time_array[mask]
                 wave_array = wave_array[mask]
 
-                timeXwave, mu, std = gp_2d_fit(time_array, wave_array, mag_array, mag_err_array,
-                                                kernel1=kernel, kernel2=kernel2, x2_edges=bands_edges, use_mcmc=use_mcmc)
+                timeXwave, mu, std = gp_2d_fit(time_array, wave_array, mag_array, mag_err_array,  kernel1=kernel, kernel2=kernel2,
+                                                x1_edges=time_edges, x2_edges=bands_edges, use_mcmc=use_mcmc)
                 mu, std = mag2flux(mu, 0.0, std)
 
             else:
