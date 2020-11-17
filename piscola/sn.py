@@ -267,7 +267,7 @@ class sn(object):
 
         if type(filter_list)==str:
             filter_list = [filter_list]
-            
+
         for band in filter_list:
             file = f'{band}.dat'
 
