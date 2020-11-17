@@ -41,7 +41,7 @@ def integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response,
 
     #check filter response type
     if response_type == 'energy':
-        filter_response = filter_response/filter_wave
+        filter_response = filter_response.copy()/filter_wave
 
     interp_response = np.interp(spectrum_wave, filter_wave, filter_response, left=0.0, right=0.0)
     I1 = np.trapz(spectrum_flux*interp_response*spectrum_wave, spectrum_wave)
