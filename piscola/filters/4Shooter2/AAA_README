@@ -1,2 +1,3 @@
-4Shooter2 filters are in photon counts
-4Shooter2*_energy are the original ones in energy counts
+filters with energy sensitivities
+
+copied from SNANA/SNDATA_ROOT/filters/PS1/Pantheon/CFA3_native/SNLS3_4shooter2_*.dat
