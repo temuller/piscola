@@ -220,7 +220,15 @@ class sn(object):
                     imin, imax = trim_filters(transmission)
                     wave, transmission = wave[imin:imax], transmission[imin:imax]
 
-                    response_type = 'photon'
+                    # retrieve response type; if none, assumed to be photon type
+                    try:
+                        with open(os.path.join(root, 'response_type.txt')) as resp_file:
+                            for line in resp_file:
+                                response_type = line.split()[0].lower()
+                    except:
+                        response_type = 'photon'
+                    assert response_type in ['photon', 'energy'], f'{band} filter response type is neither "photon" or "energy"'
+
                     self.filters[band] = {'wave':wave,
                                           'transmission':transmission,
                                           'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave,
