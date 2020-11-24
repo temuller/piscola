@@ -1,4 +1,2 @@
-Accurate measurements of the natural KeplerCam U-band are missing. We
-use measurements color corrected to the Landolt system, and call this
-band Us.
-
+4Shooter2 filters are in photon counts
+4Shooter2*_energy are the original ones in energy counts
