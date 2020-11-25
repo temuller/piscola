@@ -17,6 +17,7 @@
 ### COLUMNS:									     ###
 ### FILTER_NAME SYN_MAG_AB  SYN_MAG_LANDOLT					     ###
 ########################################################################################
+standard_sed: bd_17d4708_stisnic_005.dat
 
 # Start filters for VERSION = PS1s_CFA1_JRK07_DS16
 # MAGSYSTEM:   BD17

@@ -166,12 +166,13 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, c
         zp = 2.5*np.log10(f_vega)
 
     elif mag_sys.lower() == 'bd17':
-        bd17_sed_file = os.path.join(path, 'standards/bd_17d4708_stisnic_005.dat')
-        spectrum_wave, spectrum_flux = np.loadtxt(bd17_sed_file).T
-        f_bd17 = integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
-
         # get ZP offsets
         with open(file_path, 'rt') as bd17_file:
+            standard_sed = [line.split()[-1] for line in bd17_file if 'standard_sed:' in line.split()][0]
+            bd17_sed_file = os.path.join(path, 'standards', standard_sed)
+            spectrum_wave, spectrum_flux = np.loadtxt(bd17_sed_file).T
+
+            f_bd17 = integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
             bd17_mag = [line.split() for line in bd17_file if filter_name in line.split()]
         if bd17_mag:
             zp = 2.5*np.log10(f_bd17) +  eval(bd17_mag[0][-1])

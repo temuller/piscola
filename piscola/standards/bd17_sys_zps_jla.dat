@@ -3,6 +3,8 @@
 # 2011 release of CALSPEC 
 #@SPECTRUM MagSys/bd_17d4708_stisnic_003.ascii
 
+standard_sed: bd_17d4708_stisnic_003.dat
+
 # Magnitudes in the Landolt system : Landolt & Uomoto (2007)
 STANDARD_U 9.724
 STANDARD_B 9.907
