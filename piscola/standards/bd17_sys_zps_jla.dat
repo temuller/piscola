@@ -1,0 +1,50 @@
+# JLA1 analysis  magnitude system based on CALSPEC stis spectra 003
+#
+# 2011 release of CALSPEC 
+#@SPECTRUM MagSys/bd_17d4708_stisnic_003.ascii
+
+# Magnitudes in the Landolt system : Landolt & Uomoto (2007)
+STANDARD_U 9.724
+STANDARD_B 9.907
+STANDARD_V 9.464
+STANDARD_R 9.166
+STANDARD_I 8.846
+
+
+# Magnitudes in the USNO system : Smith et al (2002)
+USNO_u 10.56
+USNO_g 9.64
+USNO_r 9.35
+USNO_i 9.25
+USNO_z 9.23
+
+# Magnitudes in the Keplercam natural system : 
+# from linear transformations table 2 of Hicken et al 2009
+
+KEPLERCAM_Us 9.724 # U standard (normalement)
+KEPLERCAM_U 9.6922
+KEPLERCAM_B 9.8803
+KEPLERCAM_V 9.4722
+KEPLERCAM_r 9.3524 
+KEPLERCAM_i 9.2542
+#
+# Magnitudes in the 4Shooter2 natural system : 
+# from linear transformations table 2 of Hicken et al 2009
+# WARNING : UBVRI from LANDOLT
+4SHOOTER2_Us 9.724 # U standard (normalement)
+4SHOOTER2_U 9.6930
+4SHOOTER2_B 9.8744
+4SHOOTER2_V 9.4789
+4SHOOTER2_R 9.1554
+4SHOOTER2_I 8.8506
+
+# Magnitude in the Swope telescope system of CSP according to Stritzinger
+# et al. (2011), Table 6 (color terms from the first column)
+SWOPE2_u   10.514
+SWOPE2_g   9.64406
+SWOPE2_r   9.3516
+SWOPE2_i   9.25
+SWOPE2_B   9.876433
+SWOPE2_V   9.476626
+SWOPE2_V1  9.471276
+SWOPE2_V2  9.477482

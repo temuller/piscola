@@ -1,0 +1,13 @@
+# hope mirror area does not matter
+@MIRROR_AREA 1. 
+# transmission of the optics
+@OPTICS_TRANS 1
+# reflectivity of the mirror
+@MIRROR_REFLECTIVITY 1
+
+# filters
+@FILTERS FilterWheel
+@EFF_FILTERS FilterWheel
+
+# QE of CCD's
+@QE 1
