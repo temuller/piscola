@@ -152,8 +152,8 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, c
         f_ab = integrate_filter(ab_wave, ab_flux, filter_wave, filter_response, response_type)
 
         # get ZP offsets
-        with open(file_path, 'rt') as ab_file:
-            ab_mag = [line.split() for line in ab_file if filter_name in line.split()]
+        with open(file_path, 'rt') as ab_sys_file:
+            ab_mag = [line.split() for line in ab_sys_file if filter_name in line.split()]
         if ab_mag:
             zp = 2.5*np.log10(f_ab) + eval(ab_mag[0][-1])
         else:
@@ -167,13 +167,16 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, c
 
     elif mag_sys.lower() == 'bd17':
         # get ZP offsets
-        with open(file_path, 'rt') as bd17_file:
-            standard_sed = [line.split()[-1] for line in bd17_file if 'standard_sed:' in line.split()][0]
-            bd17_sed_file = os.path.join(path, 'standards', standard_sed)
-            spectrum_wave, spectrum_flux = np.loadtxt(bd17_sed_file).T
+        with open(file_path, 'rt') as bd17_sys_file:
+            standard_sed = [line.split()[-1] for line in bd17_sys_file if 'standard_sed:' in line.split()][0]
 
-            f_bd17 = integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
-            bd17_mag = [line.split() for line in bd17_file if filter_name in line.split()]
+        bd17_sed_file = os.path.join(path, 'standards', standard_sed)
+        spectrum_wave, spectrum_flux = np.loadtxt(bd17_sed_file).T
+        f_bd17 = integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
+
+        with open(file_path, 'rt') as bd17_sys_file:
+            bd17_mag = [line.split() for line in bd17_sys_file if filter_name in line.split()]
+
         if bd17_mag:
             zp = 2.5*np.log10(f_bd17) +  eval(bd17_mag[0][-1])
         else:
