@@ -155,7 +155,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, c
         with open(file_path, 'rt') as ab_sys_file:
             ab_mag = [line.split() for line in ab_sys_file if filter_name in line.split()]
         if ab_mag:
-            zp = 2.5*np.log10(f_ab) + eval(ab_mag[0][-1])
+            zp = 2.5*np.log10(f_ab) + eval(ab_mag[0][1])
         else:
             raise ValueError(f'Could not find "{filter_name}" filter in {file_path}')
 
@@ -168,7 +168,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, c
     elif mag_sys.lower() == 'bd17':
         # get ZP offsets
         with open(file_path, 'rt') as bd17_sys_file:
-            standard_sed = [line.split()[-1] for line in bd17_sys_file if 'standard_sed:' in line.split()][0]
+            standard_sed = [line.split()[1] for line in bd17_sys_file if 'standard_sed:' in line.split()][0]
 
         bd17_sed_file = os.path.join(path, 'standards', standard_sed)
         spectrum_wave, spectrum_flux = np.loadtxt(bd17_sed_file).T
@@ -178,7 +178,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, c
             bd17_mag = [line.split() for line in bd17_sys_file if filter_name in line.split()]
 
         if bd17_mag:
-            zp = 2.5*np.log10(f_bd17) +  eval(bd17_mag[0][-1])
+            zp = 2.5*np.log10(f_bd17) +  eval(bd17_mag[0][1])
         else:
             raise ValueError(f'Could not find "{filter_name}" filter in {file_path}')
     else:
