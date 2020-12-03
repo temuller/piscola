@@ -1,7 +1,3 @@
-@MEASUREMENT_RADIUS 0 cm
-# lambda : Angstroms 
-# tr : transmission ([0,1]) 
-# end
 6647.82 0
 6652.82 0.0004654
 6657.82 0.00138107
