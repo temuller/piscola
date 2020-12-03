@@ -144,7 +144,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
             (key, val) = line.split()  # key:magnitude system name, val: file with natural system values
             mag_sys_dict[key] = val
 
-    assert mag_sys.upper() in mag_sys_dict.keys(), f"magnitude system not found in '{mag_sys_file_path}'"
+    assert mag_sys.upper() in mag_sys_dict.keys(), f"magnitude system '{mag_sys.upper()}' not found in '{mag_sys_file_path}'"
 
     file_path = os.path.join(path, 'standards', mag_sys_dict[mag_sys.upper()])
 
@@ -185,7 +185,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
         else:
             raise ValueError(f'Could not find "{filter_name}" filter in {file_path}')
     else:
-        raise ValueError(f'Could not find "{mag_sys}" magnitude system')
+        raise ValueError(f'Could not find "{mag_sys}" magnitude system in the implemented systems of the code')
 
     return zp
 
