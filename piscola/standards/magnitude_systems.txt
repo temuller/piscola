@@ -1,0 +1,7 @@
+#magnitude_system  file
+AB		ab_sys_zps.dat
+BD17		bd17_sys_zps.dat
+AB_B12		ab_b12_sys_zps.dat
+AB_SDSS		ab_sdss_sys_zps.dat
+BD17_JLA 	bd17_jla_sys_zps.dat
+BD17_SWOPE	bd17_swope_sys_zps.dat

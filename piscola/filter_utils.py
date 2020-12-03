@@ -114,8 +114,8 @@ def calc_pivot_wave(filter_wave, filter_response, response_type='photon'):
     return pivot_wave
 
 
-def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, calibration_file=None):
-    """Calculates the zero point in the AB, Vega or BD17 magnitude sytems.
+def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
+    """Calculates the zero point in the AB, Vega or BD17 magnitude systems.
 
     Parameters
     ----------
@@ -124,28 +124,31 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, c
     filter_response : array
         Filter's response function.
     response_type : str, default ``photon'
-        Filter's response type. Either ``photon' or ``energy``. Only the Bessell filters use ``energy``.
+        Filter's response type. Either ``photon`` or ``energy``. Most filters use ``photon``.
     mag_sys : str
-        Magnitude system. Either ``AB``, ``Vega``, ``BD17``.
+        Magnitude system. For example, ``AB``, ``Vega``, ``BD17``, etc..
     filter_name : str
         Filter name. Used to estimate the zero point for the ``BD17`` magnitude system.
-    calibration_file: str, default ``None``
-        File with the magnitude system calibration for different set of filter.
 
     Returns
     -------
-    Zero-point in the Vega magnitude system.
+    Zero-point in the given natural magnitude system.
 
     """
 
     path = piscola.__path__[0]
+    mag_sys_dict = {}
+    mag_sys_file_path = os.path.join(path, 'standards/magnitude_systems.txt')
+    with open(mag_sys_file_path) as mag_sys_file:
+        for line in mag_sys_file:
+            (key, val) = line.split()  # key:magnitude system name, val: file with natural system values
+            mag_sys_dict[key] = val
 
-    if calibration_file:
-        file_path = f'{path}/standards/{calibration_file}'
-    else:
-        file_path = f'{path}/standards/{mag_sys.lower()}_sys_zps.dat'
+    assert mag_sys.upper() in mag_sys_dict.keys(), f"magnitude system not found in '{mag_sys_file_path}'"
 
-    if mag_sys.lower() == 'ab':
+    file_path = os.path.join(path, 'standards', mag_sys_dict[mag_sys.upper()])
+
+    if ('ab' in mag_sys.split('_')) or ('AB' in mag_sys.split('_')):
         c = 2.99792458e18  # speed of light in [Angstroms/s]
         ab_wave = np.arange(1000, 250000, 5)
         ab_flux = 3631e-23*c/ab_wave**2  # in [erg s^-1 cm^-2 A^-1]
@@ -159,13 +162,13 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name, c
         else:
             raise ValueError(f'Could not find "{filter_name}" filter in {file_path}')
 
-    elif mag_sys.lower() == 'vega':
+    elif 'vega' in mag_sys.lower():
         vega_sed_file = os.path.join(path, 'standards/alpha_lyr_stis_005.dat')
         spectrum_wave, spectrum_flux = np.loadtxt(vega_sed_file).T
         f_vega = integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response, response_type)
         zp = 2.5*np.log10(f_vega)
 
-    elif mag_sys.lower() == 'bd17':
+    elif 'bd17' in mag_sys.lower():
         # get ZP offsets
         with open(file_path, 'rt') as bd17_sys_file:
             standard_sed = [line.split()[1] for line in bd17_sys_file if 'standard_sed:' in line.split()][0]

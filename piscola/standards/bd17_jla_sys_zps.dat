@@ -51,3 +51,12 @@ SWOPE2_B   9.876433
 SWOPE2_V   9.476626
 SWOPE2_V1  9.471276
 SWOPE2_V2  9.477482
+
+# Magnitude in the Swope telescope system of CSP
+# This actually uses bd_17d4708_stisnic_002
+SWOPE_u 10.51952
+SWOPE_g 9.64638
+SWOPE_r 9.3513
+SWOPE_i 9.2495
+SWOPE_B 9.8882
+SWOPE_V 9.4806
