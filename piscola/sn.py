@@ -578,17 +578,11 @@ class sn(object):
         plt.show()
 
 
-    def normalize_data(self, offsets_file=None):
+    def normalize_data(self):
         """Normalize the fluxes and zero-points (ZPs).
 
         Fluxes are converted to physical units by calculating the ZPs according to the
-        magnitude system, either **AB**, **BD17** or **Vega**.
-
-        Parameters
-        ----------
-        offsets_file : str, default ``None``
-            File to use for the bands calibration of the zero point. If ``None``, the default file is used (either
-            ``bd17_sys_zps.dat`` or ``ab_sys_zps.dat``, depending on the band).
+        magnitude system, for example, **AB**, **BD17** and **Vega**.
         """
 
         for band in self.bands:
@@ -596,7 +590,7 @@ class sn(object):
             current_zp = self.data[band]['zp']
 
             new_zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
-                                        self.filters[band]['response_type'], mag_sys, band, offsets_file)
+                                        self.filters[band]['response_type'], mag_sys, band)
 
             self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(current_zp - new_zp))
             self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(current_zp - new_zp))
