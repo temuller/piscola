@@ -1272,9 +1272,9 @@ class sn(object):
             B15, B15_err = flux2mag(flux_b[id_15], zp_b, flux_err_b[id_15])
             B15_err += 0.005  # the last term comes from the template error in one day uncertainty
             dm15 = B15 - mb
-            dm15err = np.sqrt(mb_err**2 + B15_err**2)
+            dm15_err = np.sqrt(mb_err**2 + B15_err**2)
         except:
-            dm15 = dm15err = np.nan
+            dm15 = dm15_err = np.nan
 
         # Colour
         try:
@@ -1288,13 +1288,13 @@ class sn(object):
             id_v0 = np.where(phase_v==0.0)[0][0]
             V0, V0_err = flux2mag(flux_v[id_v0], zp_v, flux_err_v[id_v0])
             V0_err += 0.011  # the last term comes from the template error in one day uncertainty
-            color = mb - V0
-            dcolor = np.sqrt(mb_err**2 + V0_err**2)
+            colour = mb - V0
+            colour_err = np.sqrt(mb_err**2 + V0_err**2)
         except:
-            color = dcolor = np.nan
+            colour = colour_err = np.nan
 
-        self.lc_parameters = {'mb':mb, 'dmb':mb_err, 'dm15':dm15,
-                              'dm15err':dm15err, 'color':color, 'dcolor':dcolor}
+        self.lc_parameters = {'mb':mb, 'mb_err':mb_err, 'dm15':dm15,
+                              'dm15_err':dm15_err, 'colour':colour, 'colour_err':colour_err}
 
 
     def display_results(self, band='Bessell_B', plot_type='mag', display_params=False, save=False, fig_name=None, outformat='png'):
@@ -1324,11 +1324,11 @@ class sn(object):
         assert (plot_type=='mag' or plot_type=='flux'), f'"{plot_type}" is not a valid plot type.'
 
         mb = self.lc_parameters['mb']
-        dmb = self.lc_parameters['dmb']
-        color = self.lc_parameters['color']
-        dcolor = self.lc_parameters['dcolor']
+        mb_err = self.lc_parameters['mb_err']
         dm15 = self.lc_parameters['dm15']
-        dm15err = self.lc_parameters['dm15err']
+        dm15_err = self.lc_parameters['dm15_err']
+        colour = self.lc_parameters['colour']
+        colour_err = self.lc_parameters['colour_err']
 
         if band is None:
             band = 'Bessell_B'
@@ -1350,7 +1350,6 @@ class sn(object):
             yerr_fit /= y_norm
 
         elif plot_type=='mag':
-            # y, yerr, y_fit, yerr_fit variables get reassigned
             y, yerr = flux2mag(y, zp, yerr)
             y_fit, yerr_fit = flux2mag(y_fit, zp, yerr_fit)
 
@@ -1360,9 +1359,9 @@ class sn(object):
         ax.fill_between(x_fit, y_fit+yerr_fit, y_fit-yerr_fit, alpha=0.5, color='c')
 
         if display_params:
-            ax.text(0.75, 0.9,r'm$_B^{\rm max}$=%.3f$\pm$%.3f'%(mb, dmb), ha='center', va='center', fontsize=15, transform=ax.transAxes)
-            ax.text(0.75, 0.8,r'$\Delta$m$_{15}$($B$)=%.3f$\pm$%.3f'%(dm15, dm15err), ha='center', va='center', fontsize=15, transform=ax.transAxes)
-            ax.text(0.75, 0.7,r'($B-V$)$_{\rm max}$=%.3f$\pm$%.3f'%(color, dcolor), ha='center', va='center', fontsize=15, transform=ax.transAxes)
+            ax.text(0.75, 0.9,r'm$_B^{\rm max}$=%.3f$\pm$%.3f'%(mb, mb_err), ha='center', va='center', fontsize=15, transform=ax.transAxes)
+            ax.text(0.75, 0.8,r'$\Delta$m$_{15}$($B$)=%.3f$\pm$%.3f'%(dm15, dm15_err), ha='center', va='center', fontsize=15, transform=ax.transAxes)
+            ax.text(0.75, 0.7,r'($B-V$)$_{\rm max}$=%.3f$\pm$%.3f'%(colour, colour_err), ha='center', va='center', fontsize=15, transform=ax.transAxes)
 
         ax.set_xlabel(f'Phase with respect to B-band peak [days]', fontsize=16, family='serif')
         ax.set_title(f'{self.name}\n{band}, z={self.z:.5}, t0={self.tmax:.2f}', fontsize=16, family='serif')
