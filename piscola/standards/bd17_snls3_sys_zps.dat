@@ -1,0 +1,55 @@
+# SNLS 3rd year analysis  magnitude system based on BD+17d4708
+#
+# 2009 release of CALSPEC 
+#@SPECTRUM MagSys/bd_17d4708_stisnic_002.ascii
+
+# Start of PISCOLA file
+standard_sed: bd_17d4708_stisnic_002.dat
+
+
+# Magnitudes in the Landolt system : Landolt & Uomoto (2007)
+STANDARD_U 9.724
+STANDARD_B 9.907
+STANDARD_V 9.464
+STANDARD_R 9.166
+STANDARD_I 8.846
+
+# Magnitudes in the Megacam 'local natural system' : Regnault et al (2009)
+MEGACAM_u 9.7688 # annexe of calibration paper
+MEGACAM_g 9.6906
+MEGACAM_r 9.2183
+MEGACAM_i 8.9142
+MEGACAM_z 8.7736
+
+# Magnitudes in the USNO system : Smith et al (2002)
+USNO u 10.56
+USNO g 9.64
+USNO r 9.35
+USNO i 9.25
+USNO z 9.23
+
+# Magnitudes in the Keplercam natural system : 
+# from linear transformations table 2 of Hicken et al 2009
+KEPLERCAM_U 9.6922
+KEPLERCAM_B 9.8803
+KEPLERCAM_V 9.4722
+KEPLERCAM_r 9.3524 
+KEPLERCAM_i 9.2542
+
+# Magnitudes in the 4Shooter2 natural system : 
+# from linear transformations table 2 of Hicken et al 2009
+4SHOOTER2_U 9.6930
+4SHOOTER2_B 9.8744
+4SHOOTER2_V 9.4789
+4SHOOTER2_R 9.1554
+4SHOOTER2_I 8.8506
+
+# Magnitude in the Swope telescope system of CSP
+# from Conley
+SWOPE_u 10.51952
+SWOPE_g 9.64638
+SWOPE_r 9.3513
+SWOPE_i 9.2495
+SWOPE_B 9.8882
+SWOPE_V 9.4806
+
