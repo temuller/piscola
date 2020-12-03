@@ -1,0 +1,21 @@
+# M. Betoule 2012-12-18 (published version)
+# this is the AB spectrum (in ASCII for compatibility with the rest of the code)
+@SPECTRUM MagSys/ab-spec.dat
+
+
+# SDSS AB offsets ( mag_SDSS - mag_AB)
+# based on the B12 calibration
+SDSS_B12_u   0.06791
+SDSS_B12_g  -0.02028
+SDSS_B12_r  -0.00493
+SDSS_B12_i  -0.01780
+SDSS_B12_z  -0.01015
+
+# SNLS AB offsets (null by construction because B12 calibration is
+# applied to SNLS lc)
+
+MEGACAM_g 0
+MEGACAM_r 0
+MEGACAM_i 0
+MEGACAM_y 0
+MEGACAM_z 0

@@ -1,0 +1,4 @@
+g g-band-psf-correction.dat
+r r-band-psf-correction.dat
+i i-band-psf-correction.dat
+z z-band-psf-correction.dat

@@ -3,6 +3,7 @@
 # 2011 release of CALSPEC 
 #@SPECTRUM MagSys/bd_17d4708_stisnic_003.ascii
 
+# Start of PISCOLA file
 standard_sed: bd_17d4708_stisnic_003.dat
 
 # Magnitudes in the Landolt system : Landolt & Uomoto (2007)

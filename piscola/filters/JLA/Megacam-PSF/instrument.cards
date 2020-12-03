@@ -1,0 +1,30 @@
+# mirror size (cm^2) pi*( (360/2)^2 - (100/2)^2 )
+@MIRROR_AREA 80300. 
+
+# transmission of the optics
+@OPTICS_TRANS CFHT_MegaPrime_Transmission.dat
+
+# reflectivity of the mirror
+@MIRROR_REFLECTIVITY CFHT_Primary_Transmission.dat
+
+# atmospheric transmission
+@ATMOSPHERIC_TRANS SNIFS_extinction_buton2012_with_tl_X1_25.dat
+
+# filters
+@RADIALLY_VARIABLE_FILTERS FilterWheel
+
+# QE of CCD's
+@QE QE_camera_high_res_model.dat
+
+# QE of individual CCD's
+@QE_PER_CCD qe_ccd_0.list qe_ccd_1.list qe_ccd_2.list qe_ccd_3.list qe_ccd_4.list qe_ccd_5.list qe_ccd_6.list qe_ccd_7.list qe_ccd_8.list qe_ccd_9.list qe_ccd_10.list qe_ccd_11.list qe_ccd_12.list qe_ccd_13.list qe_ccd_14.list qe_ccd_15.list qe_ccd_16.list qe_ccd_17.list qe_ccd_18.list qe_ccd_19.list qe_ccd_20.list qe_ccd_21.list qe_ccd_22.list qe_ccd_23.list qe_ccd_24.list qe_ccd_25.list qe_ccd_26.list qe_ccd_27.list qe_ccd_28.list qe_ccd_29.list qe_ccd_30.list qe_ccd_31.list qe_ccd_32.list qe_ccd_33.list qe_ccd_34.list qe_ccd_35.list
+
+# pixel size
+@PIX_SIZE 0.187
+
+# PSF wavelength bias correction 
+#@PSF_CORRECTION_FILTERS psf-corrections.dat
+
+
+# replacement for "PSF_CORRECTION_FILTERS", now always integrated in effective filters
+@CHROMATIC_CORRECTIONS psf-corrections.dat

@@ -1,0 +1,12 @@
+# JLA1 analysis  magnitude system based on CALSPEC stis spectra 002
+
+# Start of PISCOLA file
+standard_sed: bd_17d4708_stisnic_002.dat
+
+# Magnitude in the Swope telescope system of CSP
+SWOPE_u 10.51952
+SWOPE_g 9.64638
+SWOPE_r 9.3513
+SWOPE_i 9.2495
+SWOPE_B 9.8882
+SWOPE_V 9.4806

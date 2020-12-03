@@ -1,0 +1,17 @@
+# J. Guy 2010-10-22
+# this is the AB spectrum (in ASCII for compatibility with the rest of the code)
+@SPECTRUM MagSys/ab-spec.dat
+
+
+# SDSS AB offsets ( mag_SDSS - mag_AB)
+#  based on SDSS magnitudes of the 3 solar analogs (from Holzmann 2008 table 1)
+# and synthetic AB magnitudes using the above Doi 2010 filters and the
+# CALSPEC spectra: p041c stisnic 003.ascii p177d stisnic 003.ascii p330e stisnic 003.ascii
+
+
+SDSS_u 0.07228
+SDSS_g -0.020637
+SDSS_r -0.004886
+SDSS_i -0.018199
+SDSS_z -0.0163845
+

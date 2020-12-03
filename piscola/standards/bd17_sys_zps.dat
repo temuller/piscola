@@ -1,6 +1,6 @@
-########################################################################################
-### NOTE: This is the same file as in SNANA, but modified to be readable for PISCoLA ###
-########################################################################################
+#######################################################################################
+### NOTE: This is the same file as in SNANA, but modified to be readable by PISCOLA ###
+#######################################################################################
 
 # Combined kcor file create by
 #   ['/project/rkessler/SN/SNANA/SNANA_CURRENT/util/combine_dataVersions.py', 'COMBINE.INPUT']
@@ -17,6 +17,8 @@
 ### COLUMNS:									     ###
 ### FILTER_NAME SYN_MAG_AB  SYN_MAG_LANDOLT					     ###
 ########################################################################################
+
+# Start of PISCOLA file
 standard_sed: bd_17d4708_stisnic_005.dat
 
 # Start filters for VERSION = PS1s_CFA1_JRK07_DS16
