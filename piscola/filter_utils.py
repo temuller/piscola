@@ -128,7 +128,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
     mag_sys : str
         Magnitude system. For example, ``AB``, ``Vega``, ``BD17``, etc..
     filter_name : str
-        Filter name. Used to estimate the zero point for the ``BD17`` magnitude system.
+        Filter name.
 
     Returns
     -------
