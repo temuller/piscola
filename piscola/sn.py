@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# This is the skeleton of PISCOLA, the main file
 
 import piscola
 from .filter_utils import integrate_filter, calc_eff_wave, calc_pivot_wave, calc_zp, filter_effective_range
@@ -18,6 +19,7 @@ import glob
 import os
 
 ### Initialisation functions ###
+# These are mainly used by the 'sn' class below
 
 def initialise_sn(sn_file):
     """Initialise the :func:`sn` object.
@@ -123,6 +125,7 @@ def load_sn(name, path=None):
 ################################################################################
 ################################################################################
 
+# This is the main class
 class sn(object):
     """Supernova class for representing a supernova."""
 
@@ -773,9 +776,9 @@ class sn(object):
 
         """
 
-        if plot_together:
+        new_palette = [plt.get_cmap('Dark2')(i) for i in np.arange(8)] + [plt.get_cmap('Set1')(i) for i in np.arange(8)]
 
-            new_palette = [plt.get_cmap('Dark2')(i) for i in np.arange(8)] + [plt.get_cmap('Set1')(i) for i in np.arange(8)]
+        if plot_together:
 
             exp = np.round(np.log10(np.abs(self.data[self.bands[0]]['flux']).mean()), 0)
             y_norm = 10**exp
@@ -809,8 +812,8 @@ class sn(object):
                                     elinewidth=3, color=new_palette[i],label=band)
                     ax.plot(time, flux,'-', color=new_palette[i], lw=2, zorder=16)
                     ax.fill_between(time, flux-std, flux+std, alpha=0.5, color=new_palette[i])
-                    ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
-                    #ax.set_ylabel(r'Scaled Flux', fontsize=16, family='serif')
+                    #ax.set_ylabel(r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp, fontsize=16, family='serif')
+                    ax.set_ylabel(r'Scaled Flux', fontsize=16, family='serif')
 
                 elif plot_type=='mag':
                     # avoid non-positive numbers in logarithm
@@ -826,7 +829,7 @@ class sn(object):
                                 elinewidth=3, color=new_palette[i],label=band)
                     ax.plot(time, mag,'-', color=new_palette[i], lw=2, zorder=16)
                     ax.fill_between(time, mag-err, mag+err, alpha=0.5, color=new_palette[i])
-                    ax.set_ylabel(r'Apparent Magnitude [mag]', fontsize=16, family='serif')
+                    ax.set_ylabel(r'Apparent Magnitude', fontsize=16, family='serif')
 
             ax.axvline(x=self.tmax0, color='k', linestyle='--', alpha=0.4)
             ax.axvline(x=self.tmax, color='k', linestyle='--')
@@ -854,10 +857,35 @@ class sn(object):
                 ax = plt.subplot(gs[k,j])
 
                 time, flux, std = self.lc_fits[band]['mjd'], self.lc_fits[band]['flux'], self.lc_fits[band]['std']
-                ax.errorbar(self.data[band]['mjd'], self.data[band]['flux'], self.data[band]['flux_err'], fmt='og',
-                                capsize=3, capthick=2, ms=8, elinewidth=3, mec='k')
-                ax.plot(time, flux,'-', lw=2, zorder=16, color='k')
-                ax.fill_between(time, flux-std, flux+std, alpha=0.5)
+                data_time, data_flux, data_std = np.copy(self.data[band]['mjd']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
+
+                exp = np.round(np.log10(np.abs(self.data[band]['flux']).mean()), 0)
+                y_norm = 10**exp
+
+                if plot_type=='flux':
+                    flux, std = flux/y_norm, std/y_norm
+                    data_flux, data_std = data_flux/y_norm, data_std/y_norm
+
+                    ax.errorbar(data_time, data_flux, data_std, fmt='o', color=new_palette[i],
+                                    capsize=3, capthick=2, ms=8, elinewidth=3, mec='k')
+                    ax.plot(time, flux,'-', lw=2, zorder=16, color=new_palette[i])
+                    ax.fill_between(time, flux-std, flux+std, alpha=0.5, color=new_palette[i])
+
+                elif plot_type=='mag':
+                    # avoid non-positive numbers in logarithm
+                    fit_mask = flux > 0
+                    time, flux, std = time[fit_mask], flux[fit_mask], std[fit_mask]
+                    data_mask = data_flux > 0
+                    data_time, data_flux, data_std = data_time[data_mask], data_flux[data_mask], data_std[data_mask]
+
+                    mag, err = flux2mag(flux, self.data[band]['zp'], std)
+                    data_mag, data_err = flux2mag(data_flux, self.data[band]['zp'], data_std)
+
+                    ax.errorbar(data_time, data_mag, data_err, fmt='o', color=new_palette[i],
+                                    capsize=3, capthick=2, ms=8, elinewidth=3, mec='k')
+                    ax.plot(time, mag,'-', lw=2, zorder=16, color=new_palette[i])
+                    ax.fill_between(time, mag-err, mag+err, alpha=0.5, color=new_palette[i])
+                    ax.invert_yaxis()
 
                 ax.axvline(x=self.tmax, color='r', linestyle='--')
                 ax.axvline(x=self.lc_fits[self.pivot_band]['tmax'], color='k', linestyle='--')
@@ -870,8 +898,13 @@ class sn(object):
 
             fig.text(0.5, 0.95, f'{self.name} (z = {self.z:.5})', ha='center', fontsize=20, family='serif')
             fig.text(0.5, 0.04, 'Modified Julian Date', ha='center', fontsize=18, family='serif')
-            fig.text(0.04, 0.5, r'Flux [erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]', va='center', rotation='vertical', fontsize=18, family='serif')
-            #fig.text(0.04, 0.5, r'Scaled Flux', va='center', rotation='vertical', fontsize=18, family='serif')
+            if plot_type=='flux':
+                #fig.text(0.04, 0.5, r'Flux [erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]', va='center',
+                # rotation='vertical', fontsize=18, family='serif')
+                fig.text(0.04, 0.5, r'Scaled Flux', va='center', rotation='vertical', fontsize=18, family='serif')
+            elif plot_type=='mag':
+                fig.text(0.04, 0.5, r'Apparent Magnitude', va='center',
+                 rotation='vertical', fontsize=18, family='serif')
 
         if save:
             if fig_name is None:
@@ -1270,7 +1303,7 @@ class sn(object):
         try:
             id_15 = np.where(phase_b==15.0)[0][0]
             B15, B15_err = flux2mag(flux_b[id_15], zp_b, flux_err_b[id_15])
-            B15_err += 0.005  # the last term comes from the template error in one day uncertainty
+            B15_err += 0.005  # this value comes from the template error in one day uncertainty approx.
             dm15 = B15 - mb
             dm15_err = np.sqrt(mb_err**2 + B15_err**2)
         except:
@@ -1287,7 +1320,7 @@ class sn(object):
 
             id_v0 = np.where(phase_v==0.0)[0][0]
             V0, V0_err = flux2mag(flux_v[id_v0], zp_v, flux_err_v[id_v0])
-            V0_err += 0.011  # the last term comes from the template error in one day uncertainty
+            V0_err += 0.011  # this value comes from the template error in one day uncertainty approx.
             colour = mb - V0
             colour_err = np.sqrt(mb_err**2 + V0_err**2)
         except:
