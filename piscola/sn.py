@@ -1197,31 +1197,27 @@ class sn(object):
                     pmax_list.append(b_phase[idx_max])
 
                 pmax_array = np.array(pmax_list)
-                tmax_offset, self.tmax_err = pmax_array.mean(), np.round(pmax_array.std(), 2)
-                self._tmax_offset = tmax_offset
-
-                peakidxs = peak.indexes(b_flux, thres=.3, min_dist=1000//(b_phase[1]-b_phase[0]))
-                idx_max = np.array([idx for idx in peakidxs if all(b_flux[:idx]<b_flux[idx])]).min()
-                tmax_offset = b_phase[idx_max] - 0.0
+                phase_offset, self.tmax_err = pmax_array.mean().round(2), pmax_array.std().round(2)
+                self._phase_offset = phase_offset
             except:
-                tmax_offset = None
+                phase_offset = None
 
-            assert tmax_offset is not None, "The peak of the rest-frame B-band light curve can not be calculated."
+            assert phase_offset is not None, "The peak of the rest-frame B-band light curve can not be calculated."
 
             if iter>=maxiter:
                 break
             iter += 1
 
             # compare tmax from the corrected restframe B-band to the initial estimation
-            if np.abs(tmax_offset) >= 0.2:
-                if np.abs(self.tmax0-self.tmax) >= 1.5:
-                    tmax_offset *= -1  # maybe it is moving too much in one direction
+            if np.abs(phase_offset) >= 0.2:
+                if np.abs(self.tmax0-self.tmax)/(1+self.z) >= 1.5:
+                    phase_offset *= -1  # maybe it is moving too much in one direction
 
                 # update phase of the light curves
-                self.tmax = np.round(self.tmax - tmax_offset*(1+self.z), 2)
-                self.lc_fits['phaseXwave'].T[0] -= tmax_offset
+                self.tmax = np.round(self.tmax - phase_offset*(1+self.z), 2)
+                self.lc_fits['phaseXwave'].T[0] -= phase_offset
                 for band in self.bands:
-                    self.lc_fits[band]['phase'] -= tmax_offset
+                    self.lc_fits[band]['phase'] -= phase_offset
 
                 # re-do mangling
                 self.mangle_sed(**self.user_input['mangle_sed'])
@@ -1240,7 +1236,7 @@ class sn(object):
 
         # B-band peak apparent magnitude
         b_phase, b_flux, b_flux_err = self.corrected_lcs[bessell_b]['phase'], self.corrected_lcs[bessell_b]['flux'], self.corrected_lcs[bessell_b]['err']
-        id_bmax = list(phase_b).index(0)
+        id_bmax = list(b_phase).index(0)
         mb, mb_err = flux2mag(b_flux[id_bmax], zp_b, b_flux_err[id_bmax])
 
         # Stretch parameter
@@ -1355,7 +1351,10 @@ class sn(object):
             if not np.isnan(dm15):
                 ax.text(0.75, 0.8,r'$\Delta$m$_{15}$($B$)=%.3f$\pm$%.3f'%(dm15, dm15_err), ha='center', va='center', fontsize=15, transform=ax.transAxes)
             if not np.isnan(colour):
-                ax.text(0.75, 0.7,r'($B-V$)$_{\rm max}$=%.3f$\pm$%.3f'%(colour, colour_err), ha='center', va='center', fontsize=15, transform=ax.transAxes)
+                position = 0.7
+                if np.isnan(dm15):
+                    position = 0.8
+                ax.text(0.75, position,r'($B-V$)$_{\rm max}$=%.3f$\pm$%.3f'%(colour, colour_err), ha='center', va='center', fontsize=15, transform=ax.transAxes)
 
         ax.set_xlabel(f'Phase with respect to B-band peak [days]', fontsize=16, family='serif')
         ax.set_title(f'{self.name}\n{band}, z={self.z:.5}, t0={self.tmax:.2f}', fontsize=16, family='serif')
