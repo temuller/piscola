@@ -5,7 +5,7 @@ import numpy as np
 import lmfit
 import time
 
-def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filters, kernel, x_edges, linear_extrap, method):
+def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filters, method, kernel, x_edges, linear_extrap):
     """Residual functions for the SED mangling minimization routine.
 
     Lmfit works in such a way that each parameters needs to have a residual value. In the case of the
@@ -64,7 +64,7 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
     return residuals
 
 
-def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_errs, bands, filters, kernel, x_edges, linear_extrap, method):
+def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_errs, bands, filters, method, kernel, x_edges, linear_extrap):
     """Mangling routine.
 
     A mangling of the SED is done by minimizing the the difference between the "observed" fluxes and the fluxes
@@ -114,7 +114,7 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
     for val, band in zip(flux_ratio_array/norm, param_bands):
         params.add(band, value=val, min=0) # , max=val*1.2)   # tighten this constrains for a smoother(?) mangling
 
-    args=(wave_array, sed_wave, sed_flux, obs_fluxes, norm, bands, filters, kernel, x_edges, linear_extrap, method)
+    args=(wave_array, sed_wave, sed_flux, obs_fluxes, norm, bands, filters, method, kernel, x_edges, linear_extrap)
     lmfit_results = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-4, ftol=1e-4, max_nfev=80)
 
     ###############################

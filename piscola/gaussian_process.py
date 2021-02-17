@@ -88,10 +88,10 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52'):
     step = 0.01/x_norm
     x_pred = np.arange(x_min, x_max+step, step)
 
-    mu, var = gp.predict(y, x_pred, return_var=True)
+    mean, var = gp.predict(y, x_pred, return_var=True)
     std = np.sqrt(var)
 
-    return x_pred*x_norm, mu*y_norm, std*y_norm
+    return x_pred*x_norm, mean*y_norm, std*y_norm
 
 def spline_mf_fit(x_data, y_data, yerr_data=0.0, x_edges=[1e3, 3e4], linear_extrap=True):
     """Fits a mangling function with a univariate spline.
@@ -124,14 +124,14 @@ def spline_mf_fit(x_data, y_data, yerr_data=0.0, x_edges=[1e3, 3e4], linear_extr
 
     # compute spline
     s = len(y)
-    spl = UnivariateSpline(x, y, k=3, s=s)
+    spline = UnivariateSpline(x, y, k=3, s=s)
 
     step = 1
     x_min, x_max = x_edges
     x_pred = np.arange(x_min, x_max+step, step)
-    mu, std = spl(x_pred), 0.0  # no uncertainty for now
+    mean, std = spline(x_pred), 0.0  # no uncertainty for now
 
-    return x_pred, mu, std, spl
+    return x_pred, mean, std, spline
 
 
 def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', x_edges=[1e3, 3e4], linear_extrap=True):
@@ -199,11 +199,11 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', x_edges=[1e3, 
     step = 1/x_norm
     x_pred = np.arange(x_min, x_max+step, step)
 
-    mu, var = gp.predict(y, x_pred, return_var=True)
+    mean, var = gp.predict(y, x_pred, return_var=True)
     std = np.sqrt(var)
 
     gp_results = {'gp':partial(gp.predict, y), 'x_norm':x_norm, 'y_norm':y_norm}
-    return x_pred*x_norm, mu*y_norm, std*y_norm, gp_results
+    return x_pred*x_norm, mean*y_norm, std*y_norm, gp_results
 
 
 def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kernel2='squaredexp',
@@ -320,14 +320,14 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kerne
     X_predict = np.array(np.meshgrid(np.arange(x1_min, x1_max+step1, step1),
                              np.arange(x2_min, x2_max+step2, step2))).reshape(2, -1).T
 
-    mu, var = gp.predict(y, X_predict, return_var=True)
+    mean, var = gp.predict(y, X_predict, return_var=True)
     std = np.sqrt(var)
 
     # de-normalize results
     X_predict *= np.array([x1_norm, x2_norm])
-    mu *= y_norm
+    mean *= y_norm
     std *= y_norm
 
     gp_results = {'gp':partial(gp.predict, y), 'x1_norm':x1_norm, 'x2_norm':x2_norm, 'y_norm':y_norm}
 
-    return X_predict, mu, std, gp_results
+    return X_predict, mean, std, gp_results
