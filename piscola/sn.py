@@ -404,21 +404,23 @@ class sn(object):
     ############################################################################
 
     def print_sed_templates(self):
-        """Prints all the available SED templates in the ``templates`` directory"""
+        """Prints all the available SED templates in the ``templates`` directory."""
 
         path = piscola.__path__[0]
         template_path = os.path.join(path, "templates")
-        print('The list of available SED templates are:', [name for name in os.listdir(template_path)
+        print('List of available SED templates:', [name for name in os.listdir(template_path)
                                                            if os.path.isdir(os.path.join(template_path, name))])
 
 
     def set_sed_template(self, template='jla'):
-        """Sets the SED templates that are going to be used for the mangling.
+        """Sets the SED template to be used for the mangling function.
 
         Parameters
         ----------
         template : str, default ``jla``
             Template name. E.g., ``jla``, ``conley09f``, etc.
+
+        Note: use ``print_sed_templates()`` to see a list of available templates.
 
         """
         # This can be modified to accept other templates
@@ -497,7 +499,7 @@ class sn(object):
                 if len(self.data[band]['flux']) <= 3:
                     bands2delete.append(band)
 
-        self.delete_bands(bands2delete)  # delete bands with less than 3 data points after applying mask
+        self.delete_bands(bands2delete)  # delete bands with less than or equal to 3 data points after applying mask
         assert len(self.bands) > 1, 'The SN has not enough data (either one or no bands) left after the mask was applied.'
 
 
@@ -586,7 +588,7 @@ class sn(object):
         """Normalize the fluxes and zero-points (ZPs).
 
         Fluxes are converted to physical units by calculating the ZPs according to the
-        magnitude system, for example, **AB**, **BD17** and **Vega**.
+        magnitude system, for example: **AB**, **BD17** or **Vega**.
         """
 
         for band in self.bands:
@@ -604,7 +606,7 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel='matern52', kernel2='matern52', fit_2d=True, fit_mag=True):
+    def fit_lcs(self, kernel='matern52', kernel2='matern52', fit_mag=True):
         """Fits the data for each band using gaussian process
 
         The fits are done independently for each band. The initial B-band peak time is estimated with
@@ -616,8 +618,6 @@ class sn(object):
             Kernel to be used to fit the light curves with gaussian process. E.g., ``matern52``, ``matern32``, ``squaredexp``.
         kernel2 : str, default ``squaredexp``
             Kernel to be used in the wavelength axis when fitting in 2D with gaussian process. E.g., ``matern52``, ``matern32``, ``squaredexp``.
-        fit_2d : bool, default ``True``
-            Whether to fit in 1D or 2D with gaussian process.
         fit_mag : bool, default ``True``
             If ``True`` and ``fit_2d=True``, the data is fit in magnitude space. This is recommended for 2D fit.
         """
@@ -627,127 +627,70 @@ class sn(object):
 
         self.calc_pivot()
 
-        if not fit_2d:
-            for band in self.bands:
-                time, flux, std = gp_lc_fit(self.data[band]['mjd'], self.data[band]['flux'],
-                                         self.data[band]['flux_err'], kernel=kernel)
+        flux_array = np.hstack([self.data[band]['flux'] for band in self.bands])
+        flux_err_array = np.hstack([self.data[band]['flux_err'] for band in self.bands])
 
-                try:
-                    peakidxs = peak.indexes(flux, thres=.3, min_dist=1000//(time[1]-time[0]))
-                    idx_max = np.array([idx for idx in peakidxs if all(flux[:idx]<flux[idx])]).min()
-                    if flux[idx_max] == np.max(flux) and flux[idx_max] > 0:
-                        tmax = time[idx_max]
-                        mmax = -2.5*np.log10(flux[idx_max]) + self.data[band]['zp']
-                    else:
-                        tmax = mmax = np.nan
-                except:
-                    tmax = mmax = np.nan
-                self.lc_fits[band] = {'mjd':time, 'flux':flux, 'std':std, 'tmax':tmax, 'mmax':mmax}
+        time_array = np.hstack([self.data[band]['mjd'] for band in self.bands])
+        wave_array = np.hstack([[self.filters[band]['eff_wave']]*len(self.data[band]['mjd']) for band in self.bands])
 
-            tmax0 = self.lc_fits[self.pivot_band]['tmax']  # initial estimation of the peak
+        # edges to extrapolate in time and wavelength
+        time_edges = np.array([time_array.min()-3, time_array.max()+5])  # the numbers are extrapolation in days
+        bands_waves = np.hstack([self.filters[band]['wave'] for band in self.bands])
+        bands_edges = np.array([bands_waves.min(), bands_waves.max()])
 
-            bands = self.bands.copy()
-            while np.isnan(tmax0):
-                bands.remove(self.pivot_band)
-                # check another band to work as pivot bands
-                self.calc_pivot(bands)
-                tmax0 = self.lc_fits[self.pivot_band]['tmax']
-                if len(bands)<=2:
-                    break
+        if fit_mag:
+            mask = flux_array >= 0.0
+            mag_array, mag_err_array = flux2mag(flux_array[mask], 0.0, flux_err_array[mask])  # ZPs are not necessary for fitting
+            time_array = time_array[mask]
+            wave_array = wave_array[mask]
 
-            assert not np.isnan(tmax0), f'Unable to obtain B-band peak for {self.name}!'
-            self.tmax = self.tmax0 = np.round(tmax0, 2)
+            timeXwave, mu, std, gp_results = gp_2d_fit(time_array, wave_array, mag_array, mag_err_array,  kernel1=kernel,
+                                                        kernel2=kernel2, x1_edges=time_edges, x2_edges=bands_edges)
+            mu, std = mag2flux(mu, 0.0, std)
 
-            delta_eff0 = self.filters[self.pivot_band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave']
-
-            # find the second closest band to restframe B-band for a more accurate tmax estimation
-            eff_wave_diff = [self.filters[band]['eff_wave']/(1+self.z) - self.filters['Bessell_B']['eff_wave'] for band in self.bands]
-            pivot_index = self.bands.index(self.pivot_band)
-            eff_wave_diff[pivot_index] = 1e6  # "remove" the pivot band to find the 2nd closest band
-
-            next_band_ind = np.argmin(np.array(eff_wave_diff))
-            next_band = self.bands[next_band_ind]
-            tmax1 = self.lc_fits[next_band]['tmax']
-
-            if not np.isnan(tmax1):
-                # estimate weighted average of tmax from two bands
-                w0 = 1/delta_eff0**2
-                delta_eff1 = eff_wave_diff[next_band_ind]
-                w1 = 1/delta_eff1**2
-                wtmax = (tmax0*w0 + tmax1*w1)/(w0 + w1)  # weighted mean
-                self.tmax = self.tmax0 = np.round(wtmax, 2)
-
-            for band in self.bands:
-                self.lc_fits[band]['phase'] = (self.lc_fits[band]['mjd']-self.tmax) / (1+self.z)
-        # 2D GP fit
         else:
-            flux_array = np.hstack([self.data[band]['flux'] for band in self.bands])
-            flux_err_array = np.hstack([self.data[band]['flux_err'] for band in self.bands])
+            timeXwave, mu, std, gp_results = gp_2d_fit(time_array, wave_array, flux_array, flux_err_array,
+                                            kernel1=kernel, kernel2=kernel2, x2_edges=bands_edges)
 
-            time_array = np.hstack([self.data[band]['mjd'] for band in self.bands])
-            wave_array = np.hstack([[self.filters[band]['eff_wave']]*len(self.data[band]['mjd']) for band in self.bands])
+        self.lc_fits['timeXwave'], self.lc_fits['mu'], self.lc_fits['std'], self.lc_fits['gp_results'] = timeXwave, mu, std, gp_results
 
-            # edges to extrapolate in time and wavelength
-            time_edges = np.array([time_array.min()-3, time_array.max()+5])  # the numbers are extrapolation in days of light-curves
-            bands_waves = np.hstack([self.filters[band]['wave'] for band in self.bands])
-            bands_edges = np.array([bands_waves.min(), bands_waves.max()])
+        ###############################
+        ##### Estimate B-band Peak ####
+        ###############################
+        wave_ind = np.argmin(np.abs(self.filters['Bessell_B']['eff_wave']*(1+self.z) - timeXwave.T[1]))
+        eff_wave = timeXwave.T[1][wave_ind]  # closest wavelength from the gp grid to the effective_wavelength*(1+z) of Bessell_B
+        mask = timeXwave.T[1]==eff_wave
 
-            if fit_mag:
-                mask = flux_array >= 0.0
-                mag_array, mag_err_array = flux2mag(flux_array[mask], 0.0, flux_err_array[mask])  # ZPs are not necessary for fitting
-                time_array = time_array[mask]
-                wave_array = wave_array[mask]
+        time, flux, err = timeXwave.T[0][mask], mu[mask], std[mask]
 
-                timeXwave, mu, std, gp_results = gp_2d_fit(time_array, wave_array, mag_array, mag_err_array,  kernel1=kernel,
-                                                            kernel2=kernel2, x1_edges=time_edges, x2_edges=bands_edges)
-                mu, std = mag2flux(mu, 0.0, std)
+        try:
+            peak_id = peak.indexes(flux, thres=.3, min_dist=1000//(time[1]-time[0]))[0]
+            self.tmax = self.tmax0 = np.round(time[peak_id], 2)
 
-            else:
-                timeXwave, mu, std, gp_results = gp_2d_fit(time_array, wave_array, flux_array, flux_err_array,
-                                                kernel1=kernel, kernel2=kernel2, x2_edges=bands_edges)
+            phaseXwave = np.copy(timeXwave)
+            phaseXwave.T[0] = (timeXwave.T[0] - self.tmax)/(1+self.z)
+            self.lc_fits['phaseXwave'] = phaseXwave
+        except:
+            raise ValueError(f'Unable to obtain an accurate B-band peak for {self.name}!')
 
-            self.lc_fits['timeXwave'], self.lc_fits['mu'], self.lc_fits['std'], self.lc_fits['gp_results'] = timeXwave, mu, std, gp_results
+        ##################################
+        ## Save individual light curves ##
+        ##################################
+        for band in self.bands:
+            wave_ind = np.argmin(np.abs(self.filters[band]['eff_wave'] - timeXwave.T[1]))
+            eff_wave = timeXwave.T[1][wave_ind]  # closest wavelength from the gp grid to the effective wavelength of the band
+            mask = timeXwave.T[1]==eff_wave
 
-            ###############################
-            ##### Estimate B-band Peak ####
-            ###############################
-            wave_ind = np.argmin(np.abs(self.filters['Bessell_B']['eff_wave']*(1+self.z) - timeXwave.T[1]))
-            eff_wave = timeXwave.T[1][wave_ind]  # closest wavelength from the gp grid to the effective_wavelength*(1+z) of Bessell_B
-            inds = [i for i, txw_tuplet in enumerate(timeXwave) if txw_tuplet[1]==eff_wave]
+            time, phase, flux, err = timeXwave.T[0][mask], phaseXwave.T[0][mask], mu[mask], std[mask]
+            self.lc_fits[band] = {'mjd':time, 'phase':phase, 'flux':flux, 'std':err}
 
-            time, flux, err = timeXwave.T[0][inds], mu[inds], std[inds]
-
+            # calculate observed peak for each band
             try:
-                peakidxs = peak.indexes(flux, thres=.3, min_dist=1000//(time[1]-time[0]))
-                # pick the index of the first peak in case some band has 2 peaks (like IR bands)
-                idx_max = np.array([idx for idx in peakidxs if all(flux[:idx]<flux[idx])]).min()
-                self.tmax = self.tmax0 = np.round(time[idx_max], 2)
-
-                phaseXwave = np.copy(timeXwave)
-                phaseXwave.T[0] = (timeXwave.T[0] - self.tmax)/(1 + self.z)
-                self.lc_fits['phaseXwave'] = phaseXwave
+                peak_id = peak.indexes(flux, thres=.3, min_dist=1000//(time[1]-time[0]))[0]
+                self.lc_fits[band]['tmax'] = np.round(time[peak_id], 2)
+                self.lc_fits[band]['mmax'] = -2.5*np.log10(flux[peak_id]) + self.data[band]['zp']
             except:
-                raise ValueError(f'Unable to obtain an accurate B-band peak for {self.name}!')
-
-            ##################################
-            ## Save individual light curves ##
-            ##################################
-            for band in self.bands:
-                wave_ind = np.argmin(np.abs(self.filters[band]['eff_wave'] - timeXwave.T[1]))
-                eff_wave = timeXwave.T[1][wave_ind]  # closest wavelength from the gp grid to the effective wavelength of the band
-                inds = [i for i, txw_tuplet in enumerate(timeXwave) if txw_tuplet[1]==eff_wave]
-
-                time, phase, flux, err = timeXwave.T[0][inds], phaseXwave.T[0][inds], mu[inds], std[inds]
-                self.lc_fits[band] = {'mjd':time, 'phase':phase, 'flux':flux, 'std':err}
-
-                # calculate observed peak for each band
-                try:
-                    peakidxs = peak.indexes(flux, thres=.3, min_dist=1000//(time[1]-time[0]))
-                    idx_max = np.array([idx for idx in peakidxs if all(flux[:idx]<flux[idx])]).min()
-                    self.lc_fits[band]['tmax'] = np.round(time[idx_max], 2)
-                    self.lc_fits[band]['mmax'] = -2.5*np.log10(flux[idx_max]) + self.data[band]['zp']
-                except:
-                    self.lc_fits[band]['tmax'] = self.lc_fits[band]['mmax'] = np.nan
+                self.lc_fits[band]['tmax'] = self.lc_fits[band]['mmax'] = np.nan
 
     def plot_fits(self, plot_together=False, plot_type='flux', save=False, fig_name=None, outformat='png'):
         """Plots the light-curves fits results.
@@ -935,6 +878,7 @@ class sn(object):
 
         phases = np.arange(min_phase, max_phase+1, 1)
 
+        # save user inputs for later (used when checking B-band peak estimation)
         self.user_input['mangle_sed'] = {'min_phase':min_phase, 'max_phase':max_phase, 'kernel':kernel,
                                          'linear_extrap':linear_extrap, 'correct_extinction':correct_extinction,
                                          'scaling':scaling, 'reddening_law':reddening_law}
@@ -1242,6 +1186,7 @@ class sn(object):
             simulated_lcs = np.asarray([np.random.normal(flux, err, 1000) for flux, err in zip(b_flux, b_err)])  # to estimate uncertainties
             try:
                 pmax_list = []
+                # loop to estimate uncertainty in tmax
                 for lc_flux in simulated_lcs.T:
                     lc_flux = savgol_filter(lc_flux, 91, 3)  # the LC need to be smoothed as the simulations are "noisy"
                     peakidxs = peak.indexes(lc_flux, thres=.3, min_dist=1000//(b_phase[1]-b_phase[0]))
@@ -1265,12 +1210,12 @@ class sn(object):
             iter += 1
 
             # compare tmax from the corrected restframe B-band to the initial estimation
-            if np.abs(tmax_offset) >= 0.25:
+            if np.abs(tmax_offset) >= 0.2:
                 if np.abs(self.tmax0-self.tmax) >= 1.5:
                     tmax_offset *= -1  # maybe it is moving too much in one direction
 
                 # update phase of the light curves
-                self.tmax = np.round(self.tmax + tmax_offset, 2)
+                self.tmax = np.round(self.tmax - tmax_offset*(1+self.z), 2)
                 self.lc_fits['phaseXwave'].T[0] -= tmax_offset
                 for band in self.bands:
                     self.lc_fits[band]['phase'] -= tmax_offset
@@ -1279,7 +1224,7 @@ class sn(object):
                 self.mangle_sed(**self.user_input['mangle_sed'])
                 self._calculate_corrected_lcs()
             else:
-                break
+                bmax_needs_check = False
 
         ########################################
         ### Calculate Light Curve Parameters ###
