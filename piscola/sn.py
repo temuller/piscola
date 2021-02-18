@@ -531,6 +531,11 @@ class sn(object):
             band_list = self.bands
 
         ZP = 27.5
+        # shift in time for visualization purposes
+        t = self.data[self.bands[1]]['time'].min()
+        tmax = str(t.astype(int))
+        zeros = '0'*len(tmax[2:])
+        t_off = int(tmax[:2] + zeros)
 
         # to set plot limits
         if plot_type=='flux':
@@ -553,7 +558,7 @@ class sn(object):
                 y_norm = 10**( -0.4*(self.data[band]['zp'] - ZP) )
                 time, flux, err = np.copy(self.data[band]['time']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
                 flux, err = flux*y_norm, err*y_norm
-                ax.errorbar(time, flux, err, fmt='o', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
+                ax.errorbar(time-t_off, flux, err, fmt='o', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
                 ylabel = f'Flux (ZP = {ZP})'
             elif plot_type=='mag':
                 ylabel = 'Apparent Magnitude'
@@ -561,10 +566,10 @@ class sn(object):
                 time = self.data[band]['time'][mask]
                 mag, err = flux2mag(self.data[band]['flux'][mask], self.data[band]['zp'], self.data[band]['flux_err'][mask])
 
-                ax.errorbar(time, mag, err, fmt='o', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
+                ax.errorbar(time-t_off, mag, err, fmt='o', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
 
         ax.set_ylabel(ylabel, fontsize=16, family='serif')
-        ax.set_xlabel('Modified Julian Date', fontsize=16, family='serif')
+        ax.set_xlabel(f'Time - {t_off} [days]', fontsize=16, family='serif')
         ax.set_title(f'{self.name}\nz = {self.z:.5}', fontsize=18, family='serif')
         ax.minorticks_on()
         ax.tick_params(which='major', length=8, width=1, direction='in', top=True, right=True, labelsize=16)
@@ -721,6 +726,11 @@ class sn(object):
         new_palette = [plt.get_cmap('Dark2')(i) for i in np.arange(8)] + [plt.get_cmap('Set1')(i) for i in np.arange(8)]
         ZP = 27.5  # zeropoint for normalising the flux for visualization purposes
 
+        # shift in time for visualization purposes
+        tmax = str(self.tmax.astype(int))
+        zeros = '0'*len(tmax[2:])
+        t_off = int(tmax[:2] + zeros)
+
         if plot_together:
             # to set plot limits
             if plot_type=='flux':
@@ -748,10 +758,10 @@ class sn(object):
                     flux, err = flux*y_norm, err*y_norm
                     data_flux, data_err = data_flux*y_norm, data_err*y_norm
 
-                    ax.errorbar(data_time, data_flux, data_err, fmt='o', mec='k', capsize=3, capthick=2, ms=8,
+                    ax.errorbar(data_time-t_off, data_flux, data_err, fmt='o', mec='k', capsize=3, capthick=2, ms=8,
                                     elinewidth=3, color=new_palette[i],label=band)
-                    ax.plot(time, flux,'-', color=new_palette[i], lw=2, zorder=16)
-                    ax.fill_between(time, flux-err, flux+err, alpha=0.5, color=new_palette[i])
+                    ax.plot(time-t_off, flux,'-', color=new_palette[i], lw=2, zorder=16)
+                    ax.fill_between(time-t_off, flux-err, flux+err, alpha=0.5, color=new_palette[i])
                     ax.set_ylabel(f'Flux (ZP = {ZP})', fontsize=16, family='serif')
 
                 elif plot_type=='mag':
@@ -764,18 +774,18 @@ class sn(object):
                     mag, err = flux2mag(flux, self.data[band]['zp'], err)
                     data_mag, data_err = flux2mag(data_flux, self.data[band]['zp'], data_err)
 
-                    ax.errorbar(data_time, data_mag, data_err, fmt='o', mec='k', capsize=3, capthick=2, ms=8,
+                    ax.errorbar(data_time-t_off, data_mag, data_err, fmt='o', mec='k', capsize=3, capthick=2, ms=8,
                                 elinewidth=3, color=new_palette[i],label=band)
-                    ax.plot(time, mag,'-', color=new_palette[i], lw=2, zorder=16)
-                    ax.fill_between(time, mag-err, mag+err, alpha=0.5, color=new_palette[i])
+                    ax.plot(time-t_off, mag,'-', color=new_palette[i], lw=2, zorder=16)
+                    ax.fill_between(time-t_off, mag-err, mag+err, alpha=0.5, color=new_palette[i])
                     ax.set_ylabel(r'Apparent Magnitude', fontsize=16, family='serif')
 
-            ax.axvline(x=self.tmax0, color='k', linestyle='--', alpha=0.4)
-            ax.axvline(x=self.tmax, color='k', linestyle='--')
+            ax.axvline(x=self.tmax0-t_off, color='k', linestyle='--', alpha=0.4)
+            ax.axvline(x=self.tmax-t_off, color='k', linestyle='--')
             ax.minorticks_on()
             ax.tick_params(which='major', length=6, width=1, direction='in', top=True, right=True, labelsize=16)
             ax.tick_params(which='minor', length=3, width=1, direction='in', top=True, right=True, labelsize=16)
-            ax.set_xlabel('Modified Julian Date', fontsize=16, family='serif')
+            ax.set_xlabel(f'Time - {t_off} [days]', fontsize=16, family='serif')
 
             ax.set_title(f'{self.name}\nz = {self.z:.5}', fontsize=18, family='serif')
             ax.legend(fontsize=13, loc='upper right')
@@ -804,10 +814,10 @@ class sn(object):
                     flux, err = flux*y_norm, err*y_norm
                     data_flux, data_err = data_flux*y_norm, data_err*y_norm
 
-                    ax.errorbar(data_time, data_flux, data_err, fmt='o', color=new_palette[i],
+                    ax.errorbar(data_time-t_off, data_flux, data_err, fmt='o', color=new_palette[i],
                                     capsize=3, capthick=2, ms=8, elinewidth=3, mec='k')
-                    ax.plot(time, flux,'-', lw=2, zorder=16, color=new_palette[i])
-                    ax.fill_between(time, flux-err, flux+err, alpha=0.5, color=new_palette[i])
+                    ax.plot(time-t_off, flux,'-', lw=2, zorder=16, color=new_palette[i])
+                    ax.fill_between(time-t_off, flux-err, flux+err, alpha=0.5, color=new_palette[i])
 
                 elif plot_type=='mag':
                     # avoid non-positive numbers in logarithm
@@ -819,14 +829,14 @@ class sn(object):
                     mag, err = flux2mag(flux, self.data[band]['zp'], err)
                     data_mag, data_err = flux2mag(data_flux, self.data[band]['zp'], data_err)
 
-                    ax.errorbar(data_time, data_mag, data_err, fmt='o', color=new_palette[i],
+                    ax.errorbar(data_time-t_off, data_mag, data_err, fmt='o', color=new_palette[i],
                                     capsize=3, capthick=2, ms=8, elinewidth=3, mec='k')
-                    ax.plot(time, mag,'-', lw=2, zorder=16, color=new_palette[i])
-                    ax.fill_between(time, mag-err, mag+err, alpha=0.5, color=new_palette[i])
+                    ax.plot(time-t_off, mag,'-', lw=2, zorder=16, color=new_palette[i])
+                    ax.fill_between(time-t_off, mag-err, mag+err, alpha=0.5, color=new_palette[i])
                     ax.invert_yaxis()
 
-                ax.axvline(x=self.tmax0, color='k', linestyle='--', alpha=0.4)
-                ax.axvline(x=self.tmax, color='k', linestyle='--')
+                ax.axvline(x=self.tmax0-t_off, color='k', linestyle='--', alpha=0.4)
+                ax.axvline(x=self.tmax-t_off, color='k', linestyle='--')
                 ax.set_title(f'{band}', fontsize=16, family='serif')
                 ax.xaxis.set_tick_params(labelsize=15)
                 ax.yaxis.set_tick_params(labelsize=15)
@@ -835,7 +845,7 @@ class sn(object):
                 ax.tick_params(which='minor', length=3, width=1, direction='in', top=True, right=True)
 
             fig.text(0.5, 0.95, f'{self.name} (z = {self.z:.5})', ha='center', fontsize=20, family='serif')
-            fig.text(0.5, 0.04, 'Modified Julian Date', ha='center', fontsize=18, family='serif')
+            fig.text(0.5, 0.04, f'Time - {t_off} [days]', ha='center', fontsize=18, family='serif')
             if plot_type=='flux':
                 fig.text(0.04, 0.5, f'Flux (ZP = {ZP})', va='center', rotation='vertical', fontsize=18, family='serif')
             elif plot_type=='mag':
@@ -1034,6 +1044,7 @@ class sn(object):
             ax.set_ylim(y.min()*0.95, y.max()*1.03)
 
             ax2.set_xlim(ax.get_xlim())
+            ax2.set_xticklabels(ax.get_xticks())
             ax2.set_xticklabels((ax.get_xticks()/(1+self.z)).astype(int))
             ax2.minorticks_on()
             ax2.set_xlabel(r'Rest-frame Wavelength [$\AA$]', fontsize=16, family='serif')
@@ -1095,6 +1106,7 @@ class sn(object):
             ax.spines['left'].set_color('g')
 
             ax2.set_xlim(ax.get_xlim())
+            ax2.set_xticklabels(ax.get_xticks())
             ax2.set_xticklabels((ax.get_xticks()/(1+self.z)).astype(int))
             ax2.set_xlabel(r'Rest-frame Wavelength [$\AA$]', fontsize=16, family='serif')
             ax2.minorticks_on()
