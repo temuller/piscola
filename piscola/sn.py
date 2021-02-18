@@ -500,7 +500,7 @@ class sn(object):
                     bands2delete.append(band)
 
         self.delete_bands(bands2delete)  # delete bands with less than or equal to 3 data points after applying mask
-        assert len(self.bands) > 1, 'The SN has not enough data (either one or no bands) left after the mask was applied.'
+        assert len(self.bands) > 1, 'The SN has not enough data. Either one or no bands left after the mask was applied.'
 
 
     def plot_data(self, band_list=None, plot_type='flux', save=False, fig_name=None, outformat='png'):
@@ -530,17 +530,16 @@ class sn(object):
         if band_list is None:
             band_list = self.bands
 
-        exp = np.round(np.log10(self.data[band_list[0]]['flux'].mean()), 0)
-        y_norm = 10**exp
+        ZP = 27.5
 
         # to set plot limits
         if plot_type=='flux':
-            plot_lim_vals = [[self.data[band]['flux'].min()/y_norm, self.data[band]['flux'].max()/y_norm] for band in self.bands]
-            plot_lim_vals = np.ndarray.flatten(np.array(plot_lim_vals))
-            ymin_lim = np.r_[plot_lim_vals, 0.0].min()*0.9
+            plot_lim_vals = np.array([self.data[band]['flux']*10**( -0.4*(self.data[band]['zp'] - ZP) )
+                                                                                    for band in self.bands] + [0.0])
+            ymin_lim = np.hstack(plot_lim_vals).min()*0.9
             if ymin_lim < 0.0:
-                ymin_lim *= 1.1/0.9
-            ymax_lim = plot_lim_vals.max()*1.1
+                ymin_lim *= 1.1/0.9  # there might be some "negative" fluxes sometimes
+            ymax_lim = np.hstack(plot_lim_vals).max()*1.05
         elif plot_type=='mag':
             plot_lim_vals = [[np.nanmin(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])[0]),
                               np.nanmax(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])[0])] for band in self.bands]
@@ -551,10 +550,11 @@ class sn(object):
         fig, ax = plt.subplots(figsize=(8,6))
         for i, band in enumerate(band_list):
             if plot_type=='flux':
+                y_norm = 10**( -0.4*(self.data[band]['zp'] - ZP) )
                 time, flux, err = np.copy(self.data[band]['time']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
-                flux, err = flux/y_norm, err/y_norm
+                flux, err = flux*y_norm, err*y_norm
                 ax.errorbar(time, flux, err, fmt='o', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
-                ylabel = r'Flux [10$^{%.0f}$ erg cm$^{-2}$ s$^{-1}$ $\AA^{-1}$]'%exp
+                ylabel = f'Flux (ZP = {ZP})'
             elif plot_type=='mag':
                 ylabel = 'Apparent Magnitude'
                 mask = np.where(self.data[band]['flux'] > 0)
@@ -673,7 +673,7 @@ class sn(object):
             phaseXwave.T[0] = (times - self.tmax)/(1+self.z)
             self.lc_fits['phaseXwave'] = phaseXwave
         except:
-            raise ValueError(f'Unable to obtain an estimation of B-band peak for {self.name}!')
+            raise ValueError(f'Unable to obtain an initial estimation of B-band peak for {self.name} (poor peak coverage)')
 
         ##################################
         ## Save individual light curves ##
@@ -899,18 +899,25 @@ class sn(object):
         if correct_extinction:
             sed_df.flux = redden(sed_df.wave.values, sed_df.flux.values, self.ra, self.dec, scaling, reddening_law)
 
-        self.sed_lcs = {band:{'flux':[], 'time':None, 'phase':None} for band in self.bands}
+        bands2mangle = []
+        # check which bands are in the wavelength range of the SED template
+        for band in self.bands:
+            filter_wave = self.filters[band]['wave']
+            if (filter_wave.min() > sed_df.wave.values.min()) & (filter_wave.max() < sed_df.wave.values.max()):
+                bands2mangle.append(band)
+
+        self.sed_lcs = {band:{'flux':[], 'time':None, 'phase':None} for band in bands2mangle}
         sed_phases = sed_df.phase.unique()
 
         # calculate SED light curves
         for phase in sed_phases:
             phase_df = sed_df[sed_df.phase==phase]
-            for band in self.bands:
+            for band in bands2mangle:
                 band_flux = integrate_filter(phase_df.wave.values, phase_df.flux.values, self.filters[band]['wave'],
-                                       self.filters[band]['transmission'], self.filters[band]['response_type'])
+                                           self.filters[band]['transmission'], self.filters[band]['response_type'])
                 self.sed_lcs[band]['flux'].append(band_flux)
 
-        for band in self.bands:
+        for band in bands2mangle:
             self.sed_lcs[band]['flux'] = np.array(self.sed_lcs[band]['flux'])
             self.sed_lcs[band]['phase'] = sed_phases
             self.sed_lcs[band]['time'] = sed_phases*(1+self.z) + self.tmax
@@ -919,12 +926,12 @@ class sn(object):
         ####### set-up for mangling #######
         ###################################
         # find the fluxes at the exact SED phases
-        obs_flux_dict = {band:np.interp(sed_phases, self.lc_fits[band]['phase'], self.lc_fits[band]['flux'], left=0.0, right=0.0) for band in self.bands}
-        obs_err_dict = {band:np.interp(sed_phases, self.lc_fits[band]['phase'], self.lc_fits[band]['err'], left=0.0, right=0.0) for band in self.bands}
-        flux_ratios_dict = {band:obs_flux_dict[band]/self.sed_lcs[band]['flux'] for band in self.bands}
+        obs_flux_dict = {band:np.interp(sed_phases, self.lc_fits[band]['phase'], self.lc_fits[band]['flux'], left=0.0, right=0.0) for band in bands2mangle}
+        obs_err_dict = {band:np.interp(sed_phases, self.lc_fits[band]['phase'], self.lc_fits[band]['err'], left=0.0, right=0.0) for band in bands2mangle}
+        flux_ratios_dict = {band:obs_flux_dict[band]/self.sed_lcs[band]['flux'] for band in bands2mangle}
 
-        wave_array = np.array([self.filters[band]['eff_wave'] for band in self.bands])
-        bands_waves = np.hstack([self.filters[band]['wave'] for band in self.bands])
+        wave_array = np.array([self.filters[band]['eff_wave'] for band in bands2mangle])
+        bands_waves = np.hstack([self.filters[band]['wave'] for band in bands2mangle])
         x_edges = np.array([bands_waves.min(), bands_waves.max()])  # to includes the edges of the reddest and bluest bands
 
         ################################
@@ -932,20 +939,20 @@ class sn(object):
         ################################
         self.mangled_sed = pd.DataFrame(columns=['phase', 'wave', 'flux', 'err'])
         for i, phase in enumerate(sed_phases):
-            obs_fluxes = np.array([obs_flux_dict[band][i] for band in self.bands])
-            obs_errs = np.array([obs_err_dict[band][i] for band in self.bands])
-            flux_ratios_array = np.array([flux_ratios_dict[band][i] for band in self.bands])
+            obs_fluxes = np.array([obs_flux_dict[band][i] for band in bands2mangle])
+            obs_errs = np.array([obs_err_dict[band][i] for band in bands2mangle])
+            flux_ratios_array = np.array([flux_ratios_dict[band][i] for band in bands2mangle])
 
             phase_df = sed_df[sed_df.phase==phase]
             sed_epoch_wave, sed_epoch_flux = phase_df.wave.values, phase_df.flux.values
 
             # mangling routine including optimisation
             mangling_results = mangle(wave_array, flux_ratios_array, sed_epoch_wave, sed_epoch_flux,
-                                        obs_fluxes, obs_errs, self.bands, self.filters, method, kernel, x_edges, linear_extrap)
+                                        obs_fluxes, obs_errs, bands2mangle, self.filters, method, kernel, x_edges, linear_extrap)
 
             # precision of the mangling function
             mag_diffs = {band:-2.5*np.log10(mangling_results['flux_ratios'][i]) if mangling_results['flux_ratios'][i] > 0
-                                                else np.nan for i, band in enumerate(self.bands)}
+                                                else np.nan for i, band in enumerate(bands2mangle)}
             self.mangling_results.update({phase:mangling_results})
             self.mangling_results[phase].update({'mag_diff':mag_diffs})
 
@@ -1150,7 +1157,7 @@ class sn(object):
         self.corrected_lcs = corrected_lcs
 
         # simple, independent 1D fit to the corrected light curves
-        corrected_lcs_fit = {band:None for band in self.filters.keys()}
+        corrected_lcs_fit = {}
         for band in self.filters.keys():
             try:
                 phases, fluxes, errs = corrected_lcs[band]['phase'], corrected_lcs[band]['flux'], corrected_lcs[band]['err']
@@ -1183,6 +1190,7 @@ class sn(object):
         bmax_needs_check = True
         iter = 0
 
+        assert 'Bessell_B' in self.corrected_lcs_fit.keys(), 'Not enough wavelength coverage to estimate rest-frame B-band.'
         while bmax_needs_check:
             b_data = self.corrected_lcs_fit['Bessell_B']
             b_phase, b_flux, b_err = b_data['phase'], b_data['flux'], b_data['err']
@@ -1197,8 +1205,12 @@ class sn(object):
                     pmax_list.append(b_phase[idx_max])
 
                 pmax_array = np.array(pmax_list)
-                phase_offset, self.tmax_err = pmax_array.mean().round(2), pmax_array.std().round(2)
-                self._phase_offset = phase_offset
+                self.tmax_err = pmax_array.std().round(2)
+
+                # estimate offset between inital B-band peak and "final" peak
+                peak_id = peak.indexes(b_flux, thres=.3, min_dist=1000//(b_phase[1]-b_phase[0]))[0]
+                phase_offset = b_phase[idx_max] - 0.0
+                self._phase_offset = np.round(phase_offset, 2)
             except:
                 phase_offset = None
 
@@ -1279,7 +1291,7 @@ class sn(object):
                 _, cov_matrix = gp(X_predict)
                 cov_B_V = cov_matrix[0][1]*y_norm**2
 
-                colour_err = np.sqrt(mb_err**2 + V0_err**2 - 2*cov_B_V)
+                colour_err = np.sqrt(np.abs(mb_err**2 + V0_err**2 - 2*cov_B_V))
 
         self.lc_parameters = {'mb':mb, 'mb_err':mb_err, 'dm15':dm15,
                               'dm15_err':dm15_err, 'colour':colour, 'colour_err':colour_err}
