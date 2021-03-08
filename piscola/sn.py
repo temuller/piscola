@@ -1268,7 +1268,23 @@ class sn(object):
             id_15 = list(b_phase).index(15)
             B15, B15_err = flux2mag(b_flux[id_15], zp_b, b_flux_err[id_15])
             dm15 = B15 - mb
-            dm15_err = np.sqrt(mb_err**2 + B15_err**2)
+
+            # covariance from the 2D gp fit to the light curves
+            gp_results = self.lc_fits['gp_results']
+            gp = gp_results['gp']
+            x1_norm, x2_norm, y_norm = gp_results['x1_norm'], gp_results['x2_norm'], gp_results['y_norm']
+
+            x1_range = np.array([self.tmax, self.tmax + 15*(1+self.z)])/x1_norm
+
+            eff_wave_B = self.filters[bessell_b]['eff_wave']*(1+self.z)
+            x2_range = np.array([eff_wave_B])/x2_norm
+
+            X_predict = np.array(np.meshgrid(x1_range, x2_range)).reshape(2, -1).T
+            _, cov_matrix = gp(X_predict)
+            cov_B0_B15 = cov_matrix[0][1]*y_norm**2
+
+            dm15_err = np.sqrt(mb_err**2 + B15_err**2 - 2*cov_B0_B15)
+
         else:
             dm15 = dm15_err = np.nan
 
@@ -1381,7 +1397,8 @@ class sn(object):
                 ax.text(0.75, position,r'($B-V$)$_{\rm max}$=%.3f$\pm$%.3f'%(colour, colour_err), ha='center', va='center', fontsize=15, transform=ax.transAxes)
 
         ax.set_xlabel(f'Phase with respect to B-band peak [days]', fontsize=16, family='serif')
-        ax.set_title(f'{self.name}\n{band}, z={self.z:.5}, t0={self.tmax:.2f}', fontsize=16, family='serif')
+        tmax_str = 't$_{\rm max}$'
+        ax.set_title(f'{self.name}\n{band}, z={self.z:.5}, {tmax_str}={self.tmax:.2f}', fontsize=16, family='serif')
         if plot_type=='flux':
             ax.set_ylabel(f'Flux (ZP = {ZP})', fontsize=16, family='serif')
             ax.set_ylim(y.min()*0.90, y.max()*1.05)
