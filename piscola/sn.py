@@ -540,7 +540,7 @@ class sn(object):
         # to set plot limits
         if plot_type=='flux':
             plot_lim_vals = np.array([self.data[band]['flux']*10**( -0.4*(self.data[band]['zp'] - ZP) )
-                                                                                    for band in self.bands] + [0.0])
+                                                                                    for band in self.bands] + [0.0], dtype="object")
             ymin_lim = np.hstack(plot_lim_vals).min()*0.9
             if ymin_lim < 0.0:
                 ymin_lim *= 1.1/0.9  # there might be some "negative" fluxes sometimes
@@ -735,7 +735,7 @@ class sn(object):
             # to set plot limits
             if plot_type=='flux':
                 plot_lim_vals = np.array([self.data[band]['flux']*10**( -0.4*(self.data[band]['zp'] - ZP) )
-                                                                                        for band in self.bands] + [0.0])
+                                                                                        for band in self.bands] + [0.0], dtype="object")
                 ymin_lim = np.hstack(plot_lim_vals).min()*0.9
                 if ymin_lim < 0.0:
                     ymin_lim *= 1.1/0.9  # there might be some "negative" fluxes sometimes
@@ -1397,7 +1397,7 @@ class sn(object):
                 ax.text(0.75, position,r'($B-V$)$_{\rm max}$=%.3f$\pm$%.3f'%(colour, colour_err), ha='center', va='center', fontsize=15, transform=ax.transAxes)
 
         ax.set_xlabel(f'Phase with respect to B-band peak [days]', fontsize=16, family='serif')
-        tmax_str = 't$_{\rm max}$'
+        tmax_str = r't$_{\rm max}$'
         ax.set_title(f'{self.name}\n{band}, z={self.z:.5}, {tmax_str}={self.tmax:.2f}', fontsize=16, family='serif')
         if plot_type=='flux':
             ax.set_ylabel(f'Flux (ZP = {ZP})', fontsize=16, family='serif')
