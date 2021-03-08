@@ -1019,7 +1019,7 @@ class sn(object):
         init_sed_wave, init_sed_flux = man['init_sed']['wave'], man['init_sed']['flux']
 
         kernel = man['kernel']
-        bands = man['mag_diff'].keys()
+        bands = list(man['mag_diff'].keys())
 
         if mangling_function_only:
             fig, ax = plt.subplots(figsize=(8,6))
