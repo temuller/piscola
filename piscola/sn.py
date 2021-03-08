@@ -1043,8 +1043,8 @@ class sn(object):
             ax.tick_params(which='minor', length=4)
             ax.set_ylim(y.min()*0.95, y.max()*1.03)
 
+            ax2.set_xticks(ax.get_xticks())
             ax2.set_xlim(ax.get_xlim())
-            ax2.set_xticklabels(ax.get_xticks())
             ax2.set_xticklabels((ax.get_xticks()/(1+self.z)).astype(int))
             ax2.minorticks_on()
             ax2.set_xlabel(r'Rest-frame Wavelength [$\AA$]', fontsize=16, family='serif')
@@ -1105,8 +1105,8 @@ class sn(object):
             ax.tick_params(axis='y', which='both', colors='g')
             ax.spines['left'].set_color('g')
 
+            ax2.set_xticks(ax.get_xticks())
             ax2.set_xlim(ax.get_xlim())
-            ax2.set_xticklabels(ax.get_xticks())
             ax2.set_xticklabels((ax.get_xticks()/(1+self.z)).astype(int))
             ax2.set_xlabel(r'Rest-frame Wavelength [$\AA$]', fontsize=16, family='serif')
             ax2.minorticks_on()
