@@ -349,7 +349,7 @@ class sn(object):
         plt.legend(loc='upper right', bbox_to_anchor=(1.2, 1.0))
 
         if save:
-            fig.tight_layout()
+            #fig.tight_layout()
             plt.savefig('filters.png')
 
         plt.show()
@@ -503,7 +503,7 @@ class sn(object):
         assert len(self.bands) > 1, 'The SN has not enough data. Either one or no bands left after the mask was applied.'
 
 
-    def plot_data(self, band_list=None, plot_type='flux', save=False, fig_name=None, outformat='png'):
+    def plot_data(self, band_list=None, plot_type='flux', save=False, fig_name=None):
         """Plot the SN light curves.
 
         Negative fluxes are masked out if magnitudes are plotted.
@@ -517,10 +517,8 @@ class sn(object):
         save : bool, default ``False``
             If true, saves the plot into a file.
         fig_name : str, default ``None``
-            Name of the saved plot. If None is used the name of the file will be '{``self.name``}_lcs.{``outformat``}'.
+            Name of the saved plot. If None is used the name of the file will be '{``self.name``}_lcs.png'.
             Only works if ``save`` is set to ``True``.
-        outformat : str, default ``png``
-            Output file format.
 
         """
 
@@ -582,8 +580,8 @@ class sn(object):
 
         if save:
             if fig_name is None:
-                fig_name = f'{self.name}_lcs.{outformat}'
-            fig.tight_layout()
+                fig_name = f'{self.name}_lcs.png'
+            #fig.tight_layout()
             plt.savefig(fig_name)
 
         plt.show()
@@ -700,7 +698,7 @@ class sn(object):
             except:
                 self.lc_fits[band]['tmax'] = self.lc_fits[band]['mmax'] = np.nan
 
-    def plot_fits(self, plot_together=False, plot_type='flux', save=False, fig_name=None, outformat='png'):
+    def plot_fits(self, plot_together=False, plot_type='flux', save=False, fig_name=None):
         """Plots the light-curves fits results.
 
         Plots the observed data for each band together with the gaussian process fits. The initial B-band
@@ -716,10 +714,8 @@ class sn(object):
         save : bool, default ``False``
             If ``True``, saves the plot into a file.
         fig_name : str, default ``None``
-            Name of the saved plot. If ``None`` is used the name of the file will be '{``self.name``}_lc_fits.{``outformat``}'.
+            Name of the saved plot. If ``None`` is used the name of the file will be '{``self.name``}_lc_fits.png'.
             Only works if ``save`` is set to ``True``.
-        outformat : str, default ``png``
-            Output file format.
 
         """
 
@@ -854,8 +850,8 @@ class sn(object):
 
         if save:
             if fig_name is None:
-                fig_name = f'{self.name}_lc_fits.{outformat}'
-            fig.tight_layout()
+                fig_name = f'{self.name}_lc_fits.png'
+            #fig.tight_layout()
             plt.savefig(fig_name)
 
         plt.show()
@@ -982,7 +978,7 @@ class sn(object):
         self.corrected_sed.flux = self.corrected_sed.flux.values*(1+self.z)
 
 
-    def plot_mangling_function(self, phase=0, mangling_function_only=False, verbose=True, save=False, fig_name=None, outformat='png'):
+    def plot_mangling_function(self, phase=0, mangling_function_only=False, verbose=True, save=False, fig_name=None):
         """Plot the mangling function for a given phase.
 
         Parameters
@@ -997,10 +993,8 @@ class sn(object):
         save : bool, default ``False``
             If true, saves the plot into a file.
         fig_name : str, default ``None``
-            Name of the saved plot. If ``None`` is used the name of the file will be '{``self.name``}_mangling_phase{``phase``}.{``outformat``}'.
+            Name of the saved plot. If ``None`` is used the name of the file will be '{``self.name``}_mangling_phase{``phase``}.png'.
             Only works if ``save`` is set to ``True``.
-        outformat : str, default ``png``
-            Output file format.
 
         """
 
@@ -1122,8 +1116,8 @@ class sn(object):
 
         if save:
             if fig_name is None:
-                fig_name = f'{self.name}_mangling_phase{phase}.{outformat}'
-            fig.tight_layout()
+                fig_name = f'{self.name}_mangling_phase{phase}.png'
+            #fig.tight_layout()
             plt.savefig(fig_name)
 
         plt.show()
@@ -1325,7 +1319,7 @@ class sn(object):
                               'dm15_err':dm15_err, 'colour':colour, 'colour_err':colour_err}
 
 
-    def display_results(self, band='Bessell_B', plot_type='mag', display_params=False, save=False, fig_name=None, outformat='png'):
+    def display_results(self, band='Bessell_B', plot_type='mag', display_params=False, save=False, fig_name=None):
         """Displays the rest-frame light curve for the given band.
 
         Plots the rest-frame band light curve together with a gaussian fit to it. The parameters estimated with
@@ -1342,10 +1336,8 @@ class sn(object):
         save : bool, default ``False``
             If ``True``, saves the plot into a file.
         fig_name : str, default ``None``
-            Name of the saved plot. If ``None`` is used the name of the file will be '{``self.name``}_restframe_{``band``}.{``outformat``}'.
+            Name of the saved plot. If ``None`` is used the name of the file will be '{``self.name``}_restframe_{``band``}.png'.
             Only works if ``save`` is set to ``True``.
-        outformat : str, default ``png``
-            Output file format.
 
         """
 
@@ -1412,8 +1404,8 @@ class sn(object):
 
         if save:
             if fig_name is None:
-                fig_name = f'{self.name}_restframe_{band}.{outformat}'
-            fig.tight_layout()
+                fig_name = f'{self.name}_restframe_{band}.png'
+            #fig.tight_layout()
             plt.savefig(fig_name)
 
         plt.show()
