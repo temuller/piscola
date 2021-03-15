@@ -1,19 +1,18 @@
 import setuptools
-import piscola
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+with open("README.md", "r") as readme_file:
+    long_description = readme_file.read()
 
-with open('requirements.txt') as f:
-    requirements = f.read().splitlines()
+with open('requirements.txt') as requirements_file:
+    requirements = requirements_file.read().splitlines()
 
 setuptools.setup(
     name="piscola",
-    version=piscola.__version__,
+    version="0.1.0",
     author="Tomás Enrique Müller Bravo",
     author_email="t.e.muller-bravo@soton.ac.uk",
     license="MIT",
-    description="Type Ia Supernova Light-curve fitting code ",
+    description="Type Ia Supernova Light-curve fitting code",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/temuller/piscola",
