@@ -1,26 +1,12 @@
 language: python
-
 install:
-  - pip install pybind11  # to avoid issues with george
-  - pip install -U -r requirements.txt
-  - python setup.py develop
-
-  # Anaconda version - [NOT FULLY TESTED]
-  # Install the latest version of Miniconda
-  #- wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-  #- bash miniconda.sh -b -p $HOME/miniconda
-  #- source "$HOME/miniconda/etc/profile.d/conda.sh"
-  #- hash -r
-  #- conda config --set always_yes yes --set changeps1 no
-  #- conda update -q conda
-  # Useful for debugging any issues with conda
-  #- conda info -a
-
-  # Install packages
-  #- conda config --add channels conda-forge
-  #- conda create -n test_pisco python=$TRAVIS_PYTHON_VERSION numpy matplotlib pandas lmfit peakutils george emcee extinction sfdmap astropy pytest
-  #- source activate test_pisco
-  #- python setup.py develop
-
+- pip install pybind11
+- pip install -U -r requirements.txt
+- python setup.py develop
 script:
-  - pytest
+- pytest
+deploy:
+  provider: pypi
+  username: __token__
+  password:
+    secure: sQqegJ7PoHhWFO8Dbxsr9CU1pGF64+IVmIn5R8AxbetTjCqEzO9u7aWFwBJ9o9zAkvGcUWkkspsYimV88G2uN7QmkCR+ezqavWxRa91qcuu8B37Wq5CXrkKi5e2WAG69otw1O+JOu3I6x5D3TKX9FfOF3AW6Tx/TV3pm8miVfK1GjpbLPrpk+24MkJig7tV8lz+tVOfCHCPsU5wVNvC1kdR1TZ4CxHzJsCr6EOn7TmZXxb/vyo6OGdg2KI8MzP0QdOYXqovjiApkblY6jlDgD3vN94P7s45wYARJ6cbo5ioLtsZPsppNh92CWDQwLZ7DTaWTqdRYl1IBoUQ1O5C7XKgx0nso6ho/gGA1ClE6YReCc6vjsUmIKmyXqS56a3x8a2W0w+oFDKNeklqqw0l9Xk2Gy61/D1UgIlsh1EVKgxT6nql79i0bu0HrVymkyddHXI8r6KMKcRLK9vOwX2yWHsbzLVoKJMsANR2L0UB8xicFCIk1y24Jkv/IPJ8MNRiaLVcbqw7u4pEUeUtHjonq3aK0seBZaZo2nZzAh2TY+gAs77X0DUqVnSgrwD/F4VXXx78kzJw7Ac7mik3ZoyBsI9z0twaK8aUproer67SBPil1G4lejpARsaRBQoLu5lxDUuJX2IZT7pKOnuXyGX9c0z1t30W4kMdQ/ma+gWgfOrQ=
