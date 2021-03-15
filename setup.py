@@ -17,7 +17,8 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/temuller/piscola",
-    packages=['piscola'],
+    package_dir={'': '.'},
+    #packages=['piscola'],
     python_requires=">=3.6",
     classifiers=[
         "Programming Language :: Python :: 3",
