@@ -1144,7 +1144,7 @@ class sn(object):
 
                 phase_wave = phase_df.wave.values
                 phase_flux = phase_df.flux.values
-                phase_err = phase_df.err.values
+                phase_err = phase_df.flux_err.values
 
                 filter_data = self.filters[band]
                 try:
