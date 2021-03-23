@@ -4,8 +4,6 @@ scipy
 pandas
 lmfit
 peakutils
-emcee
-astropy
 sfdmap
 extinction
 pybind11
