@@ -1,14 +1,13 @@
 import numpy as np
 import george
 import scipy
-import emcee
 
 from .pisco_utils import extrapolate_mangling_edges
 from scipy.interpolate import UnivariateSpline
 from functools import partial
 
 def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52'):
-    """Fits a light curve with gaussian process.
+    """Fits a single light curve with gaussian process.
 
     The package ``george`` is used for the gaussian process fit.
 
@@ -22,11 +21,15 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52'):
         Dependent value errors.
     kernel : str, default ``matern52``
         Kernel to be used with the gaussian process. E.g., ``matern52``, ``matern32``, ``squaredexp``.
-        If left default, ``matern52`` is used to fit light curves and 'squaredexp' for the mangling function.
 
     Returns
     -------
-    Returns the interpolated independent and dependent values with the 1-sigma standard deviation.
+    x_pred*x_norm : array
+        Interpolated x-axis values.
+    mean*y_norm : array
+        Interpolated  values.
+    std*y_norm : array
+        Standard deviation ($1-\sigma$) of the interpolation.
 
     """
 
@@ -113,7 +116,14 @@ def spline_mf_fit(x_data, y_data, yerr_data=0.0, x_edges=[1e3, 3e4], linear_extr
 
     Returns
     -------
-    Returns the interpolated independent and dependent values with 1-sigma standard deviation.
+    x_pred : array
+        Interpolated x-axis values.
+    mean : array
+        Interpolated  values.
+    std : float
+        Standard deviation ($1-\sigma$) of the interpolation. ``0.0`` for now - STILL NEEDS TO BE IMPLEMENTED.
+    spline : obj
+        Spline object used for the fit.
 
     """
 
@@ -156,7 +166,14 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', x_edges=[1e3, 
 
     Returns
     -------
-    Returns the interpolated independent and dependent values with 1-sigma standard deviation.
+    x_pred*x_norm : array
+        Interpolated x-axis values.
+    mean*y_norm : array
+        Interpolated  values.
+    std*y_norm : array
+        Standard deviation ($1-\sigma$) of the interpolation.
+    gp_results : dict
+        Dictionary with the Gaussian Process object used for the fit and the normalisation terms.
 
     """
 
@@ -206,7 +223,7 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', x_edges=[1e3, 
     return x_pred*x_norm, mean*y_norm, std*y_norm, gp_results
 
 
-def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kernel2='squaredexp',
+def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kernel2='matern52',
                 var=None, length1=None, length2=None, x1_edges=None, x2_edges=None, optimization=True):
     """Fits a mangling function in 2D with gaussian process.
 
@@ -214,31 +231,41 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kerne
 
     Parameters
     ----------
-    x_data : array
-        Independent values.
+    x1_data : array
+        First dimension of the x-axis grid.
+    x2_data : array
+        Second dimension of the x-axis grid.
     y_data : array
         Dependent values.
-    yerr_data : array, int
+    yerr_data : array or float, default ``0.0``
         Dependent value errors.
     kernel1 : str, default ``matern52``
         Kernel to be used to fit the light curves with gaussian process. E.g., ``matern52``, ``matern32``, ``squaredexp``.
-    kernel2 : str, default ``squaredexp``
+    kernel2 : str, default ``matern52``
         Kernel to be used in the wavelength axis when fitting in 2D with gaussian process. E.g., ``matern52``, ``matern32``, ``squaredexp``.
     var: float, default ``None``
         Variance of the kernel to be used.
     length1: float, default ``None``
-        Length scale (in time-axis) of the kernel to be used.
+        Length scale of the kernel to be used for ``x1_data``.
     length2: float, default ``None``
-        Length scale (in time-axis) of the kernel to be used.
+        Length scale of the kernel to be used for ``x2_data``.
     x1_edges: array-like, default ``None``
-        Minimum and maximum time-axis values. These are used to extrapolate both edges.
+        Minimum and maximum ``x1_data`` values. These are used to extrapolate both edges.
     x2_edges: array-like, default ``None``
-        Minimum and maximum wavelength-axis values. These are used to extrapolate both edges.
+        Minimum and maximum ``x2_data`` values. These are used to extrapolate both edges.
     optimization: bool, default ``True``
         Whether or not to optimize the gaussian process hyperparameters. This is used to fit the light curves.
+
     Returns
     -------
-    Returns the interpolated independent and dependent values with the 1-sigma standard deviation.
+    X_predict : array
+        Interpolated 2D x-axis grid.
+    mean : array
+        Interpolated  values.
+    std : array
+        Standard deviation ($1-\sigma$) of the interpolation.
+    gp_results : dict
+        Dictionary with the Gaussian Process object used for the fit and the normalisation terms.
     """
 
     # define the objective function (negative log-likelihood in this case)

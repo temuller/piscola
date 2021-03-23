@@ -14,7 +14,10 @@ def flux2mag(flux, zp, flux_err=0.0):
 
     Returns
     -------
-    Magnitudes and their errors.
+    mag : array
+        Fluxes converted to magnitudes.
+    mag_err : array
+        Flux errors converted to errors in magnitudes.
     """
 
     mag = -2.5*np.log10(flux) + zp
@@ -36,7 +39,10 @@ def mag2flux(mag, zp, mag_err=0.0):
 
     Returns
     -------
-    Fluxes and their errors.
+    flux : array
+        Magnitudes converted to fluxes.
+    flux_err : array
+        Magnitude errors converted to errors in fluxes.
     """
 
     flux = 10**( -0.4*(mag-zp) )
@@ -55,7 +61,10 @@ def trim_filters(response):
 
     Returns
     -------
-    The resulting indeces of trimming the input. The input data type is preserved.
+    first-1 : int
+        Index of the last leading zero.
+    last-1 : int
+        Index of the first trailing zero.
     """
 
     first = 0
@@ -81,7 +90,7 @@ def trim_filters(response):
 
 
 def extrapolate_mangling_edges(x, y, yerr, x_edges, extra_extension=0.0):
-    """"Extrapolates the edges of y acording to the giving edges in x (x_edges).
+    """"Extrapolates the edges of y according to the giving edges in x, x_edges.
 
     Parameters
     ----------
@@ -98,7 +107,12 @@ def extrapolate_mangling_edges(x, y, yerr, x_edges, extra_extension=0.0):
 
     Returns
     -------
-    Extrapolated x, y and yerr.
+    x : array
+        Extrapolated independent values.
+    y : array
+        Extrapolated dependent values.
+    yerr : array, int
+        Extrapolated dependent value errors.
     """
 
     x_min, x_max = x_edges

@@ -15,12 +15,13 @@ def integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response,
         Filter's wavelength range.
     filter_response : array
         Filter's response function.
-    response_type : str, default ``photon'
-        Filter's response type. Either ``photon' or``'energy``. Only the Bessell filters use ``energy``.
+    response_type : str, default ``photon``
+        Filter's response type. Either ``photon`` or``energy``.
 
     Returns
     -------
-    Flux density.
+    flux_filter : float
+        Flux density.
 
     """
 
@@ -64,12 +65,13 @@ def calc_eff_wave(spectrum_wave, spectrum_flux, filter_wave, filter_response, re
         Filter's wavelength range.
     filter_response : array
         Filter's response function.
-    response_type : str, default ``photon'
-        Filter's response type. Either ``photon' or``'energy``. Only the Bessell filters use ``energy``.
+    response_type : str, default ``photon``
+        Filter's response type. Either ``photon`` or``energy``.
 
     Returns
     -------
-    Filter's effective wavelength.
+    eff_wave : float
+        Filter's effective wavelength.
 
     """
 
@@ -94,12 +96,13 @@ def calc_pivot_wave(filter_wave, filter_response, response_type='photon'):
         Filter's wavelength range.
     filter_response : array
         Filter's response function.
-    response_type : str, default ``photon'
-        Filter's response type. Either ``photon' or``'energy``. Only the Bessell filters use ``energy``.
+    response_type : str, default ``photon``
+        Filter's response type. Either ``photon`` or``energy``.
 
     Returns
     -------
-    Filter's pivot wavelength.
+    pivot_wave : float
+        Filter's pivot wavelength.
 
     """
 
@@ -124,15 +127,16 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
     filter_response : array
         Filter's response function.
     response_type : str, default ``photon'
-        Filter's response type. Either ``photon`` or ``energy``. Most filters use ``photon``.
+        Filter's response type. Either ``photon`` or ``energy``.
     mag_sys : str
-        Magnitude system. For example, ``AB``, ``Vega``, ``BD17``, etc..
+        Magnitude system. For example, ``AB``, ``BD17`` or ``Vega``.
     filter_name : str
         Filter name.
 
     Returns
     -------
-    Zero-point in the given natural magnitude system.
+    zp : float
+        Zero-point in the given natural magnitude system.
 
     """
 
@@ -194,6 +198,8 @@ def filter_effective_range(filter_response, percent=99.0):
     """Finds the min and max indexes which contain at least the desire percentage of the filter's
     response-function area.
 
+    **Note:** each index contains the wanted area independently from the other.
+
     Parameters
     ----------
     filter_response : array
@@ -203,8 +209,10 @@ def filter_effective_range(filter_response, percent=99.0):
 
     Returns
     -------
-    Minimum and maximum indexes which contain the wanted area of the filter. Note that each
-    index contains the wanted area independently from the other.
+    min_index-1 : int
+        Minimum index containing the wanted area of the filter.
+    max_index+1 : int
+        Maximum index containing the wanted area of the filter.
 
     """
 

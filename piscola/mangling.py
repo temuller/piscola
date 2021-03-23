@@ -3,14 +3,9 @@ from .gaussian_process import gp_mf_fit, spline_mf_fit
 
 import numpy as np
 import lmfit
-import time
 
 def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filters, method, kernel, x_edges, linear_extrap):
-    """Residual functions for the SED mangling minimization routine.
-
-    Lmfit works in such a way that each parameters needs to have a residual value. In the case of the
-    hyperparameters, a residual equal to the sum of the bands's residuals is used given that there is no
-    model used to compare these values.
+    """Residual function for the mangling minimization routine.
 
     Parameters
     ----------
@@ -30,8 +25,10 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
         List of bands to performe minimization.
     filters : dictionary
         Dictionary with all the filters's information. Same format as 'sn.filters'.
+    method : str
+        Method to estimate the mangling function. Either ``gp`` or ``spline``.
     kernel : str
-        Kernel to be used with the gaussian process. Possible choices are: 'matern52', 'matern32', 'squaredexp'.
+        Kernel to be used with the gaussian process. Possible choices are: ``matern52``, ``matern32``, ``squaredexp`.
     x_edges : array-like
         Minimum and maximum x-axis values. These are used to extrapolate both edges.
     linear_extrap: bool
@@ -39,6 +36,7 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
 
     Returns
     -------
+    residuals : array
     Array of residuals for each parameter.
 
     """
@@ -65,10 +63,8 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
 
 
 def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_errs, bands, filters, method, kernel, x_edges, linear_extrap):
-    """Mangling routine.
-
-    A mangling of the SED is done by minimizing the the difference between the "observed" fluxes and the fluxes
-    coming from the modified SED.
+    """Estimates the mangling function. This is done by minimizing the difference between the observed fluxes and the fluxes
+    from the SED template.
 
     Parameters
     ----------
@@ -88,6 +84,8 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
         List of bands to performe minimization.
     filters : dictionary
         Dictionary with all the filters's information. Same format as 'sn.filters'.
+    method : str
+        Method to estimate the mangling function. Either ``gp`` or ``spline``.
     kernel : str
         Kernel to be used with the gaussian process. Possible choices are: 'matern52', 'matern32', 'squaredexp'.
     x_edges : array-like
@@ -97,8 +95,9 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
 
     Returns
     -------
-    Returns the mangled/modified SED with 1-sigma standard deviation and all the results
-    from the mangling routine (these can be plotted later to check the results).
+    mangling_results : dict
+        Dictionary with the mangled SED with 1-sigma standard deviation and all the results
+        from the mangling routine (these can be plotted later to check the results).
 
     """
 

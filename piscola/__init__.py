@@ -6,6 +6,4 @@ from . import filter_utils
 from . import gaussian_process
 from . import mangling
 from . import pisco_utils
-
-
-__version__ = "0.1.0"
+from . import _version
