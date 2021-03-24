@@ -102,7 +102,7 @@ def extrapolate_mangling_edges(x, y, yerr, x_edges, extra_extension=0.0):
         Dependent value errors.
     x_edges: array-like
         Minimum and maximum x-axis values. These are used to extrapolate both edges.
-    extra_extension: float, default=``0.0``
+    extra_extension: float, default ``0.0``
         This value is added to extend the edges even more. It might look redundant, but it has its purpose.
 
     Returns

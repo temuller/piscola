@@ -416,12 +416,12 @@ class sn(object):
     def set_sed_template(self, template='jla'):
         """Sets the SED template to be used for the mangling function.
 
+        **Note:** use :func:`print_sed_templates()` to see a list of available templates.
+
         Parameters
         ----------
         template : str, default ``jla``
             Template name. E.g., ``jla``, ``conley09f``, etc.
-
-        **Note:** use ``print_sed_templates()`` to see a list of available templates.
 
         """
         # This can be modified to accept other templates
@@ -884,9 +884,9 @@ class sn(object):
         scaling : float, default ``0.86``
             Calibration of the Milky Way dust maps. Either ``0.86``
             for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
-            dust map of Schlegel, ``Fikbeiner & Davis (1998).
+            dust map of Schlegel, Fikbeiner & Davis (1998).
         reddening_law: str, default ``fitzpatrick99``
-            Reddening law.``fitzpatrick99`` for Fitzpatrick99 (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
+            Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
         """
 
         phases = np.arange(min_phase, max_phase+1, 1)
@@ -1135,7 +1135,7 @@ class sn(object):
     def _calculate_corrected_lcs(self):
         """Calculates the SN light curves applying extinction and k-corrections.
 
-        Note: this function is used inside :func:`self.calculate_lc_params()`
+        **Note:** this function is used inside :func:`self.calculate_lc_params()`
         """
 
         corrected_lcs = {}
@@ -1182,7 +1182,7 @@ class sn(object):
     def calculate_lc_params(self, maxiter=5):
         """Calculates the light-curves parameters.
 
-        Estimation of B-band peak apparent magnitude (m$_B^{\rm max}$), stretch ($\Delta$m$_{15}(B)$) and color ($(B-V)^{\rm max}$) parameters.
+        Estimation of B-band peak apparent magnitude (m :math:`_B^{max}`), stretch (:math:`\Delta` m :math:`_{15}(B)`) and colour (:math:`(B-V)^{max}`) parameters.
         An interpolation of the corrected light curves is done as well as part of this process.
 
         Parameters
@@ -1327,7 +1327,7 @@ class sn(object):
         """Displays the rest-frame light curve for the given band.
 
         Plots the rest-frame band light curve together with a gaussian fit to it. The parameters estimated with
-        'calculate_lc_params()' are shown as well.
+        :func:`calculate_lc_params()` are shown as well.
 
         Parameters
         ----------
@@ -1420,7 +1420,7 @@ class sn(object):
 
         **Note:** this is meant to be used for "quick" fits.
         """
-        
+
         self.normalize_data()
         self.fit_lcs()
         self.mangle_sed()

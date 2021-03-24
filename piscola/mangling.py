@@ -24,11 +24,11 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
     bands : list
         List of bands to performe minimization.
     filters : dictionary
-        Dictionary with all the filters's information. Same format as 'sn.filters'.
+        Dictionary with all the filters's information. Same format as :func:`sn.filters`.
     method : str
         Method to estimate the mangling function. Either ``gp`` or ``spline``.
     kernel : str
-        Kernel to be used with the gaussian process. Possible choices are: ``matern52``, ``matern32``, ``squaredexp`.
+        Kernel to be used with the gaussian process. Possible choices are: ``matern52``, ``matern32``, ``squaredexp``.
     x_edges : array-like
         Minimum and maximum x-axis values. These are used to extrapolate both edges.
     linear_extrap: bool
@@ -83,11 +83,11 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
     bands : list
         List of bands to performe minimization.
     filters : dictionary
-        Dictionary with all the filters's information. Same format as 'sn.filters'.
+        Dictionary with all the filters's information. Same format as :func:`sn.filters`.
     method : str
         Method to estimate the mangling function. Either ``gp`` or ``spline``.
     kernel : str
-        Kernel to be used with the gaussian process. Possible choices are: 'matern52', 'matern32', 'squaredexp'.
+        Kernel to be used with the gaussian process. Possible choices are: ``matern52``, ``matern32``, ``squaredexp``.
     x_edges : array-like
         Minimum and maximum x-axis values. These are used to extrapolate both edges.
     linear_extrap: bool
@@ -96,7 +96,7 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
     Returns
     -------
     mangling_results : dict
-        Dictionary with the mangled SED with 1-sigma standard deviation and all the results
+        Dictionary with the mangled SED, standard deviation (:math:`1\sigma`) and all the results
         from the mangling routine (these can be plotted later to check the results).
 
     """

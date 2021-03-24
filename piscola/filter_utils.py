@@ -16,7 +16,7 @@ def integrate_filter(spectrum_wave, spectrum_flux, filter_wave, filter_response,
     filter_response : array
         Filter's response function.
     response_type : str, default ``photon``
-        Filter's response type. Either ``photon`` or``energy``.
+        Filter's response type. Either ``photon`` or ``energy``.
 
     Returns
     -------
@@ -66,7 +66,7 @@ def calc_eff_wave(spectrum_wave, spectrum_flux, filter_wave, filter_response, re
     filter_response : array
         Filter's response function.
     response_type : str, default ``photon``
-        Filter's response type. Either ``photon`` or``energy``.
+        Filter's response type. Either ``photon`` or ``energy``.
 
     Returns
     -------
@@ -97,7 +97,7 @@ def calc_pivot_wave(filter_wave, filter_response, response_type='photon'):
     filter_response : array
         Filter's response function.
     response_type : str, default ``photon``
-        Filter's response type. Either ``photon`` or``energy``.
+        Filter's response type. Either ``photon`` or ``energy``.
 
     Returns
     -------
@@ -126,7 +126,7 @@ def calc_zp(filter_wave, filter_response, response_type, mag_sys, filter_name):
         Filter's wavelength range.
     filter_response : array
         Filter's response function.
-    response_type : str, default ``photon'
+    response_type : str, default ``photon``
         Filter's response type. Either ``photon`` or ``energy``.
     mag_sys : str
         Magnitude system. For example, ``AB``, ``BD17`` or ``Vega``.

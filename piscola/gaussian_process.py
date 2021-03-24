@@ -29,7 +29,7 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52'):
     mean*y_norm : array
         Interpolated  values.
     std*y_norm : array
-        Standard deviation ($1-\sigma$) of the interpolation.
+        Standard deviation (:math:`1\sigma`) of the interpolation.
 
     """
 
@@ -121,7 +121,7 @@ def spline_mf_fit(x_data, y_data, yerr_data=0.0, x_edges=[1e3, 3e4], linear_extr
     mean : array
         Interpolated  values.
     std : float
-        Standard deviation ($1-\sigma$) of the interpolation. ``0.0`` for now - STILL NEEDS TO BE IMPLEMENTED.
+        Standard deviation (:math:`1\sigma`) of the interpolation. ``0.0`` for now - **STILL NEEDS TO BE IMPLEMENTED.**
     spline : obj
         Spline object used for the fit.
 
@@ -171,7 +171,7 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', x_edges=[1e3, 
     mean*y_norm : array
         Interpolated  values.
     std*y_norm : array
-        Standard deviation ($1-\sigma$) of the interpolation.
+        Standard deviation (:math:`1\sigma`) of the interpolation.
     gp_results : dict
         Dictionary with the Gaussian Process object used for the fit and the normalisation terms.
 
@@ -263,7 +263,7 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kerne
     mean : array
         Interpolated  values.
     std : array
-        Standard deviation ($1-\sigma$) of the interpolation.
+        Standard deviation (:math:`1\sigma`) of the interpolation.
     gp_results : dict
         Dictionary with the Gaussian Process object used for the fit and the normalisation terms.
     """

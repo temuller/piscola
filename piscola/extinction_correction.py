@@ -9,7 +9,7 @@ import numpy as np
 import os
 
 def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
-    """Reddens the given spectrum, given a right ascension and declination. $R_V$ is assumed to be 3.1.
+    """Reddens the given spectrum, given a right ascension and declination. :math:`R_V` is assumed to be 3.1.
 
     Parameters
     ----------
@@ -26,7 +26,7 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
         for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
         dust map of Schlegel, Fikbeiner & Davis (1998).
     reddening_law: str, default ``fitzpatrick99``
-        Reddening law.``fitzpatrick99`` for Fitzpatrick99 (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
+        Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
 
     Returns
     -------
@@ -52,7 +52,7 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
 
 
 def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
-    """Dereddens the given spectrum, given a right ascension and declination. Rv is assumed to be 3.1.
+    """Dereddens the given spectrum, given a right ascension and declination. :math:`R_V` is assumed to be 3.1.
 
     Parameters
     ----------
@@ -67,9 +67,9 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
     scaling: float, default ``0.86``
         Calibration of the Milky Way dust maps. Either ``0.86``
         for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
-        dust map of Schlegel, ``Fikbeiner & Davis (1998).
+        dust map of Schlegel, Fikbeiner & Davis (1998).
     reddening_law: str, default ``fitzpatrick99``
-        Reddening law.``fitzpatrick99`` for Fitzpatrick99 (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
+        Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
 
     Returns
     -------
@@ -96,7 +96,7 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
 
 
 def calculate_ebv(ra, dec, scaling=0.86):
-    """Calculates Milky Way reddening, $E(B-V)$.
+    """Calculates Milky Way reddening, :math:`E(B-V)`.
 
     Parameters
     ----------
@@ -112,7 +112,7 @@ def calculate_ebv(ra, dec, scaling=0.86):
     Returns
     -------
     ebv :  float
-        Reddening value, $E(B-V)$.
+        Reddening value, :math:`E(B-V)``.
 
     """
 
@@ -125,7 +125,7 @@ def calculate_ebv(ra, dec, scaling=0.86):
 
 
 def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
-    """Estimate the extinction for a given filter, given a right ascension and declination. $R_V$ is assumed to be 3.1.
+    """Estimate the extinction for a given filter, given a right ascension and declination. :math:`R_V` is assumed to be 3.1.
 
     Parameters
     ----------
@@ -140,9 +140,9 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, redde
     scaling: float, default ``0.86``
         Calibration of the Milky Way dust maps. Either ``0.86``
         for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
-        dust map of Schlegel, ``Fikbeiner & Davis (1998).
+        dust map of Schlegel, Fikbeiner & Davis (1998).
     reddening_law: str, default ``fitzpatrick99``
-        Reddening law.``fitzpatrick99`` for Fitzpatrick99 (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
+        Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
 
     Returns
     -------
@@ -162,7 +162,7 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, redde
 
 
 def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
-    """Plots the extinction curve for a given RA and Dec. $R_V$ is assumed to be 3.1.
+    """Plots the extinction curve for a given RA and Dec. :math:`R_V` is assumed to be 3.1.
 
     Parameters
     ----------
@@ -173,9 +173,9 @@ def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
     scaling: float, default ``0.86``
         Calibration of the Milky Way dust maps. Either ``0.86``
         for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
-        dust map of Schlegel, ``Fikbeiner & Davis (1998).
+        dust map of Schlegel, Fikbeiner & Davis (1998).
     reddening_law: str, default ``fitzpatrick99``
-        Reddening law.``fitzpatrick99`` for Fitzpatrick99 (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
+        Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
 
     """
 
