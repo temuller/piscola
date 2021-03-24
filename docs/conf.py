@@ -5,18 +5,18 @@ import os
 # to be able to import piscola
 sys.path.insert(0, os.path.abspath('../'))
 
-import piscola
+from piscola._version import __version__
 
 # -- Project information -----------------------------------------------------
 
 project = 'PISCOLA'
-copyright = '2020, Tomás E. Müller Bravo'
+copyright = '2021, Tomás E. Müller Bravo'
 author = 'Tomás E. Müller Bravo'
 
 # The short X.Y version.
-version = piscola.__version__
+version = __version__
 # The full version, including alpha/beta/rc tags
-release = piscola.__version__
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -28,6 +28,7 @@ extensions = [
 "sphinx.ext.autodoc",
 "sphinx.ext.napoleon",
 "sphinx.ext.mathjax",
+#"sphinx.ext.pngmath",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

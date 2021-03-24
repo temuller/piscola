@@ -32,6 +32,11 @@ PISCOLA is being actively developed in `a public repository on GitHub
    :caption: User Guide
 
    user/sn_object.rst
+   user/extinction_correction.rst
+   user/gaussian_process.rst
+   user/mangling.rst
+   user/filter_utils.rst
+   user/pisco_utils.rst
 
 .. toctree::
    :maxdepth: 1
@@ -39,6 +44,7 @@ PISCOLA is being actively developed in `a public repository on GitHub
 
    examples/basic_example.rst
    examples/advanced_example.rst
+   examples/sn_file.rst
 
 .. toctree::
    :maxdepth: 1
