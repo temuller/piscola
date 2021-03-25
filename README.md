@@ -1,4 +1,4 @@
-# Python for Intelligent Supernova-COsmology Light-Curve Analysis: PISCOLA
+# PISCOLA: Python for Intelligent Supernova-COsmology Light-curve Analysis
 
 **Type Ia Supernova Light-curve fitting code in python**
 
@@ -7,21 +7,55 @@
 [![documentation status](https://readthedocs.org/projects/piscola/badge/?version=latest&style=flat)](https://piscola.readthedocs.io/en/latest/?badge=latest)
 [![license](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/temuller/piscola/blob/master/LICENSE)
 [![ci](http://img.shields.io/travis/temuller/piscola/master.svg?style=flat)](https://travis-ci.org/temuller/piscola)
+![Python Version](https://img.shields.io/badge/Python-3.6%2B-red)
 
 
-Read the documentation at: [piscola.readthedocs.io](http://piscola.readthedocs.io/).
+Read the full documentation at: [piscola.readthedocs.io](http://piscola.readthedocs.io/). See below for a summary.
 
-The dependencies are listed in `requirements.txt`.
-  
-It is recommended to create a conda environment:
+___
+## Installation
+
+PISCOLA can be installed in the usual ways, via pip:
 
 ```
-$ conda config --add channels conda-forge
-
-$ conda create -n pisco numpy matplotlib pandas lmfit peakutils george emcee extinction sfdmap astropy
+pip install piscola
 ```
 
-Otherwise, you can install the dependencies by typing `pip install -r requirements.txt` on your terminal.
+or from source:
+
+```
+git clone https://github.com/temuller/piscola.git
+
+cd piscola
+
+pip install -r requirements.txt
+
+python setup.py install
+```
+
+## Using PISCOLA
+
+PISCOLA can fit the supernova light curves and correct them in a few lines of code:
 
 
-In order to use PISCOLA in any directory, you will need to clone the repository and install it by typing `python setup.py install` inside the directory.
+```python
+sn = piscola.call_sn(<sn_name>)
+
+sn.normalize_data()
+sn.fit_lcs()
+sn.mangle_sed()
+sn.calculate_lc_params()
+```
+
+or for a "quick" fit with the default parameters:
+
+```python
+sn = piscola.call_sn(<sn_name>)
+sn.do_magic()
+```
+
+You can find an example of input file in the [data](https://github.com/temuller/piscola/tree/master/data) directory.
+
+## Contributing and raising an issue
+
+The recommended way is to use the [issues](https://github.com/temuller/piscola/issues) page. Otherwise, you can contact me directly.
