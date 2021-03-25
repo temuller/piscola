@@ -7,8 +7,8 @@ tags:
   - cosmology
 
 authors:
-  - name: Tomás E. Müller Bravo^[Corresponding author]
-    orcid: 0000-0003-0872-7098
+  - name: Tomás E. Müller Bravo^[t.e.muller-bravo@soton.ac.uk]
+    orcid: 0000-0003-3939-7167
     affiliation: 1
   - name: Mark Sullivan
     affiliation: 1
@@ -93,15 +93,6 @@ For a quick reference, the following citation commands can be used:
 - `@author:2001`  ->  "Author et al. (2001)"
 - `[@author:2001]` -> "(Author et al., 2001)"
 - `[@author1:2001; @author2:2001]` -> "(Author1 et al., 2001; Author2 et al., 2002)"
-
-# Figures
-
-Figures can be included like this:
-![Caption for example figure.\label{fig:example}](figure.png)
-and referenced from text using \autoref{fig:example}.
-
-Figure sizes can be customized by adding an optional second parameter:
-![Caption for example figure.](figure.png){ width=20% }
 
 # Acknowledgements
 
