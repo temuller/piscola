@@ -1029,10 +1029,10 @@ class sn(object):
             y, yerr = y/y_norm, yerr/y_norm
             opt_flux_ratios = opt_flux_ratios/y_norm
 
-            ax.scatter(eff_waves, init_flux_ratios, flux_ratios_err, marker='o', label='Initial values')
+            ax.scatter(eff_waves, init_flux_ratios, marker='o', label='Initial values')
             ax.plot(x, y)
             ax.fill_between(x, y-yerr, y+yerr, alpha=0.5, color='orange')
-            ax.scatter(eff_waves, opt_flux_ratios, flux_ratios_err, marker='*', color='red', label='Optimized values')
+            ax.scatter(eff_waves, opt_flux_ratios, marker='*', color='red', label='Optimized values')
 
             ax.set_xlabel(r'Observer-frame Wavelength [$\AA$]', fontsize=16, family='serif')
             ax.set_ylabel(r'(Flux$_{\rm Obs}$ / Flux$_{\rm Temp}) \times$ 10$^{%.0f}$'%exp, fontsize=16, family='serif')
@@ -1160,9 +1160,15 @@ class sn(object):
                 except:
                     pass
 
+            if 'Bessell_' in band:
+                zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
+                                            self.filters[band]['response_type'], 'BD17', band)
+            else:
+                zp = self.data[band]['zp']
+
             if len(band_flux)!=0:
                 band_flux, band_err, band_phase = np.array(band_flux), np.array(band_err), np.array(band_phase)
-                corrected_lcs[band] = {'phase':band_phase, 'flux':band_flux, 'flux_err':band_err}
+                corrected_lcs[band] = {'phase':band_phase, 'flux':band_flux, 'flux_err':band_err, 'zp':zp}
 
         self.corrected_lcs = corrected_lcs
 
@@ -1173,7 +1179,7 @@ class sn(object):
                 phases, fluxes, errs = corrected_lcs[band]['phase'], corrected_lcs[band]['flux'], corrected_lcs[band]['flux_err']
                 phases_fit, fluxes_fit, _ = gp_lc_fit(phases, fluxes, fluxes*1e-3)
                 errs_fit = np.interp(phases_fit, phases, errs, left=0.0, right=0.0)  # linear extrapolation of errors
-                corrected_lcs_fit[band] = {'phase':phases_fit, 'flux':fluxes_fit, 'flux_err':errs_fit}
+                corrected_lcs_fit[band] = {'phase':phases_fit, 'flux':fluxes_fit, 'flux_err':errs_fit, 'zp':corrected_lcs[band]['zp']}
             except:
                 pass
         self.corrected_lcs_fit = corrected_lcs_fit
@@ -1251,12 +1257,9 @@ class sn(object):
         ### Calculate Light Curve Parameters ###
         ########################################
         bessell_b = 'Bessell_B'
-        zp_b = calc_zp(self.filters[bessell_b]['wave'], self.filters[bessell_b]['transmission'],
-                                    self.filters[bessell_b]['response_type'], 'BD17', bessell_b)
-
-        self.corrected_lcs[bessell_b]['zp'] = zp_b
 
         # B-band peak apparent magnitude
+        zp_b = self.corrected_lcs[bessell_b]['zp']
         b_phase, b_flux, b_flux_err = self.corrected_lcs[bessell_b]['phase'], self.corrected_lcs[bessell_b]['flux'], self.corrected_lcs[bessell_b]['flux_err']
         id_bmax = list(b_phase).index(0)
         mb, mb_err = flux2mag(b_flux[id_bmax], zp_b, b_flux_err[id_bmax])
@@ -1292,10 +1295,7 @@ class sn(object):
             bessell_v = 'Bessell_V'
             if 0 in self.corrected_lcs[bessell_v]['phase']:
 
-                zp_v = calc_zp(self.filters[bessell_v]['wave'], self.filters[bessell_v]['transmission'],
-                                            self.filters[bessell_v]['response_type'], 'BD17', bessell_v)
-
-                self.corrected_lcs[bessell_v]['zp'] = zp_v
+                zp_v = self.corrected_lcs[bessell_v]['zp']
                 v_phase, v_flux, v_flux_err = self.corrected_lcs[bessell_v]['phase'], self.corrected_lcs[bessell_v]['flux'], self.corrected_lcs[bessell_v]['flux_err']
 
                 id_v0 = list(v_phase).index(0)
@@ -1367,7 +1367,7 @@ class sn(object):
 
         if plot_type=='flux':
             ZP = 27.5
-            y_norm = 10**( -0.4*(self.data[band]['zp'] - ZP) )
+            y_norm = 10**( -0.4*(self.corrected_lcs[band]['zp'] - ZP) )
             y /= y_norm
             yerr /= y_norm
             y_fit /= y_norm
