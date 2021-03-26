@@ -7,7 +7,7 @@
 [![documentation status](https://readthedocs.org/projects/piscola/badge/?version=latest&style=flat)](https://piscola.readthedocs.io/en/latest/?badge=latest)
 [![license](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/temuller/piscola/blob/master/LICENSE)
 [![ci](http://img.shields.io/travis/temuller/piscola/master.svg?style=flat)](https://travis-ci.org/temuller/piscola)
-![Python Version](https://img.shields.io/badge/Python-3.6%2B-red)
+![Python Version](https://img.shields.io/badge/Python-3.6%2B-blue)
 
 
 Read the full documentation at: [piscola.readthedocs.io](http://piscola.readthedocs.io/). See below for a summary.
