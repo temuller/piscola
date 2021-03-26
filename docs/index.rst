@@ -45,6 +45,7 @@ PISCOLA is being actively developed in `a public repository on GitHub
    examples/basic_example.rst
    examples/advanced_example.rst
    examples/sn_file.rst
+   examples/further_details.rst
 
 .. toctree::
    :maxdepth: 1

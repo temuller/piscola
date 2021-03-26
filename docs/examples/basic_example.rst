@@ -6,7 +6,10 @@ Basic Example
 Simple usage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In here we show how to use PISCOLA in the simplest way possible.
+In here we show how to use PISCOLA in the simplest way possible. You can run this example on google colab: |Open In Colab|
+
+.. |Open In Colab| image:: https://colab.research.google.com/assets/colab-badge.svg
+   :target: https://colab.research.google.com/drive/1Tjel0cXtHxMOKjem0a-9iZzGJhTD-Oz8?usp=sharing
 
 As always, we start by importing the necessary packages.
 
@@ -14,7 +17,7 @@ As always, we start by importing the necessary packages.
 
 	import piscola
 
-PISCOLA uses its own format for a SN file (explained in the advanced implementation below) which is similar to the one used by other light-curve fitting codes. As an example we have SN ``03D1au`` (from the SNLS survey) in a file called ``03D1au.dat`` inside the ``data/`` directory. To import a SN all you need to do is use the ``call_sn`` function which receives two arguments, the SN name (or file name) and the directory where to find the file (``data/`` by default).
+PISCOLA uses its own format for a SN file (explained in the advanced implementation below) which is similar to the one used by other light-curve fitting codes. As an example we have SN ``03D1au`` (from the SNLS survey) in a file called ``03D1au.dat`` inside the ``data/`` directory. To import a SN all you need to do is use the :func:`call_sn()` function which receives two arguments, the SN name (or file name) and the directory where to find the file (``data/`` by default).
 
 .. code:: python
 
@@ -39,7 +42,7 @@ The ``sn`` object will contain the SN information, i.e., name, redshift, RA, DEC
 	dict_keys(['Megacam_g', 'Megacam_r', 'Megacam_i', 'Megacam_z'])
 	dict_keys(['time', 'flux', 'flux_err', 'zp', 'mag_sys'])
 
-We need to **normalize** the data so the flux is converted to physical units if it is not already in those units. We can also mask the data according to the signal-to-noise ratio (``S/N > 5``, by default) and/or phases wanted by using ``sn.mask_data()``. The latter is not done by default when calling the function. The light curves can be plotted by calling ``sn.plot_data()``.
+We need to **normalize** the data so the flux is converted to physical units if it is not already in those units. We can also mask the data according to the signal-to-noise ratio (``S/N > 5``, by default) and/or phases wanted by using :func:`sn.mask_data()`. The latter is not done by default when calling the function. The light curves can be plotted by calling :func:`sn.plot_data()`.
 
 .. code:: python
 
@@ -49,7 +52,7 @@ We need to **normalize** the data so the flux is converted to physical units if 
 
 .. image:: basic_example/03D1au_lcs.png
 
-To fit the light curves one needs to use ``sn.fit_lcs()``, where the user can decide which kernel to use (``matern52`` by default). One can also plot the fits afterwards by using ``sn.plot_fits()``. From the light curve fits you will get an initial estimation of the rest-frame B-band peak (plotted as a vertical black dashed line).
+To fit the light curves one needs to use :func:`sn.fit_lcs()`, where the user can decide which kernel to use (``matern52`` by default). One can also plot the fits afterwards by using ``sn.plot_fits()``. From the light curve fits you will get an initial estimation of the rest-frame B-band peak (plotted as a vertical black dashed line).
 
 
 .. code:: python
@@ -65,13 +68,13 @@ To fit the light curves one needs to use ``sn.fit_lcs()``, where the user can de
 
 	Initial B-band peak estimation: 52907.8
 
-The next step is not find the *mangling function* which will warp the SED template to match the SN colours at the given epochs. This is done by using ``sn.mangle_sed()`` and giving the minimum and maximum phase with respect to B-band peak estimated in the previous step (``-15`` and ``+30`` days by deaulft, respectively). The kernel used can also be chosen (``squaredexp`` by default). This process can take up to several minutes depending on several factors, but it usually takes about two minute. This is very slow compared to template-based fits, but the end product is worth it!
+The next step is not find the *mangling function* which will warp the SED template to match the SN colours at the given epochs. This is done by using :func:`sn.mangle_sed()` and giving the minimum and maximum phase with respect to B-band peak estimated in the previous step (``-15`` and ``+30`` days by deaulft, respectively). The kernel used can also be chosen (``squaredexp`` by default). This process can take up to several minutes depending on several factors, but it usually takes about two minute. This is very slow compared to template-based fits, but the end product is worth it!
 
 .. code:: python
 
 	sn.mangle_sed()
 
-Next comes the estimation of the light-curves parameters for which we use ``sn.calculate_lc_params()``. This step can also take a while to run as it compares the final estimation of the B-band peak with the initial one. If their difference is larger than a certain *threshold* (specified in the code), the whole mangling process is repeated (internally) until convergence is reached.
+Next comes the estimation of the light-curves parameters for which we use :func:`sn.calculate_lc_params()`. This step can also take a while to run as it compares the final estimation of the B-band peak with the initial one. If their difference is larger than a certain *threshold* (specified in the code), the whole mangling process is repeated (internally) until convergence is reached.
 
 .. code:: python
 
@@ -103,7 +106,7 @@ Putting it all together
 	sn.mangle_sed()
 	sn.calculate_lc_params()
 
-Or, if you want a "quick" implementation, following the same steps as above and using the default values, you can use ``sn.do_magic()``.
+Or, if you want a "quick" implementation, following the same steps as above and using the default values, you can use :func:`sn.do_magic()`.
 
 .. code:: python
 
