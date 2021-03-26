@@ -42,7 +42,7 @@ statistical uncertainties. However, a large portion of the error budget is domin
 
 `PISCOLA` is a new light-curve fitting code developed in Python. This package is user-friendly and well-documented. One 
 of the main goals behind this code is to allow the users to have access and undertand the different steps of the light-curve 
-fitting and correction process, so the community can contribute to its improvement. `PISCOLA` relies on gaussian process [@gp], 
+fitting and correction process, so the community can contribute to its improvement. `PISCOLA` relies on gaussian process [@Rasmussen06], 
 a data-driven bayesian method, to fit the light curves in 2D (luminosity as a function of time and wavelength), using the
 package `george` `[@george]` for it. The *mangling* function, used in the $K$-correction, is also calculated by using gaussian 
 process. Finally, the standard light-curve parameters ($\m_B^{max}$, $\Delta$m$_{15}(15)$ and $(B-V)_{max}$) can be estiamted.
