@@ -86,13 +86,16 @@ Finally, we can check the estimated light-curves parameters and plot the rest-fr
 	
 	sn.display_results()
 	print(f't_peak = {sn.tmax} +/- {sn.tmax_err}')
+	print(sn.lc_parameters)
 
 .. image:: basic_example/03D1au_restframe_Bessell_B.png
 
 .. code:: python
 	
 	t_peak = 52907.61 +/- 0.12
+	{'mb': 23.01570005610094, 'mb_err': 0.009595737298040906, 'dm15': 0.9289279683676384, 'dm15_err': 0.007616849936084865, 'colour': nan, 'colour_err': nan}
 
+where the ``nan`` values are shown because the data coverage is not enough to estimate colour.
 
 Putting it all together
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
