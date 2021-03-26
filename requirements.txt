@@ -7,6 +7,5 @@ peakutils
 astropy
 sfdmap
 extinction
-pybind11
 george
 

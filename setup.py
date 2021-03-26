@@ -4,7 +4,7 @@ from piscola._version import __version__
 with open("README.md", "r") as readme_file:
     long_description = readme_file.read()
 
-with open('requirements.txt') as requirements_file:
+with open("requirements.txt") as requirements_file:
     requirements = requirements_file.read().splitlines()
 
 setuptools.setup(
@@ -17,7 +17,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/temuller/piscola",
-    package_dir={'': 'piscola'},
+    package_dir={"": "piscola"},
     python_requires=">=3.6",
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -26,6 +26,6 @@ setuptools.setup(
     ],
     install_requires=requirements,
     #package_data={'' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*"]},
-    include_package_data=True,
-    zip_safe=True,
+    #include_package_data=True,
+    #zip_safe=True,
 )
