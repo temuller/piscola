@@ -3,7 +3,7 @@ python:
   - 3.6
   - 3.7
   - 3.8
-#  - 3.9  # takes too long to build
+  - 3.9
 before_install:
   - pip install -U -r requirements.txt
 install:
