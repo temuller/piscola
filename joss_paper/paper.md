@@ -45,7 +45,7 @@ of the main goals behind this code is to allow the users to have access and unde
 fitting and correction process, so the community can contribute to its improvement. `PISCOLA` relies on gaussian process [@Rasmussen06], 
 a data-driven bayesian method, to fit the light curves in 2D (luminosity as a function of time and wavelength), using the
 package `george` `[@george]` for it. The *mangling* function, used in the $K$-correction, is also calculated by using gaussian 
-process. Finally, the standard light-curve parameters ($\m_B^{max}$, $\Delta$m$_{15}(15)$ and $(B-V)_{max}$) can be estiamted.
+process. Finally, the standard light-curve parameters (m$_B^{max}$, $\Delta$m$_{15}(15)$ and $(B-V)_{max}$) can be estiamted.
 
 Several light-curve fitters (e.g., SALT2 [@salt2], SiFTO [@sifto], SNooPy [@snoopy] have proven to be great tools for 
 supernova cosmology, however, most of them present some disadvantage such as: their limitation to working with optical data only 
