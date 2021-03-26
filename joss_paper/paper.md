@@ -1,5 +1,5 @@
 ---
-title: 'PISCOLA: Python for Intelligent Supernova-Cosmology Light-curve Analysis'
+title: 'PISCOLA: Python for Intelligent Supernova-COsmology Light-curve Analysis'
 tags:
   - Python
   - astronomy
@@ -26,76 +26,38 @@ bibliography: paper.bib
 
 # Optional fields if submitting to a AAS journal too, see this blog post:
 # https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
-mnras-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
+# mnras-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
 ---
 
 # Summary
 
-The forces on stars, galaxies, and dark matter under external gravitational
-fields lead to the dynamical evolution of structures in the universe. The orbits
-of these bodies are therefore key to understanding the formation, history, and
-future state of galaxies. The field of "galactic dynamics," which aims to model
-the gravitating components of galaxies to study their structure and evolution,
-is now well-established, commonly taught, and frequently used in astronomy.
-Aside from toy problems and demonstrations, the majority of problems require
-efficient numerical tools, many of which require the same base code (e.g., for
-performing numerical orbit integration).
+Type Ia Supernovae (SNe Ia) are stellar explosions that have been studied for many years as standardisable candles 
+for cosmological distance measurement. Their multi-colour light curves need to be fitted and corrected (e.g., 
+extinction and $K$-correction) in order to be standardised. Several light-curve fitters exist now a day for this.
+With future surveys, such as LSST, the sample of these objects will rapidly increase by orders of magnitude, reducing the 
+statistical uncertainties. However, a large portion of the error budget is dominated by systematic uncertatinties.
+
 
 # Statement of need
 
-`Gala` is an Astropy-affiliated Python package for galactic dynamics. Python
-enables wrapping low-level languages (e.g., C) for speed without losing
-flexibility or ease-of-use in the user-interface. The API for `Gala` was
-designed to provide a class-based and user-friendly interface to fast (C or
-Cython-optimized) implementations of common operations such as gravitational
-potential and force evaluation, orbit integration, dynamical transformations,
-and chaos indicators for nonlinear dynamics. `Gala` also relies heavily on and
-interfaces well with the implementations of physical units and astronomical
-coordinate systems in the `Astropy` package [@astropy] (`astropy.units` and
-`astropy.coordinates`).
+`PISCOLA` is a new light-curve fitting code developed in Python. This package is user-friendly and well-documented. One 
+of the main goals behind this code is to allow the users to have access and undertand the different steps of the light-curve 
+fitting and correction process, so the community can contribute to its improvement. `PISCOLA` relies on gaussian process [@gp], 
+a data-driven bayesian method, to fit the light curves in 2D (luminosity as a function of time and wavelength), using the
+package `george` `[@george]` for it. The *mangling* function, used in the $K$-correction, is also calculated by using gaussian 
+process. Finally, the standard light-curve parameters ($\m_B^{max}$, $\Delta$m$_{15}(15)$ and $(B-V)_{max}$) can be estiamted.
 
-`Gala` was designed to be used by both astronomical researchers and by
-students in courses on gravitational dynamics or astronomy. It has already been
-used in a number of scientific publications [@Pearson:2017] and has also been
-used in graduate courses on Galactic dynamics to, e.g., provide interactive
-visualizations of textbook material [@Binney:2008]. The combination of speed,
-design, and support for Astropy functionality in `Gala` will enable exciting
-scientific explorations of forthcoming data releases from the *Gaia* mission
-[@gaia] by students and experts alike.
+Several light-curve fitters (e.g., SALT2 [@salt2], SiFTO [@sifto], SNooPy [@snoopy] have proven to be great tools for 
+supernova cosmology, however, most of them present some disadvantage such as: their limitation to working with optical data only 
+(SNe Ia are better suited for cosmology in the near-infrared; e.g., [@Elias81], [@Freedman09]), except for SNooPy, and their 
+susceptibility to biases [@Kessler09b], as they rely on templates for the fits. PISCOLA, being a data-driven tool, does not 
+suffer from this disadvantages. For this reason, this code has the potential to produce better results and possibly help understand 
+different systematic biases the other codes suffer from.
 
-# Mathematics
-
-Single dollars ($) are required for inline mathematics e.g. $f(x) = e^{\pi/x}$
-
-Double dollars make self-standing equations:
-
-$$\Theta(x) = \left\{\begin{array}{l}
-0\textrm{ if } x < 0\cr
-1\textrm{ else}
-\end{array}\right.$$
-
-You can also use plain \LaTeX for equations
-\begin{equation}\label{eq:fourier}
-\hat f(\omega) = \int_{-\infty}^{\infty} f(x) e^{i\omega x} dx
-\end{equation}
-and refer to \autoref{eq:fourier} from text.
-
-# Citations
-
-Citations to entries in paper.bib should be in
-[rMarkdown](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
-format.
-
-If you want to cite a software repository URL (e.g. something on GitHub without a preferred
-citation) then you can do it with the example BibTeX entry below for @fidgit.
-
-For a quick reference, the following citation commands can be used:
-- `@author:2001`  ->  "Author et al. (2001)"
-- `[@author:2001]` -> "(Author et al., 2001)"
-- `[@author1:2001; @author2:2001]` -> "(Author1 et al., 2001; Author2 et al., 2002)"
 
 # Acknowledgements
 
-TMB would like to thank the LSSTC-DSFP which allow him to develop many computational skills and tools for the development of PISCOLA.
+TMB would like to thank the LSSTC-DSFP which allowed him to develop many computational skills and tools for the development of PISCOLA.
+
 
 # References
