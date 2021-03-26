@@ -33,31 +33,32 @@ bibliography: paper.bib
 
 Type Ia Supernovae (SNe Ia) are stellar explosions that have been studied for many years as standardisable candles 
 for cosmological distance measurement. Their multi-colour light curves need to be fitted and corrected (e.g., 
-extinction and $K$-correction) in order to be standardised. Several light-curve fitters exist now a day for this.
-With future surveys, such as LSST, the sample of these objects will rapidly increase by orders of magnitude, reducing the 
-statistical uncertainties. However, a large portion of the error budget is dominated by systematic uncertatinties.
+extinction and $K$-correction) in order to be standardised. Several light-curve fitters have been developed for this reason.
+With future surveys, such as LSST, the sample of these objects will rapidly increase by orders of magnitude, immensely reducing the 
+statistical uncertainties. However, a large portion of the error budget is dominated by systematic uncertatinties, in part
+coming from the fitting and correction processes, and the standardisation itself.
 
 
 # Statement of need
 
 `PISCOLA` is a new light-curve fitting code developed in Python. This package is user-friendly and well-documented. One 
 of the main goals behind this code is to allow the users to have access and undertand the different steps of the light-curve 
-fitting and correction process, so the community can contribute to its improvement. `PISCOLA` relies on gaussian process [@Rasmussen06], 
-a data-driven bayesian method, to fit the light curves in 2D (luminosity as a function of time and wavelength), using the
-package `george` `[@george]` for it. The *mangling* function, used in the $K$-correction, is also calculated by using gaussian 
-process. Finally, the standard light-curve parameters (m$_B^{max}$, $\Delta$m$_{15}(15)$ and $(B-V)_{max}$) can be estiamted.
+fitting and correction processes, so the community can contribute to its improvement. `PISCOLA` relies on gaussian process [@Rasmussen06], 
+a data-driven bayesian method, to fit the light curves in 2D (luminosity as a function of time and wavelength), using the `george` package 
+[@george] for this. The *mangling* function, used in the $K$-correction, is also calculated by using gaussian process. At the end of 
+the process, the standard light-curve parameters (m$_B^{max}$, $\Delta$m$_{15}(15)$ and $(B-V)_{max}$) can be estimated.
 
-Several light-curve fitters (e.g., SALT2 [@salt2], SiFTO [@sifto], SNooPy [@snoopy] have proven to be great tools for 
-supernova cosmology, however, most of them present some disadvantage such as: their limitation to working with optical data only 
-(SNe Ia are better suited for cosmology in the near-infrared; e.g., [@Elias81], [@Freedman09]), except for SNooPy, and their 
-susceptibility to biases [@Kessler09b], as they rely on templates for the fits. PISCOLA, being a data-driven tool, does not 
+Several light-curve fitters (e.g., SALT2 [@salt2], SiFTO [@sifto], SNooPy [@snoopy]) have proven to be great tools for 
+supernova cosmology, however, most of them present disadvantages, such as: their limitation to working with optical data only 
+(SNe Ia are better suited for cosmology in the near-infrared [@Elias81, @Freedman09]), except for SNooPy, and their 
+susceptibility to biases [@Kessler09b], as they rely on templates for the fits. `PISCOLA`, being a data-driven tool, does not 
 suffer from this disadvantages. For this reason, this code has the potential to produce better results and possibly help understand 
-different systematic biases the other codes suffer from.
+different systematic biases other codes suffer from.
 
 
 # Acknowledgements
 
-TMB would like to thank the LSSTC-DSFP which allowed him to develop many computational skills and tools for the development of PISCOLA.
+TMB would like to thank the LSSTC-DSFP which allowed him to develop many computational skills and tools for the development of `PISCOLA`.
 
 
 # References
