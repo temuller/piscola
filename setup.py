@@ -1,11 +1,15 @@
 import setuptools
-from piscola._version import __version__
 
 with open("README.md", "r") as readme_file:
     long_description = readme_file.read()
 
 with open("requirements.txt") as requirements_file:
     requirements = requirements_file.read().splitlines()
+
+with open("piscola/_version.py") as version_file:
+    for line in version_file:
+        if "__version__" in line:
+            __version__ = line.split()[-1].replace('"', '')
 
 setuptools.setup(
     name="piscola",
@@ -26,6 +30,6 @@ setuptools.setup(
     ],
     install_requires=requirements,
     #package_data={'' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*"]},
-    #include_package_data=True,
+    include_package_data=True,
     #zip_safe=True,
 )

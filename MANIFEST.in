@@ -1,2 +1,8 @@
-exclude piscola/sfddata-master/*.fits
+include requirements.txt, LICENSE
+graft piscola
+graft data
+graft tests
+
+prune docs
+prune joss_paper
 
