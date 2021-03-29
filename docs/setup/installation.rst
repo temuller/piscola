@@ -66,3 +66,5 @@ There are different packages to test the installation, but the recommended ones 
 
 	python -m pytest -v tests
 
+The command above would need to be run from the source directory.
+

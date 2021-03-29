@@ -17,7 +17,7 @@ As always, we start by importing the necessary packages.
 
 	import piscola
 
-PISCOLA uses its own format for a SN file (explained in the advanced implementation below) which is similar to the one used by other light-curve fitting codes. As an example we have SN ``03D1au`` (from the SNLS survey) in a file called ``03D1au.dat`` inside the ``data/`` directory. To import a SN all you need to do is use the :func:`call_sn()` function which receives two arguments, the SN name (or file name) and the directory where to find the file (``data/`` by default).
+PISCOLA uses its own format for a SN file (explained in the advanced implementation below) which is similar to the one used by other light-curve fitting codes. As an example we have SN ``03D1au`` (from the SNLS survey) in a file called ``03D1au.dat`` inside the ``data/`` directory. This file can be downloaded from the `repository <https://github.com/temuller/piscola/tree/master/data>`_ directly or with the command ``wget https://raw.githubusercontent.com/temuller/piscola/master/data/03D1au.dat`` on a terminal. To import a SN all you need to do is use the :func:`call_sn()` function which receives two arguments, the SN name (or file name) and the directory where to find the file (``data/`` by default).
 
 .. code:: python
 
