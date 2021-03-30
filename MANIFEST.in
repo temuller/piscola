@@ -3,6 +3,7 @@ graft piscola
 graft data
 graft tests
 
+exclude piscola/sfddata-master/*fits
 prune docs
 prune joss_paper
 

@@ -52,9 +52,19 @@ Yet another option is to install the code directly from the repository (some sor
 
 .. code::
 
-	pip install -e git+git://github.com/temuller/piscola@master#egg=piscola
+	pip install -e git+https://github.com/temuller/piscola@master#egg=piscola
 
 Use this option only if you know what you are doing.
+
+
+SFD dust maps
+########################
+
+PISCOLA uses dust maps taken from the `sfdmap repository <https://github.com/kbarbary/sfdmap>`_ to calculate extinction. These need to go under the :code:`piscola/sfddata-master` directory (they will already be there if you cloned the repository). There are a couple of ways to do this:
+
+	1. Manually download the ``fits`` files from one of these links: `option1 <https://github.com/kbarbary/sfddata/>`_ or `option2 <https://github.com/temuller/piscola/tree/master/piscola/sfddata-master>`_
+
+	2. Navigate to the ``piscola/sfddata-master`` directory (you can use ``pip show piscola`` to find where PISCOLA is installed) and run this command on a terminal: ``wget https://github.com/kbarbary/sfddata/archive/master.tar.gz && tar xzf master.tar.gz``
 
 
 Test the installation
