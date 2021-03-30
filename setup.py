@@ -6,7 +6,7 @@ with open("README.md", "r") as readme_file:
 with open("requirements.txt") as requirements_file:
     requirements = requirements_file.read().splitlines()
 
-with open("piscola/_version.py") as version_file:
+with open("src/_version.py") as version_file:
     for line in version_file:
         if "__version__" in line:
             __version__ = line.split()[-1].replace('"', '')
@@ -21,7 +21,8 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/temuller/piscola",
-    package_dir={"": "piscola"},
+    package_dir={"": "src"},
+    packages=setuptools.find_packages(where="src"),
     python_requires=">=3.6",
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -29,7 +30,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=requirements,
-    #package_data={'' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*"]},
+    package_data={'' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*", "standards/*"]},
     include_package_data=True,
     #zip_safe=True,
 )

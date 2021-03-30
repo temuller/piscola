@@ -3,9 +3,12 @@ import sys
 import os
 
 # to be able to import piscola
-sys.path.insert(0, os.path.abspath('../'))
+#sys.path.insert(0, os.path.abspath('../'))
 
-from piscola._version import __version__
+with open("../src/_version.py") as version_file:
+    for line in version_file:
+        if "__version__" in line:
+            __version__ = line.split()[-1].replace('"', '')
 
 # -- Project information -----------------------------------------------------
 

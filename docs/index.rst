@@ -57,7 +57,7 @@ PISCOLA is being actively developed in `a public repository on GitHub
 License & Attribution
 ---------------------
 
-Copyright 2020 Tomás E. Müller Bravo.
+Copyright 2021 Tomás E. Müller Bravo.
 
 PISCOLA is being developed by `Tomás E. Müller Bravo <https://temuller.github.io/>`_ in a
 `public GitHub repository <https://github.com/temuller/piscola>`_.
