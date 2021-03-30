@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
-__all__ = ['sn']
-
+from .sn import call_sn, load_sn
 from . import extinction_correction
 from . import filter_utils
 from . import gaussian_process
