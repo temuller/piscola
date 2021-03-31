@@ -3,7 +3,7 @@ import sys
 import os
 
 # to be able to import piscola
-sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('../src'))
 
 with open("../src/piscola/_version.py") as version_file:
     for line in version_file:

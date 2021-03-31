@@ -17,7 +17,7 @@ To setup your environment through conda environment use:
 
 This will create the environment with the required dependencies for PISCOLA to work. 
 
-**Note:** the versions of the packages install with conda are not always the same as the ones installed with pip.
+**Note:** the versions of the packages installed with conda are not always the same as the ones installed with pip.
 
 
 Pyenv + virtualenv

@@ -1,5 +1,3 @@
-.. module:: piscola
-
 .. _pisco_utils:
 
 Other PISCOLA utils

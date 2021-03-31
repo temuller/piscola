@@ -1,5 +1,3 @@
-.. module:: piscola
-
 .. _mangling:
 
 Mangling

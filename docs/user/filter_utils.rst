@@ -1,5 +1,3 @@
-.. module:: piscola
-
 .. _filter_utils:
 
 Filters utils

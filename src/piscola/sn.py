@@ -22,7 +22,7 @@ import os
 ### Initialisation functions ###
 # These are mainly used by the 'sn' class below
 
-def initialise_sn(sn_file):
+def _initialise_sn(sn_file):
     """Initialise the :func:`sn` object.
 
     The object is initialised with all the necessary information like filters, fluxes, etc.
@@ -84,15 +84,15 @@ def call_sn(sn_file, directory='data'):
     sn_full_path = os.path.join(directory, sn_file)
     # if sn_file is the file name
     if os.path.isfile(sn_full_path):
-        return initialise_sn(sn_full_path)
+        return _initialise_sn(sn_full_path)
 
     # if sn_file is the SN name
     elif os.path.isfile(sn_full_path + '.dat'):
-        return initialise_sn(sn_full_path + '.dat')
+        return _initialise_sn(sn_full_path + '.dat')
 
     # if sn_file is the file name with full or relative path
     elif os.path.isfile(sn_file):
-        return initialise_sn(sn_file)
+        return _initialise_sn(sn_file)
 
     else:
         raise ValueError(f'{sn_file} was not a valid SN name or file.')

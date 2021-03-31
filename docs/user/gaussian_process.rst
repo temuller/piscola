@@ -1,5 +1,3 @@
-.. module:: piscola
-
 .. _gaussian_process:
 
 Gaussian Process
