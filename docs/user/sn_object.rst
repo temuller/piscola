@@ -9,3 +9,11 @@ The backbone of PISCOLA is the :class:`sn` object. This class incorporates all t
 
 .. autoclass:: piscola.sn
    :inherited-members:
+
+.. autoclass:: sn
+   :inherited-members:
+
+Bellow you can find information about two of the main functions, to create and load an :class:`sn` object, respectively:
+
+.. autofunction:: call_sn
+.. autofunction:: load_sn
