@@ -33,6 +33,16 @@ pip install -r requirements.txt
 python setup.py install
 ```
 
+## SFD dust maps
+
+PISCOLA uses the dust maps from the [sfddata](https://github.com/kbarbary/sfddata/) repository. These can be downloaded and moved into the directory where PISCOLA looks for them by defuault using the ``download_dustmaps.py`` script included in this repository (this script relies on [wget](https://pypi.org/project/wget/)):
+
+```
+chmod -x download_dustmaps.py
+
+python download_dustmaps.py piscola
+```
+
 ## Using PISCOLA
 
 PISCOLA can fit the supernova light curves and correct them in a few lines of code:
