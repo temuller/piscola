@@ -109,7 +109,7 @@ Putting it all together
 	sn.mangle_sed()
 	sn.calculate_lc_params()
 
-Or, if you want a "quick" implementation, following the same steps as above and using the default values, you can use :func:`sn.do_magic()`.
+Or, if you just want to fit using the default values, you can use :func:`sn.do_magic()`.
 
 .. code:: python
 

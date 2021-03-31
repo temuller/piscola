@@ -35,7 +35,7 @@ python setup.py install
 
 ## SFD dust maps
 
-PISCOLA uses the dust maps from the [sfddata](https://github.com/kbarbary/sfddata/) repository. These can be downloaded and moved into the directory where PISCOLA looks for them by defuault using the ``download_dustmaps.py`` script included in this repository (this script relies on [wget](https://pypi.org/project/wget/)):
+PISCOLA uses the dust maps from the [sfddata](https://github.com/kbarbary/sfddata/) repository. These can be downloaded and moved into the directory where PISCOLA looks for them by default, by using the ``download_dustmaps.py`` script included in this repository (this script relies on [wget](https://pypi.org/project/wget/)):
 
 ```
 chmod -x download_dustmaps.py
@@ -57,7 +57,7 @@ sn.mangle_sed()
 sn.calculate_lc_params()
 ```
 
-or for a "quick" fit with the default parameters:
+or if you are OK with using the default parameters:
 
 ```python
 sn = piscola.call_sn(<sn_name>)
