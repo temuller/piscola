@@ -49,9 +49,6 @@ def initialise_sn(sn_file):
     sn_obj.bands = [band for band in list(sn_df['band'].unique())]
     sn_obj.call_filters()
 
-    # calculate MW reddening
-    sn_obj.mw_ebv = calculate_ebv(ra, dec)
-
     # order bands by effective wavelength (estimated from the SED template)
     eff_waves = [sn_obj.filters[band]['eff_wave'] for band in sn_obj.bands]
     sorted_idx = sorted(range(len(eff_waves)), key=lambda k: eff_waves[k])
@@ -863,7 +860,7 @@ class sn(object):
     ############################################################################
 
     def mangle_sed(self, min_phase=-15, max_phase=30, method='gp', kernel='squaredexp', linear_extrap=True,
-                            correct_extinction=True, scaling=0.86, reddening_law='fitzpatrick99'):
+                            correct_extinction=True, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None):
         """Mangles the SED with the given method to match the SN magnitudes.
 
         Parameters
@@ -887,6 +884,8 @@ class sn(object):
             dust map of Schlegel, Fikbeiner & Davis (1998).
         reddening_law: str, default ``fitzpatrick99``
             Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
+        dustmaps_dir : str, default ``None``
+            Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
         """
 
         phases = np.arange(min_phase, max_phase+1, 1)
@@ -907,7 +906,9 @@ class sn(object):
         # first redshift the SED ("move" it in z) and then apply extinction from MW only
         sed_df.wave, sed_df.flux = sed_df.wave.values*(1+self.z), sed_df.flux.values/(1+self.z)
         if correct_extinction:
-            sed_df.flux = redden(sed_df.wave.values, sed_df.flux.values, self.ra, self.dec, scaling, reddening_law)
+            sed_df.flux = redden(sed_df.wave.values, sed_df.flux.values, self.ra, self.dec, scaling, reddening_law, dustmaps_dir)
+            # calculate MW reddening
+            self.mw_ebv = calculate_ebv(ra, dec, scaling, dustmaps_dir)
 
         bands2mangle = []
         # check which bands are in the wavelength range of the SED template
@@ -977,7 +978,8 @@ class sn(object):
         self.corrected_sed = self.mangled_sed.copy()
         if correct_extinction:
             self.corrected_sed.flux = deredden(self.corrected_sed.wave.values, self.corrected_sed.flux.values,
-                                                                                    self.ra, self.dec, scaling, reddening_law)
+                                                                                    self.ra, self.dec, scaling,
+                                                                                    reddening_law, dustmaps_dir)
         self.corrected_sed.wave = self.corrected_sed.wave.values/(1+self.z)
         self.corrected_sed.flux = self.corrected_sed.flux.values*(1+self.z)
 
