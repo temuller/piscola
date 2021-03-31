@@ -6,9 +6,12 @@ python:
   - 3.9
 before_install:
   - pip install -U -r requirements.txt
+  - pip install wget
 install:
   - python setup.py install
 script:
+  - chmod -x download_dustmaps.py
+  - python download_dustmaps.py piscola
   - python -m pytest -v tests
 #deploy:
 #  provider: pypi

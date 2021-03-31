@@ -5,10 +5,15 @@ import tarfile
 import os
 import sys
 
+try:
+    import piscola
+except:
+    pass
+
 def download_dustmaps(mapsdir='.'):
     """ Downloads dust maps of Schlegel, Fikbeiner & Davis (1998).
 
-    mapsdir : str, default '.' (current directory)
+    mapsdir : str, default '.' (current directory) or 'sfddata-master' (under piscola directory if piscola is installed)
         Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
     """
 
@@ -25,5 +30,9 @@ def download_dustmaps(mapsdir='.'):
 if __name__ == '__main__':
     if len(sys.argv)==1:
         download_dustmaps()
+    elif str(sys.argv[1])=='piscola':
+        pisco_path = piscola.__path__[0]
+        mapsdir = os.path.join(pisco_path, 'sfddata-master')
+        download_dustmaps(mapsdir)
     else:
         download_dustmaps(str(sys.argv[1]))
