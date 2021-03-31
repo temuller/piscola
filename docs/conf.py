@@ -3,9 +3,9 @@ import sys
 import os
 
 # to be able to import piscola
-#sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('../'))
 
-with open("../src/_version.py") as version_file:
+with open("../src/piscola/_version.py") as version_file:
     for line in version_file:
         if "__version__" in line:
             __version__ = line.split()[-1].replace('"', '')
@@ -13,7 +13,7 @@ with open("../src/_version.py") as version_file:
 # -- Project information -----------------------------------------------------
 
 project = 'PISCOLA'
-copyright = '2021, Tomás E. Müller Bravo'
+copyright = '2018-2021, Tomás E. Müller Bravo'
 author = 'Tomás E. Müller Bravo'
 
 # The short X.Y version.

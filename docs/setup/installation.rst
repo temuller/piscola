@@ -60,7 +60,7 @@ Use this option only if you know what you are doing.
 SFD dust maps
 ########################
 
-PISCOLA uses dust maps taken from the `sfdmap repository <https://github.com/kbarbary/sfdmap>`_ to calculate extinction. These need to go under the :code:`piscola/sfddata-master` directory (they will already be there if you cloned the repository). There are a couple of ways to do this:
+PISCOLA uses dust maps taken from the `sfdmap repository <https://github.com/kbarbary/sfdmap>`_ to calculate extinction. These need to go under the :code:`piscola/sfddata-master` directory (they will already be there if you cloned the repository). **They should automatically be downloaded if they are not found by the code**, but if for any reason they are not, there are a couple of ways to add them:
 
 	1. Manually download the ``fits`` files from one of these links: `option1 <https://github.com/kbarbary/sfddata/>`_ or `option2 <https://github.com/temuller/piscola/tree/master/piscola/sfddata-master>`_
 
