@@ -1,23 +1,16 @@
-### piscola ###
-
 ### installation ###
 build
 dist
-__pycache__
-# extra 
-*.egg-info
-# extra files
-test_piscola.ipynb
 
+### extra ###
+*.egg*
+*pycache*
 .ipynb_checkpoints
-.eggs
 tests/__pycache__
 
 ### src ###
-piscola/*.egg-info
-piscola/__pycache__
-#piscola/filters
-#piscola/filters/Bessell/*
+src/piscola/*.egg-info
+src/piscola/__pycache__
 
 ### docs ###
 docs/_build
