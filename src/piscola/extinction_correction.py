@@ -6,7 +6,43 @@ import sfdmap
 
 import matplotlib.pyplot as plt
 import numpy as np
+
+import wget
+import tarfile
 import os
+
+
+def _download_dustmaps():
+    """ Downloads dust maps of Schlegel, Fikbeiner & Davis (1998).
+    """
+
+    path = piscola.__path__[0]
+    sfdmaps_url = 'https://github.com/kbarbary/sfddata/archive/master.tar.gz'
+
+    master_tar = wget.download(sfdmaps_url)
+
+    # extract tar file under piscola's directory
+    tar = tarfile.open(master_tar)
+    tar.extractall(path)
+    tar.close()
+
+    os.remove(master_tar)
+
+def _check_dustmaps_files():
+    """ Checks whether the dust maps files are found under ``sfddata-master/`` in the root directory.
+    """
+
+    path = piscola.__path__[0]
+    dustmaps_files = ['SFD_dust_4096_ngp.fits',
+                      'SFD_dust_4096_sgp.fits',
+                      'SFD_mask_4096_ngp.fits',
+                      'SFD_mask_4096_sgp.fits']
+
+    for dm_file in dustmaps_files:
+        dustmap_file = os.path.join(path, 'sfddata-master', dm_file)
+        if not os.path.isfile(dustmap_file):
+            _download_dustmaps()
+            break
 
 def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
     """Reddens the given spectrum, given a right ascension and declination. :math:`R_V` is assumed to be 3.1.
@@ -34,6 +70,8 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
         Redden flux values.
 
     """
+
+    _check_dustmaps_files()
 
     path = piscola.__path__[0]
     mapdir = os.path.join(path, 'sfddata-master')
@@ -78,6 +116,7 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99'):
     Returns the deredden flux density values.
 
     """
+    _check_dustmaps_files()
 
     path = piscola.__path__[0]
     mapdir = os.path.join(path, 'sfddata-master')
@@ -115,6 +154,7 @@ def calculate_ebv(ra, dec, scaling=0.86):
         Reddening value, :math:`E(B-V)``.
 
     """
+    _check_dustmaps_files()
 
     path = piscola.__path__[0]
     mapdir = os.path.join(path, 'sfddata-master')
