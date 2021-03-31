@@ -31,8 +31,7 @@ if __name__ == '__main__':
     if len(sys.argv)==1:
         download_dustmaps()
     elif str(sys.argv[1])=='piscola':
-        pisco_path = piscola.__path__[0]
-        mapsdir = os.path.join(pisco_path, 'sfddata-master')
+        mapsdir = piscola.__path__[0]
         download_dustmaps(mapsdir)
     else:
         download_dustmaps(str(sys.argv[1]))
