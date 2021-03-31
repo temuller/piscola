@@ -6,7 +6,7 @@ with open("README.md", "r") as readme_file:
 with open("requirements.txt") as requirements_file:
     requirements = requirements_file.read().splitlines()
 
-with open("src/_version.py") as version_file:
+with open("src/piscola/_version.py") as version_file:
     for line in version_file:
         if "__version__" in line:
             __version__ = line.split()[-1].replace('"', '')
@@ -30,7 +30,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=requirements,
-    package_data={'' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*", "standards/*"]},
+    package_data={'piscola' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*", "standards/*"]},
     include_package_data=True,
     #zip_safe=True,
 )
