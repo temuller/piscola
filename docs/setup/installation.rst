@@ -60,11 +60,22 @@ Use this option only if you know what you are doing.
 SFD dust maps
 ########################
 
-PISCOLA uses dust maps taken from the `sfdmap repository <https://github.com/kbarbary/sfdmap>`_ to calculate extinction. These need to go under the :code:`piscola/sfddata-master` directory (they will already be there if you cloned the repository). **They should automatically be downloaded if they are not found by the code**, but if for any reason they are not, there are a couple of ways to add them:
+PISCOLA uses dust maps taken from the `sfdmap repository <https://github.com/kbarbary/sfdmap>`_ to calculate extinction. By default, PISCOLA looks under the :code:`src/piscola/sfddata-master` directory (they will already be there if you cloned the repository), although you can change the path where the dust maps are found (see the `Extinction correction <extinction_correction>`_ section). There are a few ways to download these dust maps:
 
-	1. Manually download the ``fits`` files from one of these links: `option1 <https://github.com/kbarbary/sfddata/>`_ or `option2 <https://github.com/temuller/piscola/tree/master/piscola/sfddata-master>`_
+	1. Manually download the files from one of these links: `option1 <https://github.com/kbarbary/sfddata/>`_ or `option2 <https://github.com/temuller/piscola/tree/master/piscola/sfddata-master>`_
 
-	2. Navigate to the ``piscola/sfddata-master`` directory (you can use ``pip show piscola`` to find where PISCOLA is installed) and run this command on a terminal: ``wget https://github.com/kbarbary/sfddata/archive/master.tar.gz && tar xzf master.tar.gz``
+	2. Run this command on a terminal: ``wget https://github.com/kbarbary/sfddata/archive/master.tar.gz && tar xzf master.tar.gz``
+
+	3. Use the ``download_dustmaps.py`` script included in the repository which will download and extract the files in a directory with the name ``sfddata-master``.
+
+For the last option you can run this from a terminal:
+
+.. code::
+
+	chmod -x download_dustmaps.py
+	python download_dustmaps.py <path/where/to/download>
+
+If the argument is empty, the files will be downloaded in your current directory, or you can use ``piscola`` as argument, which will download the files under the default directory (:code:`src/piscola/sfddata-master`) if PISCOLA is installed.
 
 
 Test the installation

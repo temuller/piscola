@@ -74,7 +74,7 @@ The next step is not find the *mangling function* which will warp the SED templa
 
 	sn.mangle_sed()
 
-Next comes the estimation of the light-curves parameters for which we use :func:`sn.calculate_lc_params()`. This step can also take a while to run as it compares the final estimation of the B-band peak with the initial one. If their difference is larger than a certain *threshold* (specified in the code), the whole mangling process is repeated (internally) until convergence is reached.
+Extinction correction is calculated internally as part of the mangling process. Next comes the estimation of the light-curves parameters for which we use :func:`sn.calculate_lc_params()`. This step can also take a while to run as it compares the final estimation of the B-band peak with the initial one. If their difference is larger than a certain *threshold* (specified in the code), the whole mangling process is repeated (internally) until convergence is reached.
 
 .. code:: python
 
