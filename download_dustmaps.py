@@ -14,7 +14,7 @@ def download_dustmaps(mapsdir='.'):
     """ Downloads dust maps of Schlegel, Fikbeiner & Davis (1998).
 
     mapsdir : str, default '.' (current directory) or 'sfddata-master' (under piscola directory if piscola is installed)
-        Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
+        Directory where the directory with dust maps of Schlegel, Fikbeiner & Davis (1998) is going to be downloaded with the name 'sfddata-master/'.
     """
 
     sfdmaps_url = 'https://github.com/kbarbary/sfddata/archive/master.tar.gz'

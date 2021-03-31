@@ -908,7 +908,7 @@ class sn(object):
         if correct_extinction:
             sed_df.flux = redden(sed_df.wave.values, sed_df.flux.values, self.ra, self.dec, scaling, reddening_law, dustmaps_dir)
             # calculate MW reddening
-            self.mw_ebv = calculate_ebv(ra, dec, scaling, dustmaps_dir)
+            self.mw_ebv = calculate_ebv(self.ra, self.dec, scaling, dustmaps_dir)
 
         bands2mangle = []
         # check which bands are in the wavelength range of the SED template
