@@ -1,4 +1,4 @@
-include requirements.txt, LICENSE, download_dustmaps.py
+include requirements.txt download_dustmaps.py
 graft src/piscola
 graft data
 graft tests
