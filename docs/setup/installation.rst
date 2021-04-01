@@ -18,11 +18,11 @@ One of the easiest way of installing PISCOLA is by using `pip <https://pip.pypa.
 Using conda
 ########################
 
-Another option is to use `conda <https://docs.conda.io/en/latest/>`_ (**not implemented yet**):
+Another option is to use `conda <https://docs.conda.io/en/latest/>`_:
 
 .. code::
 
-	conda install -c conda-forge piscola
+	conda install -c temuller piscola
 
 From source
 ########################
