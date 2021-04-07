@@ -8,6 +8,8 @@
 [![license](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/temuller/piscola/blob/master/LICENSE)
 [![ci](http://img.shields.io/travis/temuller/piscola/master.svg?style=flat)](https://travis-ci.org/temuller/piscola)
 ![Python Version](https://img.shields.io/badge/Python-3.6%2B-blue)
+[![PyPI](https://img.shields.io/pypi/v/piscola?label=PyPI&logo=pypi&logoColor=white)](https://pypi.org/project/piscola/)
+[![Conda Version](https://img.shields.io/conda/vn/temuller/piscola?label=conda%20version)](https://anaconda.org/temuller/pypeit)
 
 
 Read the full documentation at: [piscola.readthedocs.io](http://piscola.readthedocs.io/). See below for a summary.
