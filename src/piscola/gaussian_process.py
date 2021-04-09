@@ -225,7 +225,7 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', x_edges=[1e3, 
 
 def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kernel2='matern52',
                 var=None, length1=None, length2=None, x1_edges=None, x2_edges=None, optimization=True):
-    """Fits a mangling function in 2D with gaussian process.
+    """Fits light curves in 2D with gaussian process.
 
     The package ``george`` is used for the gaussian process fit.
 
