@@ -57,14 +57,12 @@ def _initialise_sn(sn_file):
     # add data to each band
     for band in sn_obj.bands:
         band_info = sn_df[sn_df['band']==band]
-        if len(band_info['flux'].values) >= 3:
-            sn_obj.data[band] = {'time':band_info['time'].values,
-                                 'flux':band_info['flux'].values,
-                                 'flux_err':band_info['flux_err'].values,
-                                 'zp':float(band_info['zp'].unique()[0]),
-                                 'mag_sys':band_info['mag_sys'].unique()[0],
-                                }
-    sn_obj.bands = list(sn_obj.data.keys())  # to exclude removed bands
+        sn_obj.data[band] = {'time':band_info['time'].values,
+                             'flux':band_info['flux'].values,
+                             'flux_err':band_info['flux_err'].values,
+                             'zp':float(band_info['zp'].unique()[0]),
+                             'mag_sys':band_info['mag_sys'].unique()[0],
+                            }
 
     return sn_obj
 
@@ -375,26 +373,26 @@ class sn(object):
         self.pivot_band = band_list[idx]
 
 
-    def delete_bands(self, bands_list, verbose=False):
-        """Delete chosen bands together with the data in it.
+    def remove_bands(self, bands, verbose=False):
+        """Remove chosen bands together with the data in it.
 
         Parameters
         ----------
-        bands : list
-            List of bands.
+        bands : str or list
+            Band string (for a single band) or list of bands to be removed.
         verbose : bool, default ``False``
             If ``True``, a warning is given when a band from ``bands_list`` is not found within the SN bands.
 
         """
 
-        for band in bands_list:
+        if isinstance(bands, str):
+            bands = [bands]
+
+        for band in bands:
+            self.data.pop(band, None)
+            self.filters.pop(band, None)
             if band in self.bands:
-                self.data.pop(band, None)
-                self.filters.pop(band, None)
                 self.bands.remove(band)
-            else:
-                if verbose:
-                    print(f'Warning, {band} not found!')
 
     ############################################################################
     ############################### SED template ###############################
@@ -442,8 +440,6 @@ class sn(object):
 
     def mask_data(self, band_list=None, mask_snr=True, snr=5, mask_phase=False, min_phase=-20, max_phase=40):
         """Mask the data with the given signal-to-noise (S/N) and/or given range of days respect to B-band peak.
-
-        **Note:** Bands with less or equal than 3 data points, after the mask is applied, will be deleted.
 
         Parameters
         ----------
@@ -493,12 +489,6 @@ class sn(object):
                 self.data[band]['time'] = self.data[band]['time'][mask]
                 self.data[band]['flux'] = self.data[band]['flux'][mask]
                 self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
-
-                if len(self.data[band]['flux']) <= 3:
-                    bands2delete.append(band)
-
-        self.delete_bands(bands2delete)  # delete bands with less than or equal to 3 data points after applying mask
-        assert len(self.bands) > 1, 'The SN has not enough data. Either one or no bands left after the mask was applied.'
 
 
     def plot_data(self, band_list=None, plot_type='flux', save=False, fig_name=None):
