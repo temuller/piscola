@@ -320,7 +320,7 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kerne
     # optimization routine for hyperparameters
     if optimization:
         p0 = gp.get_parameter_vector()
-        results = scipy.optimize.minimize(neg_ln_like, p0, jac=grad_neg_ln_like, method="L-BFGS-B")
+        results = scipy.optimize.minimize(neg_ln_like, p0, jac=grad_neg_ln_like, method="BFGS")
         gp.set_parameter_vector(results.x)
 
     # check edges
