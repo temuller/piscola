@@ -631,7 +631,7 @@ class sn(object):
         bands_edges = np.array([bands_waves.min(), bands_waves.max()])
 
         if fit_mag:
-            mask = flux_array >= 0.0
+            mask = flux_array > 0.0
             mag_array, mag_err_array = flux2mag(flux_array[mask], 0.0, flux_err_array[mask])  # ZPs are not necessary for fitting
             time_array = time_array[mask]
             wave_array = wave_array[mask]
