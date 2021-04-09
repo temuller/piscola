@@ -14,6 +14,7 @@ from scipy.signal import savgol_filter
 from peakutils import peak
 import pandas as pd
 import numpy as np
+import random
 import pickle
 import math
 import glob
@@ -1230,8 +1231,9 @@ class sn(object):
 
             # compare tmax from the corrected restframe B-band to the initial estimation
             if np.abs(phase_offset) >= 0.2:
-                if np.abs(self.tmax0-self.tmax)/(1+self.z) >= 1.5:
-                    phase_offset *= -1  # maybe it is moving too much in one direction
+                if np.abs(self.tmax0-self.tmax)/(1+self.z) >= 0.5:
+                    self.tmax = np.copy(self.tmax0)  # back to initial estimation - going too far
+                    phase_offset = random.uniform(-0.2, 0.2)
 
                 # update phase of the light curves
                 self.tmax = np.round(self.tmax - phase_offset*(1+self.z), 2)
