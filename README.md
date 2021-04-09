@@ -59,7 +59,7 @@ sn.mangle_sed()
 sn.calculate_lc_params()
 ```
 
-or if you are OK with using the default parameters:
+or if you are OK with using the default parameters, [you can do magic](https://www.youtube.com/watch?v=tt4cR9szMS8):
 
 ```python
 sn = piscola.call_sn(<sn_name>)
