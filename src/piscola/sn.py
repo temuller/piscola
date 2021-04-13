@@ -6,7 +6,7 @@ from .filter_utils import integrate_filter, calc_eff_wave, calc_pivot_wave, calc
 from .gaussian_process import gp_lc_fit, gp_2d_fit
 from .extinction_correction import redden, deredden, calculate_ebv
 from .mangling import mangle
-from .pisco_utils import trim_filters, flux2mag, mag2flux
+from .pisco_utils import trim_filters, flux2mag, mag2flux, change_zp
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
@@ -95,6 +95,7 @@ def call_sn(sn_file, directory='data'):
 
     else:
         raise ValueError(f'{sn_file} was not a valid SN name or file.')
+
 
 def load_sn(name, path=None):
     """Loads a :func:`sn` oject that was previously saved as a pickle file.
@@ -526,7 +527,7 @@ class sn(object):
 
         # to set plot limits
         if plot_type=='flux':
-            plot_lim_vals = np.array([self.data[band]['flux']*10**( -0.4*(self.data[band]['zp'] - ZP) )
+            plot_lim_vals = np.array([change_zp(self.data[band]['flux'], self.data[band]['zp'], ZP)
                                                                                     for band in self.bands] + [0.0], dtype="object")
             ymin_lim = np.hstack(plot_lim_vals).min()*0.9
             if ymin_lim < 0.0:
@@ -542,7 +543,7 @@ class sn(object):
         fig, ax = plt.subplots(figsize=(8,6))
         for i, band in enumerate(band_list):
             if plot_type=='flux':
-                y_norm = 10**( -0.4*(self.data[band]['zp'] - ZP) )
+                y_norm = change_zp(1.0, self.data[band]['zp'], ZP)
                 time, flux, err = np.copy(self.data[band]['time']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
                 flux, err = flux*y_norm, err*y_norm
                 ax.errorbar(time-t_off, flux, err, fmt='o', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
@@ -590,8 +591,8 @@ class sn(object):
             new_zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
                                         self.filters[band]['response_type'], mag_sys, band)
 
-            self.data[band]['flux'] = self.data[band]['flux']*10**(-0.4*(current_zp - new_zp))
-            self.data[band]['flux_err'] = self.data[band]['flux_err']*10**(-0.4*(current_zp - new_zp))
+            self.data[band]['flux'] = change_zp(self.data[band]['flux'], current_zp, new_zp)
+            self.data[band]['flux_err'] = change_zp(self.data[band]['flux_err'], current_zp, new_zp)
             self.data[band]['zp'] = new_zp
 
     ############################################################################
@@ -720,7 +721,7 @@ class sn(object):
         if plot_together:
             # to set plot limits
             if plot_type=='flux':
-                plot_lim_vals = np.array([self.data[band]['flux']*10**( -0.4*(self.data[band]['zp'] - ZP) )
+                plot_lim_vals = np.array([change_zp(self.data[band]['flux'], self.data[band]['zp'], ZP)
                                                                                         for band in self.bands] + [0.0], dtype="object")
                 ymin_lim = np.hstack(plot_lim_vals).min()*0.9
                 if ymin_lim < 0.0:
@@ -740,7 +741,7 @@ class sn(object):
                 data_time, data_flux, data_err = np.copy(self.data[band]['time']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
 
                 if plot_type=='flux':
-                    y_norm = 10**( -0.4*(self.data[band]['zp'] - ZP) )
+                    y_norm = change_zp(1.0, self.data[band]['zp'], ZP)
                     flux, err = flux*y_norm, err*y_norm
                     data_flux, data_err = data_flux*y_norm, data_err*y_norm
 
@@ -796,7 +797,7 @@ class sn(object):
                 data_time, data_flux, data_err = np.copy(self.data[band]['time']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
 
                 if plot_type=='flux':
-                    y_norm = 10**( -0.4*(self.data[band]['zp'] - ZP) )
+                    y_norm = change_zp(1.0, self.data[band]['zp'], ZP)
                     flux, err = flux*y_norm, err*y_norm
                     data_flux, data_err = data_flux*y_norm, data_err*y_norm
 
@@ -850,8 +851,8 @@ class sn(object):
     ######################### Light Curves Correction ##########################
     ############################################################################
 
-    def mangle_sed(self, min_phase=-15, max_phase=30, method='gp', kernel='squaredexp', linear_extrap=True,
-                            correct_extinction=True, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None):
+    def mangle_sed(self, min_phase=-15, max_phase=30, method='gp', kernel='squaredexp', linear_extrap=True, correct_extinction=True,
+                        scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None, r_v=3.1, ebv=None):
         """Mangles the SED with the given method to match the SN magnitudes.
 
         Parameters
@@ -877,6 +878,10 @@ class sn(object):
             Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
         dustmaps_dir : str, default ``None``
             Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
+        r_v : float, default ``3.1``
+            Total-to-selective extinction ratio (:math:`R_V`)
+        ebv : float, default ``None``
+            Colour excess (:math:`E(B-V)`). If given, this is used instead of the dust map value.
         """
 
         phases = np.arange(min_phase, max_phase+1, 1)
@@ -884,7 +889,9 @@ class sn(object):
         # save user inputs for later (used when checking B-band peak estimation)
         self.user_input['mangle_sed'] = {'min_phase':min_phase, 'max_phase':max_phase, 'method':method, 'kernel':kernel,
                                          'linear_extrap':linear_extrap, 'correct_extinction':correct_extinction,
-                                         'scaling':scaling, 'reddening_law':reddening_law}
+                                         'scaling':scaling, 'reddening_law':reddening_law, 'dustmaps_dir':dustmaps_dir,
+                                         'r_v':r_v, 'ebv':ebv}
+
         lc_phases = self.lc_fits[self.pivot_band]['phase']
 
         ####################################
@@ -897,9 +904,12 @@ class sn(object):
         # first redshift the SED ("move" it in z) and then apply extinction from MW only
         sed_df.wave, sed_df.flux = sed_df.wave.values*(1+self.z), sed_df.flux.values/(1+self.z)
         if correct_extinction:
-            sed_df.flux = redden(sed_df.wave.values, sed_df.flux.values, self.ra, self.dec, scaling, reddening_law, dustmaps_dir)
-            # calculate MW reddening
-            self.mw_ebv = calculate_ebv(self.ra, self.dec, scaling, dustmaps_dir)
+            sed_df.flux = redden(sed_df.wave.values, sed_df.flux.values, self.ra, self.dec,
+                                                            scaling, reddening_law, dustmaps_dir, r_v, ebv)
+            if ebv is None:
+                self.mw_ebv = calculate_ebv(self.ra, self.dec, scaling, dustmaps_dir)  # calculates MW reddening
+            else:
+                self.mw_ebv = ebv
 
         bands2mangle = []
         # check which bands are in the wavelength range of the SED template
@@ -970,7 +980,8 @@ class sn(object):
         if correct_extinction:
             self.corrected_sed.flux = deredden(self.corrected_sed.wave.values, self.corrected_sed.flux.values,
                                                                                     self.ra, self.dec, scaling,
-                                                                                    reddening_law, dustmaps_dir)
+                                                                                    reddening_law, dustmaps_dir,
+                                                                                    r_v, ebv)
         self.corrected_sed.wave = self.corrected_sed.wave.values/(1+self.z)
         self.corrected_sed.flux = self.corrected_sed.flux.values*(1+self.z)
 
@@ -1219,6 +1230,7 @@ class sn(object):
                 # estimate offset between inital B-band peak and "final" peak
                 peak_id = peak.indexes(b_flux, thres=.3, min_dist=1000//(b_phase[1]-b_phase[0]))[0]
                 phase_offset = b_phase[idx_max] - 0.0
+
                 self._phase_offset = np.round(phase_offset, 2)
             except:
                 phase_offset = None
@@ -1361,7 +1373,7 @@ class sn(object):
 
         if plot_type=='flux':
             ZP = 27.5
-            y_norm = 10**( -0.4*(self.corrected_lcs[band]['zp'] - ZP) )
+            y_norm = change_zp(1.0, self.corrected_lcs[band]['zp'], ZP)
             y /= y_norm
             yerr /= y_norm
             y_fit /= y_norm
