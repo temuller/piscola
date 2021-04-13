@@ -93,8 +93,7 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', d
     -------
     deredden_flux : array
         Deredden flux values.
-    Returns the deredden flux density values.
-
+        
     """
     pisco_path = piscola.__path__[0]
     if dustmaps_dir is None:
