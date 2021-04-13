@@ -50,6 +50,31 @@ def mag2flux(mag, zp, mag_err=0.0):
 
     return flux, flux_err
 
+def change_zp(flux, zp, new_zp):
+    """Converts flux units given a new zero-point.
+
+    **Note:** this assumes that the new zero-point is in the same magnitude system as the current one.
+
+    Parameters
+    ----------
+    flux : float or array
+        Fluxes.
+    zp : float or array
+        Current zero-point for the given fluxes.
+    new_zp : float or array
+        New zero-point to convert the flux units.
+
+    Returns
+    -------
+    new_flux : float or array
+        Fluxes with with a new zero-point.
+
+    """
+
+    new_flux = flux*10**( -0.4*(zp - new_zp) )
+
+    return new_flux
+
 def trim_filters(response):
     """Trim the leading and trailing zeros from a 1-D array or sequence, leaving
     one zero on each side. This is a modified version of numpy.trim_zeros.
