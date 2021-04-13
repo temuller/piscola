@@ -875,7 +875,9 @@ class sn(object):
             for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
             dust map of Schlegel, Fikbeiner & Davis (1998).
         reddening_law: str, default ``fitzpatrick99``
-            Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
+            Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
+            ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
+            :math:`R_V` = 3.1.)
         dustmaps_dir : str, default ``None``
             Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
         r_v : float, default ``3.1``

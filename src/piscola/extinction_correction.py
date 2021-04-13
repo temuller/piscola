@@ -27,7 +27,9 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dus
         for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
         dust map of Schlegel, Fikbeiner & Davis (1998).
     reddening_law: str, default ``fitzpatrick99``
-        Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
+        Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
+        ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
+        :math:`R_V` = 3.1.)
     dustmaps_dir : str, default ``None``
         Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
     r_v : float, default ``3.1``
@@ -51,13 +53,20 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dus
 
     a_v = r_v*ebv
 
-    rl_list = ['fitzpatrick99', 'ccm89']
+    rl_list = ['ccm89', 'odonnell94', 'fitzpatrick99', 'calzetti00', 'fm07']
     assert reddening_law in rl_list, f'Choose one of the available reddening laws: {rl_list}'
 
-    if reddening_law=='fitzpatrick99':
-        ext = extinction.fitzpatrick99(wave, a_v, r_v)
-    elif reddening_law=='ccm89':
+    if reddening_law=='ccm89':
         ext = extinction.ccm89(wave, a_v, r_v)
+    elif reddening_law=='odonnell94':
+        ext = extinction.odonnell94(wave, a_v, r_v)
+    elif reddening_law=='fitzpatrick99':
+        ext = extinction.fitzpatrick99(wave, a_v, r_v)
+    elif reddening_law=='calzetti00':
+        ext = extinction.calzetti00(wave, a_v, r_v)
+    elif reddening_law=='fm07':
+        ext = extinction.fm07(wave, a_v)
+
     redden_flux = extinction.apply(ext, flux)
 
     return redden_flux
@@ -81,7 +90,9 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', d
         for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
         dust map of Schlegel, Fikbeiner & Davis (1998).
     reddening_law: str, default ``fitzpatrick99``
-        Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
+        Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
+        ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
+        :math:`R_V` = 3.1.)
     dustmaps_dir : str, default ``None``
         Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
     r_v : float, default ``3.1``
@@ -105,13 +116,20 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', d
 
     a_v = r_v*ebv
 
-    rl_list = ['fitzpatrick99', 'ccm89']
+    rl_list = ['ccm89', 'odonnell94', 'fitzpatrick99', 'calzetti00', 'fm07']
     assert reddening_law in rl_list, f'Choose one of the available reddening laws: {rl_list}'
 
-    if reddening_law=='fitzpatrick99':
-        ext = extinction.fitzpatrick99(wave, a_v, r_v)
-    elif reddening_law=='ccm89':
+    if reddening_law=='ccm89':
         ext = extinction.ccm89(wave, a_v, r_v)
+    elif reddening_law=='odonnell94':
+        ext = extinction.odonnell94(wave, a_v, r_v)
+    elif reddening_law=='fitzpatrick99':
+        ext = extinction.fitzpatrick99(wave, a_v, r_v)
+    elif reddening_law=='calzetti00':
+        ext = extinction.calzetti00(wave, a_v, r_v)
+    elif reddening_law=='fm07':
+        ext = extinction.fm07(wave, a_v)
+
     deredden_flux = extinction.remove(ext, flux)
 
     return deredden_flux
@@ -168,7 +186,9 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, redde
         for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
         dust map of Schlegel, Fikbeiner & Davis (1998).
     reddening_law: str, default ``fitzpatrick99``
-        Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
+        Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
+        ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
+        :math:`R_V` = 3.1.)
     dustmaps_dir : str, default ``None``
         Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
     r_v : float, default ``3.1``
@@ -207,7 +227,9 @@ def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustm
         for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
         dust map of Schlegel, Fikbeiner & Davis (1998).
     reddening_law: str, default ``fitzpatrick99``
-        Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
+        Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
+        ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
+        :math:`R_V` = 3.1.)
     dustmaps_dir : str, default ``None``
         Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
     r_v : float, default ``3.1``
