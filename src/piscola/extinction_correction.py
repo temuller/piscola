@@ -9,8 +9,8 @@ import numpy as np
 import os
 
 
-def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None):
-    """Reddens the given spectrum, given a right ascension and declination. :math:`R_V` is assumed to be 3.1.
+def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None, r_v=3.1, ebv=None):
+    """Reddens the given spectrum, given a right ascension and declination or :math:`E(B-V)`.
 
     Parameters
     ----------
@@ -30,6 +30,10 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dus
         Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
     dustmaps_dir : str, default ``None``
         Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
+    r_v : float, default ``3.1``
+        Total-to-selective extinction ratio (:math:`R_V`)
+    ebv : float, default ``None``
+        Colour excess (:math:`E(B-V)`). If given, this is used instead of the dust map value.
 
     Returns
     -------
@@ -37,15 +41,18 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dus
         Redden flux values.
 
     """
-
     pisco_path = piscola.__path__[0]
     if dustmaps_dir is None:
         dustmaps_dir = os.path.join(pisco_path, 'sfddata-master')
 
-    m = sfdmap.SFDMap(mapdir=dustmaps_dir, scaling=scaling)
-    ebv = m.ebv(ra, dec) # RA and DEC in degrees
-    r_v  = 3.1
+    if ebv is None:
+        m = sfdmap.SFDMap(mapdir=dustmaps_dir, scaling=scaling)
+        ebv = m.ebv(ra, dec) # RA and DEC in degrees
+
     a_v = r_v*ebv
+
+    rl_list = ['fitzpatrick99', 'ccm89']
+    assert reddening_law in rl_list, f'Choose one of the available reddening laws: {rl_list}'
 
     if reddening_law=='fitzpatrick99':
         ext = extinction.fitzpatrick99(wave, a_v, r_v)
@@ -57,7 +64,7 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dus
 
 
 def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None):
-    """Dereddens the given spectrum, given a right ascension and declination. :math:`R_V` is assumed to be 3.1.
+    """Dereddens the given spectrum, given a right ascension and declination or :math:`E(B-V)`.
 
     Parameters
     ----------
@@ -77,6 +84,10 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', d
         Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
     dustmaps_dir : str, default ``None``
         Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
+    r_v : float, default ``3.1``
+        Total-to-selective extinction ratio (:math:`R_V`)
+    ebv : float, default ``None``
+        Colour excess (:math:`E(B-V)`). If given, this is used instead of the dust map value.
 
     Returns
     -------
@@ -89,10 +100,14 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', d
     if dustmaps_dir is None:
         dustmaps_dir = os.path.join(pisco_path, 'sfddata-master')
 
-    m = sfdmap.SFDMap(mapdir=dustmaps_dir, scaling=scaling)
-    ebv = m.ebv(ra, dec) # RA and DEC in degrees
-    r_v  = 3.1
+    if ebv is None:
+        m = sfdmap.SFDMap(mapdir=dustmaps_dir, scaling=scaling)
+        ebv = m.ebv(ra, dec) # RA and DEC in degrees
+
     a_v = r_v*ebv
+
+    rl_list = ['fitzpatrick99', 'ccm89']
+    assert reddening_law in rl_list, f'Choose one of the available reddening laws: {rl_list}'
 
     if reddening_law=='fitzpatrick99':
         ext = extinction.fitzpatrick99(wave, a_v, r_v)
@@ -104,7 +119,7 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', d
 
 
 def calculate_ebv(ra, dec, scaling=0.86, dustmaps_dir=None):
-    """Calculates Milky Way reddening, :math:`E(B-V)`.
+    """Calculates Milky Way colour excess, :math:`E(B-V)`, for a given right ascension and declination.
 
     Parameters
     ----------
@@ -136,8 +151,8 @@ def calculate_ebv(ra, dec, scaling=0.86, dustmaps_dir=None):
     return ebv
 
 
-def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None):
-    """Estimate the extinction for a given filter, given a right ascension and declination. :math:`R_V` is assumed to be 3.1.
+def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None, r_v=3.1, ebv=None):
+    """Estimate the extinction for a given filter, given a right ascension and declination or :math:`E(B-V)`.
 
     Parameters
     ----------
@@ -157,6 +172,10 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, redde
         Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
     dustmaps_dir : str, default ``None``
         Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
+    r_v : float, default ``3.1``
+        Total-to-selective extinction ratio (:math:`R_V`)
+    ebv : float, default ``None``
+        Colour excess (:math:`E(B-V)`). If given, this is used instead of the dust map value.
 
     Returns
     -------
@@ -166,7 +185,7 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, redde
     """
 
     flux = 100
-    deredden_flux = deredden(filter_wave, flux, ra, dec, scaling, reddening_law, dustmaps_dir)
+    deredden_flux = deredden(filter_wave, flux, ra, dec, scaling, reddening_law, dustmaps_dir, r_v, ebv)
 
     f1 = integrate_filter(filter_wave, flux, filter_wave, filter_response)
     f2 = integrate_filter(filter_wave, deredden_flux, filter_wave, filter_response)
@@ -175,8 +194,8 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, redde
     return A
 
 
-def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None):
-    """Plots the extinction curve for a given RA and Dec. :math:`R_V` is assumed to be 3.1.
+def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None, r_v=3.1, ebv=None):
+    """Plots the extinction curve for a given right ascension and declination or :math:`E(B-V)`.
 
     Parameters
     ----------
@@ -192,12 +211,16 @@ def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustm
         Reddening law. Use ``fitzpatrick99`` for Fitzpatrick (1999) or ``ccm89`` for Cardelli, Clayton & Mathis (1989).
     dustmaps_dir : str, default ``None``
         Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
+    r_v : float, default ``3.1``
+        Total-to-selective extinction ratio (:math:`R_V`)
+    ebv : float, default ``None``
+        Colour excess (:math:`E(B-V)`). If given, this is used instead of the dust map value.
 
     """
 
     flux = 100
     wave = np.arange(1000, 25001)  # in Angstroms
-    deredden_flux = deredden(wave, flux, ra, dec, scaling, reddening_law, dustmaps_dir)
+    deredden_flux = deredden(wave, flux, ra, dec, scaling, reddening_law, dustmaps_dir, r_v, ebv)
     ff = 1 - flux/deredden_flux
 
     f, ax = plt.subplots(figsize=(8,6))
