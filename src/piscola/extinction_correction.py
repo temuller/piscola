@@ -63,7 +63,7 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dus
     return redden_flux
 
 
-def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None):
+def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None, r_v=3.1, ebv=None):
     """Dereddens the given spectrum, given a right ascension and declination or :math:`E(B-V)`.
 
     Parameters
@@ -93,7 +93,7 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', d
     -------
     deredden_flux : array
         Deredden flux values.
-        
+
     """
     pisco_path = piscola.__path__[0]
     if dustmaps_dir is None:
