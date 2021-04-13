@@ -24,11 +24,11 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52'):
 
     Returns
     -------
-    x_pred*x_norm : array
+    x_pred : array
         Interpolated x-axis values.
-    mean*y_norm : array
+    mean : array
         Interpolated  values.
-    std*y_norm : array
+    std : array
         Standard deviation (:math:`1\sigma`) of the interpolation.
 
     """
@@ -94,7 +94,9 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52'):
     mean, var = gp.predict(y, x_pred, return_var=True)
     std = np.sqrt(var)
 
-    return x_pred*x_norm, mean*y_norm, std*y_norm
+    x_pred, mean, std = x_pred*x_norm, mean*y_norm, std*y_norm
+
+    return x_pred, mean, std
 
 def spline_mf_fit(x_data, y_data, yerr_data=0.0, x_edges=[1e3, 3e4], linear_extrap=True):
     """Fits a mangling function with a univariate spline.
@@ -166,11 +168,11 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', x_edges=[1e3, 
 
     Returns
     -------
-    x_pred*x_norm : array
+    x_pred : array
         Interpolated x-axis values.
-    mean*y_norm : array
+    mean : array
         Interpolated  values.
-    std*y_norm : array
+    std : array
         Standard deviation (:math:`1\sigma`) of the interpolation.
     gp_results : dict
         Dictionary with the Gaussian Process object used for the fit and the normalisation terms.
@@ -220,7 +222,9 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', x_edges=[1e3, 
     std = np.sqrt(var)
 
     gp_results = {'gp':partial(gp.predict, y), 'x_norm':x_norm, 'y_norm':y_norm}
-    return x_pred*x_norm, mean*y_norm, std*y_norm, gp_results
+    x_pred, mean, std = x_pred*x_norm, mean*y_norm, std*y_norm
+
+    return x_pred, mean, std, gp_results
 
 
 def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kernel2='matern52',

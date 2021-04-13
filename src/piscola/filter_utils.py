@@ -209,9 +209,9 @@ def filter_effective_range(filter_response, percent=99.0):
 
     Returns
     -------
-    min_index-1 : int
+    min_index : int
         Minimum index containing the wanted area of the filter.
-    max_index+1 : int
+    max_index : int
         Maximum index containing the wanted area of the filter.
 
     """
@@ -227,4 +227,7 @@ def filter_effective_range(filter_response, percent=99.0):
         min_index += 1
         max_index -= 1
 
-    return min_index-1, max_index+1
+    min_index -=1
+    max_index += 1
+
+    return min_index, max_index

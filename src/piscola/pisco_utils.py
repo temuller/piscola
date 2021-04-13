@@ -61,9 +61,9 @@ def trim_filters(response):
 
     Returns
     -------
-    first-1 : int
+    first : int
         Index of the last leading zero.
-    last-1 : int
+    last : int
         Index of the first trailing zero.
     """
 
@@ -85,8 +85,10 @@ def trim_filters(response):
         else:
             last = last - 1
 
+    first -= 1
+    last += 1
 
-    return first-1, last+1
+    return first, last
 
 
 def extrapolate_mangling_edges(x, y, yerr, x_edges, extra_extension=0.0):
