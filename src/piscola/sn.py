@@ -58,11 +58,18 @@ def _initialise_sn(sn_file):
     # add data to each band
     for band in sn_obj.bands:
         band_info = sn_df[sn_df['band']==band]
-        sn_obj.data[band] = {'time':band_info['time'].values,
-                             'flux':band_info['flux'].values,
-                             'flux_err':band_info['flux_err'].values,
-                             'zp':float(band_info['zp'].unique()[0]),
-                             'mag_sys':band_info['mag_sys'].unique()[0],
+        time, flux = band_info['time'].values, band_info['flux'].values
+        flux_err, zp = band_info['flux_err'].values, float(band_info['zp'].unique()[0])
+        mag, mag_err = flux2mag(flux, zp, flux_err)
+        mag_sys = band_info['mag_sys'].unique()[0]
+
+        sn_obj.data[band] = {'time':time,
+                             'flux':flux,
+                             'flux_err':flux_err,
+                             'mag':mag,
+                             'mag_err':mag_err,
+                             'zp':zp,
+                             'mag_sys':mag_sys,
                             }
 
     return sn_obj
@@ -441,7 +448,7 @@ class sn(object):
     ############################################################################
 
     def mask_data(self, band_list=None, mask_snr=True, snr=5, mask_phase=False, min_phase=-20, max_phase=40):
-        """Mask the data with the given signal-to-noise (S/N) and/or given range of days respect to B-band peak.
+        """Mask the data with the given signal-to-noise (S/N) in flux space and/or given range of days with respect to B-band peak.
 
         Parameters
         ----------
@@ -450,7 +457,7 @@ class sn(object):
         mask_snr : bool, default ``True``
             If ``True``, keeps the flux values with S/N greater or equal to ``snr``.
         snr : float, default ``5``
-            S/N threshold applied to mask data.
+            S/N threshold applied to mask data in flux space.
         mask_phase : bool, default ``False``
             If ``True``, keeps the flux values within the given phase range set by ``min_phase`` and ``max_phase``.
             An initial estimation of the peak is needed first (can be set manually).
@@ -463,7 +470,7 @@ class sn(object):
         if band_list is None:
             band_list = self.bands
 
-        bands2delete = []
+        bands2remove = []
 
         if mask_phase:
             #assert self.tmax, 'An initial estimation of the peak is needed first!'
@@ -481,9 +488,11 @@ class sn(object):
                 self.data[band]['time'] = self.data[band]['time'][mask]
                 self.data[band]['flux'] = self.data[band]['flux'][mask]
                 self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
+                self.data[band]['mag'] = self.data[band]['mag'][mask]
+                self.data[band]['mag_err'] = self.data[band]['mag_err'][mask]
 
-                if len(self.data[band]['flux']) <= 3:
-                    bands2delete.append(band)
+                if len(self.data[band]['flux']) == 0:
+                    bands2remove.append(band)
 
         if mask_snr:
             for band in band_list:
@@ -491,6 +500,11 @@ class sn(object):
                 self.data[band]['time'] = self.data[band]['time'][mask]
                 self.data[band]['flux'] = self.data[band]['flux'][mask]
                 self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
+
+                if len(self.data[band]['flux']) == 0:
+                    bands2remove.append(band)
+
+        self.remove_bands(bands2remove)
 
 
     def plot_data(self, band_list=None, plot_type='flux', save=False, fig_name=None):
@@ -534,8 +548,7 @@ class sn(object):
                 ymin_lim *= 1.1/0.9  # there might be some "negative" fluxes sometimes
             ymax_lim = np.hstack(plot_lim_vals).max()*1.05
         elif plot_type=='mag':
-            plot_lim_vals = [[np.nanmin(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])[0]),
-                              np.nanmax(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])[0])] for band in self.bands]
+            plot_lim_vals = [[np.nanmin(self.data[band]['mag']), np.nanmax(self.data[band]['mag'])] for band in self.bands]
             plot_lim_vals = np.ndarray.flatten(np.array(plot_lim_vals))
             ymin_lim = np.nanmin(plot_lim_vals)*0.98
             ymax_lim = np.nanmax(plot_lim_vals)*1.02
@@ -552,7 +565,7 @@ class sn(object):
                 ylabel = 'Apparent Magnitude'
                 mask = np.where(self.data[band]['flux'] > 0)
                 time = self.data[band]['time'][mask]
-                mag, err = flux2mag(self.data[band]['flux'][mask], self.data[band]['zp'], self.data[band]['flux_err'][mask])
+                mag, err = self.data[band]['mag'][mask], self.data[band]['mag_err'][mask]
 
                 ax.errorbar(time-t_off, mag, err, fmt='o', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, label=band, color=new_palette[i])
 
@@ -633,20 +646,21 @@ class sn(object):
         bands_edges = np.array([bands_waves.min(), bands_waves.max()])
 
         if fit_mag:
-            mask = flux_array > 0.0
+            mask = flux_array > 0.0  # prevents invalid inputs in logarithm
             mag_array, mag_err_array = flux2mag(flux_array[mask], 0.0, flux_err_array[mask])  # ZPs are not necessary for fitting
             time_array = time_array[mask]
             wave_array = wave_array[mask]
 
-            timeXwave, mean, std, gp_results = gp_2d_fit(time_array, wave_array, mag_array, mag_err_array,  kernel1=kernel,
+            timeXwave, lc_mean, lc_std, gp_results = gp_2d_fit(time_array, wave_array, mag_array, mag_err_array,  kernel1=kernel,
                                                         kernel2=kernel2, x1_edges=time_edges, x2_edges=bands_edges)
-            mean, std = mag2flux(mean, 0.0, std)
+            lc_mean, lc_std = mag2flux(lc_mean, 0.0, lc_std)
 
         else:
-            timeXwave, mean, std, gp_results = gp_2d_fit(time_array, wave_array, flux_array, flux_err_array,
+            timeXwave, lc_mean, lc_std, gp_results = gp_2d_fit(time_array, wave_array, flux_array, flux_err_array,
                                             kernel1=kernel, kernel2=kernel2, x2_edges=bands_edges)
 
-        self.lc_fits['timeXwave'], self.lc_fits['mean'], self.lc_fits['std'], self.lc_fits['gp_results'] = timeXwave, mean, std, gp_results
+        self.lc_fits['timeXwave'], self.lc_fits['lc_mean'] = timeXwave, lc_mean
+        self.lc_fits['lc_std'], self.lc_fits['gp_results'] = lc_std, gp_results
 
         ###############################
         ##### Estimate B-band Peak ####
@@ -657,7 +671,7 @@ class sn(object):
         eff_wave = waves[wave_ind]  # closest wavelength from the gp grid to the effective_wavelength*(1+z) of Bessell_B
         mask = waves==eff_wave
 
-        time, flux, err = times[mask], mean[mask], std[mask]
+        time, flux, flux_err = times[mask], lc_mean[mask], lc_std[mask]
 
         try:
             peak_id = peak.indexes(flux, thres=.3, min_dist=1000//(time[1]-time[0]))[0]
@@ -678,14 +692,15 @@ class sn(object):
             eff_wave = waves[wave_ind]  # closest wavelength from the gp grid to the effective wavelength of the band
             mask = waves==eff_wave
 
-            time, phase, flux, err = times[mask], phases[mask], mean[mask], std[mask]
-            self.lc_fits[band] = {'time':time, 'phase':phase, 'flux':flux, 'flux_err':err}
+            time, phase, flux, flux_err = times[mask], phases[mask], lc_mean[mask], lc_std[mask]
+            mag, mag_err = flux2mag(flux, self.data[band]['zp'], flux_err)
+            self.lc_fits[band] = {'time':time, 'phase':phase, 'flux':flux, 'flux_err':flux_err, 'mag':mag, 'mag_err':mag_err}
 
             # calculate observed time and magnitude of peak for each band
             try:
                 peak_id = peak.indexes(flux, thres=.3, min_dist=1000//(time[1]-time[0]))[0]
                 self.lc_fits[band]['tmax'] = np.round(time[peak_id], 2)
-                self.lc_fits[band]['mmax'] = -2.5*np.log10(flux[peak_id]) + self.data[band]['zp']
+                self.lc_fits[band]['mmax'] = mag[peak_id]
             except:
                 self.lc_fits[band]['tmax'] = self.lc_fits[band]['mmax'] = np.nan
 
@@ -728,8 +743,7 @@ class sn(object):
                     ymin_lim *= 1.1/0.9  # there might be some "negative" fluxes sometimes
                 ymax_lim = np.hstack(plot_lim_vals).max()*1.05
             elif plot_type=='mag':
-                plot_lim_vals = [[np.nanmin(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])[0]),
-                                  np.nanmax(flux2mag(np.abs(self.data[band]['flux']), self.data[band]['zp'])[0])] for band in self.bands]
+                plot_lim_vals = [[np.nanmin(self.data[band]['mag']), np.nanmax(self.data[band]['mag'])] for band in self.bands]
                 plot_lim_vals = np.ndarray.flatten(np.array(plot_lim_vals))
                 ymin_lim = np.nanmin(plot_lim_vals)*0.98
                 ymax_lim = np.nanmax(plot_lim_vals)*1.02
@@ -737,34 +751,29 @@ class sn(object):
             fig, ax = plt.subplots(figsize=(8, 6))
             for i, band in enumerate(self.bands):
 
-                time, flux, err = np.copy(self.lc_fits[band]['time']), np.copy(self.lc_fits[band]['flux']), np.copy(self.lc_fits[band]['flux_err'])
-                data_time, data_flux, data_err = np.copy(self.data[band]['time']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
+                # GP fits
+                time, flux, flux_err = np.copy(self.lc_fits[band]['time']), np.copy(self.lc_fits[band]['flux']), np.copy(self.lc_fits[band]['flux_err'])
+                mag, mag_err = np.copy(self.lc_fits[band]['mag']), np.copy(self.lc_fits[band]['mag_err'])
+                # Data
+                data_time, data_flux, data_flux_err = np.copy(self.data[band]['time']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
+                data_mag, data_mag_err = np.copy(self.data[band]['mag']), np.copy(self.data[band]['mag_err'])
 
                 if plot_type=='flux':
                     y_norm = change_zp(1.0, self.data[band]['zp'], ZP)
-                    flux, err = flux*y_norm, err*y_norm
-                    data_flux, data_err = data_flux*y_norm, data_err*y_norm
+                    flux, err = flux*y_norm, flux_err*y_norm
+                    data_flux, data_flux_err = data_flux*y_norm, data_flux_err*y_norm
 
-                    ax.errorbar(data_time-t_off, data_flux, data_err, fmt='o', mec='k', capsize=3, capthick=2, ms=8,
+                    ax.errorbar(data_time-t_off, data_flux, data_flux_err, fmt='o', mec='k', capsize=3, capthick=2, ms=8,
                                     elinewidth=3, color=new_palette[i],label=band)
                     ax.plot(time-t_off, flux,'-', color=new_palette[i], lw=2, zorder=16)
-                    ax.fill_between(time-t_off, flux-err, flux+err, alpha=0.5, color=new_palette[i])
+                    ax.fill_between(time-t_off, flux-flux_err, flux+flux_err, alpha=0.5, color=new_palette[i])
                     ax.set_ylabel(f'Flux (ZP = {ZP})', fontsize=16, family='serif')
 
                 elif plot_type=='mag':
-                    # avoid non-positive numbers in logarithm
-                    fit_mask = flux > 0
-                    time, flux, err = time[fit_mask], flux[fit_mask], err[fit_mask]
-                    data_mask = data_flux > 0
-                    data_time, data_flux, data_err = data_time[data_mask], data_flux[data_mask], data_err[data_mask]
-
-                    mag, err = flux2mag(flux, self.data[band]['zp'], err)
-                    data_mag, data_err = flux2mag(data_flux, self.data[band]['zp'], data_err)
-
-                    ax.errorbar(data_time-t_off, data_mag, data_err, fmt='o', mec='k', capsize=3, capthick=2, ms=8,
+                    ax.errorbar(data_time-t_off, data_mag, data_mag_err, fmt='o', mec='k', capsize=3, capthick=2, ms=8,
                                 elinewidth=3, color=new_palette[i],label=band)
                     ax.plot(time-t_off, mag,'-', color=new_palette[i], lw=2, zorder=16)
-                    ax.fill_between(time-t_off, mag-err, mag+err, alpha=0.5, color=new_palette[i])
+                    ax.fill_between(time-t_off, mag-mag_err, mag+mag_err, alpha=0.5, color=new_palette[i])
                     ax.set_ylabel(r'Apparent Magnitude', fontsize=16, family='serif')
 
             ax.axvline(x=self.tmax0-t_off, color='k', linestyle='--', alpha=0.4)
@@ -793,33 +802,27 @@ class sn(object):
                 k =i // h
                 ax = plt.subplot(gs[k,j])
 
-                time, flux, err = self.lc_fits[band]['time'], self.lc_fits[band]['flux'], self.lc_fits[band]['flux_err']
-                data_time, data_flux, data_err = np.copy(self.data[band]['time']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
+                time, flux, flux_err = np.copy(self.lc_fits[band]['time']), np.copy(self.lc_fits[band]['flux']), np.copy(self.lc_fits[band]['flux_err'])
+                mag, mag_err = np.copy(self.lc_fits[band]['mag']), np.copy(self.lc_fits[band]['mag_err'])
+                # Data
+                data_time, data_flux, data_flux_err = np.copy(self.data[band]['time']), np.copy(self.data[band]['flux']), np.copy(self.data[band]['flux_err'])
+                data_mag, data_mag_err = np.copy(self.data[band]['mag']), np.copy(self.data[band]['mag_err'])
 
                 if plot_type=='flux':
                     y_norm = change_zp(1.0, self.data[band]['zp'], ZP)
-                    flux, err = flux*y_norm, err*y_norm
-                    data_flux, data_err = data_flux*y_norm, data_err*y_norm
+                    flux, flux_err = flux*y_norm, flux_err*y_norm
+                    data_flux, data_flux_err = data_flux*y_norm, data_flux_err*y_norm
 
-                    ax.errorbar(data_time-t_off, data_flux, data_err, fmt='o', color=new_palette[i],
+                    ax.errorbar(data_time-t_off, data_flux, data_flux_err, fmt='o', color=new_palette[i],
                                     capsize=3, capthick=2, ms=8, elinewidth=3, mec='k')
                     ax.plot(time-t_off, flux,'-', lw=2, zorder=16, color=new_palette[i])
-                    ax.fill_between(time-t_off, flux-err, flux+err, alpha=0.5, color=new_palette[i])
+                    ax.fill_between(time-t_off, flux-flux_err, flux+flux_err, alpha=0.5, color=new_palette[i])
 
                 elif plot_type=='mag':
-                    # avoid non-positive numbers in logarithm
-                    fit_mask = flux > 0
-                    time, flux, err = time[fit_mask], flux[fit_mask], err[fit_mask]
-                    data_mask = data_flux > 0
-                    data_time, data_flux, data_err = data_time[data_mask], data_flux[data_mask], data_err[data_mask]
-
-                    mag, err = flux2mag(flux, self.data[band]['zp'], err)
-                    data_mag, data_err = flux2mag(data_flux, self.data[band]['zp'], data_err)
-
-                    ax.errorbar(data_time-t_off, data_mag, data_err, fmt='o', color=new_palette[i],
+                    ax.errorbar(data_time-t_off, data_mag, data_mag_err, fmt='o', color=new_palette[i],
                                     capsize=3, capthick=2, ms=8, elinewidth=3, mec='k')
                     ax.plot(time-t_off, mag,'-', lw=2, zorder=16, color=new_palette[i])
-                    ax.fill_between(time-t_off, mag-err, mag+err, alpha=0.5, color=new_palette[i])
+                    ax.fill_between(time-t_off, mag-mag_err, mag+mag_err, alpha=0.5, color=new_palette[i])
                     ax.invert_yaxis()
 
                 ax.axvline(x=self.tmax0-t_off, color='k', linestyle='--', alpha=0.4)
@@ -1148,19 +1151,19 @@ class sn(object):
         phases = self.corrected_sed.phase.unique()
 
         for band in self.filters.keys():
-            band_flux, band_err, band_phase = [], [], []
+            band_flux, band_flux_err, band_phase = [], [], []
             for phase in phases:
                 phase_df = self.corrected_sed[self.corrected_sed.phase==phase]
 
                 phase_wave = phase_df.wave.values
                 phase_flux = phase_df.flux.values
-                phase_err = phase_df.flux_err.values
+                phase_flux_err = phase_df.flux_err.values
 
                 filter_data = self.filters[band]
                 try:
                     band_flux.append(integrate_filter(phase_wave, phase_flux, filter_data['wave'], filter_data['transmission'],
                                                                     filter_data['response_type']))
-                    band_err.append(integrate_filter(phase_wave, phase_err, filter_data['wave'], filter_data['transmission'],
+                    band_flux_err.append(integrate_filter(phase_wave, phase_flux_err, filter_data['wave'], filter_data['transmission'],
                                                                     filter_data['response_type']))
                     band_phase.append(phase)
                 except:
@@ -1173,8 +1176,10 @@ class sn(object):
                 zp = self.data[band]['zp']
 
             if len(band_flux)!=0:
-                band_flux, band_err, band_phase = np.array(band_flux), np.array(band_err), np.array(band_phase)
-                corrected_lcs[band] = {'phase':band_phase, 'flux':band_flux, 'flux_err':band_err, 'zp':zp}
+                band_flux, band_flux_err, band_phase = np.array(band_flux), np.array(band_flux_err), np.array(band_phase)
+                band_mag, band_mag_err = flux2mag(band_flux, zp, band_flux_err)
+                corrected_lcs[band] = {'phase':band_phase, 'flux':band_flux, 'flux_err':band_flux_err,
+                                       'mag':band_mag, 'mag_err':band_mag_err, 'zp':zp}
 
         self.corrected_lcs = corrected_lcs
 

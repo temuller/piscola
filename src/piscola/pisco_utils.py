@@ -3,6 +3,8 @@ import numpy as np
 def flux2mag(flux, zp, flux_err=0.0):
     """Converts fluxes to magnitudes, propagating errors if given.
 
+    Note: if there are negative or zero fluxes, these are converted to NaN values.
+
     Parameters
     ----------
     flux : array
@@ -20,8 +22,10 @@ def flux2mag(flux, zp, flux_err=0.0):
         Flux errors converted to errors in magnitudes.
     """
 
-    mag = -2.5*np.log10(flux) + zp
-    mag_err = np.abs( 2.5*flux_err/(flux*np.log(10)) )
+    flux_ = np.array([f if f>=0.0 else np.nan for f in flux ])  # turns negative and 0.0 values to NaN
+
+    mag = -2.5*np.log10(flux_) + zp
+    mag_err = np.abs( 2.5*flux_err/(flux_*np.log(10)) )
 
     return mag, mag_err
 
