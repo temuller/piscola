@@ -316,7 +316,7 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kerne
     ker1, ker2 = kernels_dict[kernel1], kernels_dict[kernel2]
     ker = var * ker1(length1**2, ndim=2, axes=0) * ker2(length2**2, ndim=2, axes=1)
 
-    mean_function =  y.mean()
+    mean_function =  y.min()
     gp = george.GP(kernel=ker, mean=mean_function, fit_mean=True)
     # initial guess
     gp.compute(X, yerr)
