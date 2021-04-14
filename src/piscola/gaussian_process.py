@@ -101,8 +101,6 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52'):
 def spline_mf_fit(x_data, y_data, yerr_data=0.0, x_edges=[1e3, 3e4], linear_extrap=True):
     """Fits a mangling function with a univariate spline.
 
-    The package ``george`` is used for the gaussian process fit.
-
     Parameters
     ----------
     x_data : array
@@ -123,7 +121,7 @@ def spline_mf_fit(x_data, y_data, yerr_data=0.0, x_edges=[1e3, 3e4], linear_extr
     mean : array
         Interpolated  values.
     std : float
-        Standard deviation (:math:`1\sigma`) of the interpolation. ``0.0`` for now - **STILL NEEDS TO BE IMPLEMENTED.**
+        Standard deviation (:math:`1\sigma`) of the interpolation.
     spline : obj
         Spline object used for the fit.
 
@@ -134,14 +132,29 @@ def spline_mf_fit(x_data, y_data, yerr_data=0.0, x_edges=[1e3, 3e4], linear_extr
     else:
         x, y, yerr = np.copy(x_data), np.copy(y_data), np.copy(yerr_data)
 
-    # compute spline
     s = len(y)
-    spline = UnivariateSpline(x, y, k=3, s=s)
+    if s<=3:
+        k = s-1
+    else:
+        k = 3
+
+    Y = np.random.normal(y, yerr, (1000, s))
+    N = 1000
 
     step = 1
     x_min, x_max = x_edges
     x_pred = np.arange(x_min, x_max+step, step)
-    mean, std = spline(x_pred), 0.0  # no uncertainty for now
+
+    # compute N splines
+    y_spl = []
+    for y in Y:
+
+        spline = UnivariateSpline(x, y, k=k, s=s)
+        y_spl.append(spline(x_pred))
+
+    y_spl = np.array(y_spl)
+    mean = np.mean(y_spl, axis=0)
+    std = np.std(y_spl, axis=0)
 
     return x_pred, mean, std, spline
 
