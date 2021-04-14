@@ -500,6 +500,8 @@ class sn(object):
                 self.data[band]['time'] = self.data[band]['time'][mask]
                 self.data[band]['flux'] = self.data[band]['flux'][mask]
                 self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
+                self.data[band]['mag'] = self.data[band]['mag'][mask]
+                self.data[band]['mag_err'] = self.data[band]['mag_err'][mask]
 
                 if len(self.data[band]['flux']) == 0:
                     bands2remove.append(band)
@@ -674,7 +676,7 @@ class sn(object):
         time, flux, flux_err = times[mask], lc_mean[mask], lc_std[mask]
 
         try:
-            peak_id = peak.indexes(flux, thres=.3, min_dist=1000//(time[1]-time[0]))[0]
+            peak_id = peak.indexes(flux, thres=.3, min_dist=len(time)//2)[0]
             self.tmax = self.tmax0 = np.round(time[peak_id], 2)
 
             phaseXwave = np.copy(timeXwave)
@@ -698,7 +700,7 @@ class sn(object):
 
             # calculate observed time and magnitude of peak for each band
             try:
-                peak_id = peak.indexes(flux, thres=.3, min_dist=1000//(time[1]-time[0]))[0]
+                peak_id = peak.indexes(flux, thres=.3, min_dist=len(time)//2)[0]
                 self.lc_fits[band]['tmax'] = np.round(time[peak_id], 2)
                 self.lc_fits[band]['mmax'] = mag[peak_id]
             except:
@@ -1185,14 +1187,17 @@ class sn(object):
 
         # simple, independent 1D fit to the corrected light curves
         corrected_lcs_fit = {}
-        for band in self.filters.keys():
-            try:
-                phases, fluxes, errs = corrected_lcs[band]['phase'], corrected_lcs[band]['flux'], corrected_lcs[band]['flux_err']
-                phases_fit, fluxes_fit, _ = gp_lc_fit(phases, fluxes, fluxes*1e-3)
-                errs_fit = np.interp(phases_fit, phases, errs, left=0.0, right=0.0)  # linear extrapolation of errors
-                corrected_lcs_fit[band] = {'phase':phases_fit, 'flux':fluxes_fit, 'flux_err':errs_fit, 'zp':corrected_lcs[band]['zp']}
-            except:
-                pass
+        for band in corrected_lcs.keys():
+            phase, zp = corrected_lcs[band]['phase'], corrected_lcs[band]['zp']
+            flux, flux_err = corrected_lcs[band]['flux'], corrected_lcs[band]['flux_err']
+
+            phase_fit, flux_fit, _ = gp_lc_fit(phase, flux, flux*1e-3)
+            flux_err_fit = np.interp(phase_fit, phase, flux_err, left=0.0, right=0.0)  # linear extrapolation of errors
+
+            mag_fit, mag_err_fit = flux2mag(flux_fit, zp, flux_err_fit)
+            corrected_lcs_fit[band] = {'phase':phase_fit, 'flux':flux_fit, 'flux_err':flux_err_fit,
+                                       'mag':mag_fit, 'mag_err':mag_err_fit, 'zp':zp}
+
         self.corrected_lcs_fit = corrected_lcs_fit
 
 
@@ -1218,31 +1223,40 @@ class sn(object):
         iter = 0
 
         assert 'Bessell_B' in self.corrected_lcs_fit.keys(), 'Not enough wavelength coverage to estimate rest-frame B-band.'
+
         while bmax_needs_check:
-            b_data = self.corrected_lcs_fit['Bessell_B']
-            b_phase, b_flux, b_err = b_data['phase'], b_data['flux'], b_data['flux_err']
-            simulated_lcs = np.asarray([np.random.normal(flux, err, 1000) for flux, err in zip(b_flux, b_err)])  # to estimate uncertainties
+            # estimate offset between inital B-band peak and "final" peak
             try:
-                pmax_list = []
-                # loop to estimate uncertainty in tmax
-                for lc_flux in simulated_lcs.T:
-                    lc_flux = savgol_filter(lc_flux, 91, 3)  # the LC needs to be smoothed as the "simulations" are "noisy"
-                    peakidxs = peak.indexes(lc_flux, thres=.3, min_dist=1000//(b_phase[1]-b_phase[0]))
-                    idx_max = np.array([idx for idx in peakidxs if all(lc_flux[:idx]<lc_flux[idx])]).min()
-                    pmax_list.append(b_phase[idx_max])
+                b_data = self.corrected_lcs['Bessell_B']
+                b_phase, b_flux, b_err = b_data['phase'], b_data['flux'], b_data['flux_err']
+                b_phase, b_flux, b_err = gp_lc_fit(b_phase, b_flux, b_err)  # smoother estimation of the peak
 
-                pmax_array = np.array(pmax_list)
-                self.tmax_err = pmax_array.std().round(2)
-
-                # estimate offset between inital B-band peak and "final" peak
-                peak_id = peak.indexes(b_flux, thres=.3, min_dist=1000//(b_phase[1]-b_phase[0]))[0]
-                phase_offset = b_phase[idx_max] - 0.0
+                peak_id = peak.indexes(b_flux, thres=.3, min_dist=len(b_phase)//2)[0]
+                phase_offset = b_phase[peak_id] - 0.0
 
                 self._phase_offset = np.round(phase_offset, 2)
             except:
                 phase_offset = None
 
             assert phase_offset is not None, "The peak of the rest-frame B-band light curve can not be calculated."
+
+            # error propagation
+            try:
+                b_data = self.corrected_lcs_fit['Bessell_B']
+                b_phase, b_flux, b_err = b_data['phase'], b_data['flux'], b_data['flux_err']
+                simulated_lcs = np.asarray([np.random.normal(flux, err, 1000) for flux, err in zip(b_flux, b_err)])
+
+                pmax_list = []
+                # loop to estimate uncertainty in tmax
+                for lc_flux in simulated_lcs.T:
+                    lc_flux = savgol_filter(lc_flux, 91, 3)  # the LC needs to be smoothed as the "simulations" are "noisy"
+                    idx_max = peak.indexes(lc_flux, thres=.3, min_dist=len(b_phase)//2)[0]
+                    pmax_list.append(b_phase[idx_max])
+
+                pmax_array = np.array(pmax_list)
+                self.tmax_err = pmax_array.std().round(2)
+            except:
+                self.tmax_err = np.nan
 
             if iter>=maxiter:
                 break
@@ -1272,15 +1286,17 @@ class sn(object):
         bessell_b = 'Bessell_B'
 
         # B-band peak apparent magnitude
-        zp_b = self.corrected_lcs[bessell_b]['zp']
-        b_phase, b_flux, b_flux_err = self.corrected_lcs[bessell_b]['phase'], self.corrected_lcs[bessell_b]['flux'], self.corrected_lcs[bessell_b]['flux_err']
+        b_phase = self.corrected_lcs[bessell_b]['phase']
+        b_mag, b_mag_err = self.corrected_lcs[bessell_b]['mag'], self.corrected_lcs[bessell_b]['mag_err']
         id_bmax = list(b_phase).index(0)
-        mb, mb_err = flux2mag(b_flux[id_bmax], zp_b, b_flux_err[id_bmax])
+
+        mb, mb_err = b_mag[id_bmax], b_mag_err[id_bmax]
 
         # Stretch parameter
         if 15 in b_phase:
             id_15 = list(b_phase).index(15)
-            B15, B15_err = flux2mag(b_flux[id_15], zp_b, b_flux_err[id_15])
+            B15, B15_err = b_mag[id_15], b_mag_err[id_15]
+
             dm15 = B15 - mb
 
             # covariance from the 2D gp fit to the light curves
@@ -1307,12 +1323,12 @@ class sn(object):
         if 'Bessell_V' in self.corrected_lcs.keys():
             bessell_v = 'Bessell_V'
             if 0 in self.corrected_lcs[bessell_v]['phase']:
-
-                zp_v = self.corrected_lcs[bessell_v]['zp']
-                v_phase, v_flux, v_flux_err = self.corrected_lcs[bessell_v]['phase'], self.corrected_lcs[bessell_v]['flux'], self.corrected_lcs[bessell_v]['flux_err']
+                v_phase = self.corrected_lcs[bessell_v]['phase']
+                v_mag, v_mag_err = self.corrected_lcs[bessell_v]['mag'], self.corrected_lcs[bessell_v]['mag_err']
 
                 id_v0 = list(v_phase).index(0)
-                V0, V0_err = flux2mag(v_flux[id_v0], zp_v, v_flux_err[id_v0])
+                V0, V0_err = v_mag[id_v0], v_mag_err[id_v0]
+
                 colour = mb - V0
 
                 # covariance from the 2D gp fit to the light curves
@@ -1371,24 +1387,21 @@ class sn(object):
             band = 'Bessell_B'
 
         x = np.copy(self.corrected_lcs[band]['phase'])
-        y = np.copy(self.corrected_lcs[band]['flux'])
-        yerr = np.copy(self.corrected_lcs[band]['flux_err'])
+        y = np.copy(self.corrected_lcs[band][plot_type])
+        yerr = np.copy(self.corrected_lcs[band][plot_type+'_err'])
         zp = self.corrected_lcs[band]['zp']
+
         x_fit = np.copy(self.corrected_lcs_fit[band]['phase'])
-        y_fit = np.copy(self.corrected_lcs_fit[band]['flux'])
-        yerr_fit = np.copy(self.corrected_lcs_fit[band]['flux_err'])
+        y_fit = np.copy(self.corrected_lcs_fit[band][plot_type])
+        yerr_fit = np.copy(self.corrected_lcs_fit[band][plot_type+'_err'])
 
         if plot_type=='flux':
             ZP = 27.5
-            y_norm = change_zp(1.0, self.corrected_lcs[band]['zp'], ZP)
-            y /= y_norm
-            yerr /= y_norm
-            y_fit /= y_norm
-            yerr_fit /= y_norm
-
-        elif plot_type=='mag':
-            y, yerr = flux2mag(y, zp, yerr)
-            y_fit, yerr_fit = flux2mag(y_fit, zp, yerr_fit)
+            y_norm = change_zp(1.0, zp, ZP)
+            y *= y_norm
+            yerr *= y_norm
+            y_fit *= y_norm
+            yerr_fit *= y_norm
 
         fig, ax = plt.subplots(figsize=(8,6))
         ax.errorbar(x, y, yerr, fmt='-.o', color='k', ecolor='k', mec='k', capsize=3, capthick=2, ms=8, elinewidth=3, zorder=16)
