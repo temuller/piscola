@@ -1177,7 +1177,7 @@ class sn(object):
             else:
                 zp = self.data[band]['zp']
 
-            if len(band_flux)!=0:
+            if len(band_flux)>0:
                 band_flux, band_flux_err, band_phase = np.array(band_flux), np.array(band_flux_err), np.array(band_phase)
                 band_mag, band_mag_err = flux2mag(band_flux, zp, band_flux_err)
                 corrected_lcs[band] = {'phase':band_phase, 'flux':band_flux, 'flux_err':band_flux_err,
