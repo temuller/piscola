@@ -22,8 +22,13 @@ def flux2mag(flux, zp, flux_err=0.0):
         Flux errors converted to errors in magnitudes.
     """
 
-    flux_ = np.array([f if f>=0.0 else np.nan for f in flux ])  # turns negative and 0.0 values to NaN
-
+    if type(flux)==np.ndarray:
+        flux_ = np.array([f if f>=0.0 else np.nan for f in flux ])  # turns negative and 0.0 values to NaN
+    elif flux<=0.0:
+        flux_ = np.nan
+    else:
+        flux_ = flux
+        
     mag = -2.5*np.log10(flux_) + zp
     mag_err = np.abs( 2.5*flux_err/(flux_*np.log(10)) )
 
