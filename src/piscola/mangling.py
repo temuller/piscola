@@ -4,13 +4,16 @@ from .gaussian_process import gp_mf_fit, spline_mf_fit
 import numpy as np
 import lmfit
 
-def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filters, method, kernel, x_edges, linear_extrap):
+def residual(params, flux_ratios_err_array, wave_array, sed_wave, sed_flux, obs_flux, norm, bands,
+                                                                    filters, method, kernel, x_edges, linear_extrap):
     """Residual function for the mangling minimization routine.
 
     Parameters
     ----------
     params : lmfit.Parameters()
         Flux values for each band to be minimized.
+    flux_ratios_err_array : array
+        "Observed" flux errors divided by the SED template flux values.
     wave_array: array
         Effective wavelengths of the bands.
     sed_wave : array
@@ -62,7 +65,8 @@ def residual(params, wave_array, sed_wave, sed_flux, obs_flux, norm, bands, filt
     return residuals
 
 
-def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_errs, bands, filters, method, kernel, x_edges, linear_extrap):
+def mangle(wave_array, flux_ratio_array, flux_ratios_err_array, sed_wave, sed_flux, obs_fluxes, obs_errs,
+                                                                bands, filters, method, kernel, x_edges, linear_extrap):
     """Estimates the mangling function. This is done by minimizing the difference between the observed fluxes and the fluxes
     from the SED template.
 
@@ -71,7 +75,9 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
     wave_array: array
         Effective wavelengths of the bands.
     flux_ratio_array : array
-        "Observed" flux values divided by the SED template values.
+        "Observed" flux values divided by the SED template flux values.
+    flux_ratios_err_array : array
+        "Observed" flux errors divided by the SED template flux values.
     sed_wave : array
         SED wavelength range
     sed_flux : array
@@ -113,7 +119,8 @@ def mangle(wave_array, flux_ratio_array, sed_wave, sed_flux, obs_fluxes, obs_err
     for val, band in zip(flux_ratio_array/norm, param_bands):
         params.add(band, value=val, min=0) # , max=val*1.2)   # tighten this constrains for a smoother(?) mangling
 
-    args=(wave_array, sed_wave, sed_flux, obs_fluxes, norm, bands, filters, method, kernel, x_edges, linear_extrap)
+    args=(flux_ratios_err_array, wave_array, sed_wave, sed_flux, obs_fluxes, norm,
+                                                                bands, filters, method, kernel, x_edges, linear_extrap)
     lmfit_results = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-4, ftol=1e-4, max_nfev=80)
 
     ###############################

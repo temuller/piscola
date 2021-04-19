@@ -948,6 +948,7 @@ class sn(object):
         obs_flux_dict = {band:np.interp(sed_phases, self.lc_fits[band]['phase'], self.lc_fits[band]['flux'], left=0.0, right=0.0) for band in bands2mangle}
         obs_err_dict = {band:np.interp(sed_phases, self.lc_fits[band]['phase'], self.lc_fits[band]['flux_err'], left=0.0, right=0.0) for band in bands2mangle}
         flux_ratios_dict = {band:obs_flux_dict[band]/self.sed_lcs[band]['flux'] for band in bands2mangle}
+        flux_ratios_err_dict = {band:obs_err_dict[band]/self.sed_lcs[band]['flux'] for band in bands2mangle}
 
         wave_array = np.array([self.filters[band]['eff_wave'] for band in bands2mangle])
         bands_waves = np.hstack([self.filters[band]['wave'] for band in bands2mangle])
@@ -961,12 +962,13 @@ class sn(object):
             obs_fluxes = np.array([obs_flux_dict[band][i] for band in bands2mangle])
             obs_errs = np.array([obs_err_dict[band][i] for band in bands2mangle])
             flux_ratios_array = np.array([flux_ratios_dict[band][i] for band in bands2mangle])
+            flux_ratios_err_array = np.array([flux_ratios_err_dict[band][i] for band in bands2mangle])
 
             phase_df = sed_df[sed_df.phase==phase]
             sed_epoch_wave, sed_epoch_flux = phase_df.wave.values, phase_df.flux.values
 
             # mangling routine including optimisation
-            mangling_results = mangle(wave_array, flux_ratios_array, sed_epoch_wave, sed_epoch_flux,
+            mangling_results = mangle(wave_array, flux_ratios_array, flux_ratios_err_array, sed_epoch_wave, sed_epoch_flux,
                                         obs_fluxes, obs_errs, bands2mangle, self.filters, method, kernel, x_edges, linear_extrap)
 
             # precision of the mangling function
