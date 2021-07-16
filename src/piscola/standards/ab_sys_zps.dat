@@ -34,6 +34,13 @@ ps1_i   -0.024-0.0043
 ps1_z   -0.024+0.008
 ps1_y   0.0
 
+#MAGSYSTEM:  AB
+des_g   0.0
+des_r   0.0
+des_i   0.0
+des_z   0.0
+des_Y   0.0
+
 
 #SN_SED:       Hsiao07.extrap.dat
 #BD17_SED:     bd17.dat
