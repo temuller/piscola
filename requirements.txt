@@ -8,4 +8,5 @@ astropy
 sfdmap
 extinction
 george
+wget
 
