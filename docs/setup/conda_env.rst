@@ -1,4 +1,4 @@
-.. _CondaConfigurations:
+.. _envconf:
 
 Environment configuration
 =============================
@@ -13,9 +13,9 @@ To setup your environment through conda environment use:
 
 .. code::
 
-	conda create --name <env_name> --file requirements.txt
+	conda create --name <env_name>
 
-This will create the environment with the required dependencies for PISCOLA to work. 
+By adding the ``--file requirements.txt`` flag you will create the environment with the required dependencies for PISCOLA to work (the ``requirements.txt`` file can be downloaded from the repository). 
 
 **Note:** the versions of the packages installed with conda are not always the same as the ones installed with pip.
 

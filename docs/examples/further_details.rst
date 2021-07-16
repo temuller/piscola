@@ -1,7 +1,7 @@
 .. _furtherdetails:
 
-Further Details
-========================
+Further details: filters, magnitude systems and SED templates
+===============================================================
 
 Let's see what else PISCOLA has to offer. This is probably aimed towards more advanced user.
 
