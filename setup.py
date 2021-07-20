@@ -23,6 +23,7 @@ setuptools.setup(
     url="https://github.com/temuller/piscola",
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
+    scripts=["bin/piscola"],
     python_requires=">=3.6",
     classifiers=[
         "Programming Language :: Python :: 3",
