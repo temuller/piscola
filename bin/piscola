@@ -39,7 +39,7 @@ if __name__ == "__main__":
     parser.add_argument("-sfd", "--dustmaps_dir", dest="dustmaps_dir", action="store", default=None)
 
     args = parser.parse_args()
-    
+
     sn = piscola.call_sn(args.sn_name, args.data_dir)
 
     # apply maks
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     sn.normalize_data()
     sn.fit_lcs(args.kernel1, args.kernel2)
     sn.mangle_sed(args.min_phase, args.max_phase, kernel=args.mangling_kernel, scaling=args.dust_scaling,
-                  reddening_law=args.reddening_law, dustmaps_dir=args.dustmaps_dir, ebv=ebv)
+                  reddening_law=args.reddening_law, dustmaps_dir=args.dustmaps_dir, ebv=args.ebv)
     sn.calculate_lc_params()
 
     if args.save:
