@@ -112,6 +112,19 @@ Finally, you can access the light curve parameters which are stored in a diction
 
 	dict_keys(['mb', 'mb_err', 'dm15', 'dm15_err', 'colour', 'colour_err'])
 
+
+Corrected SED
+##############
+
+The user can access the corrected SED (end product) saved in:
+
+.. code:: python
+
+	sn.corrected_sed
+
+which comes in a pandas ``DataFrame``. With this SED, one can estimate the rest-frame light curves in any bands desired. Remember that PISCOLA only estimates the rest-frame light curves in the standard Bessell filters and the filters used for the observations by default. If the user wants to use other filters, this needs to be done manually.
+
+
 Saving and loading a supernova object
 #####################################
 
