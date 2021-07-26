@@ -116,3 +116,52 @@ Or, if you just want to fit using the default values, you can use :func:`sn.do_m
 	sn = piscola.call_sn('03D1au')
 	sn.do_magic()
 
+Using the CLI
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+PISCOLA can also be used from a terminal. The command-line interface can be used as follows:
+
+.. code:: bash
+
+	piscola <sn_name> [options]
+
+To check the available options, type:
+
+.. code:: bash
+
+	piscola -h
+
+.. code:: bash
+
+	usage: piscola <sn_name> [options]
+
+	PISCOLA (v0.1.1) - Type Ia light-curve fitter
+
+	positional arguments:
+	  sn_name               name of the supernova
+
+	optional arguments:
+	  -h, --help            show this help message and exit
+	  --data_dir DATA_DIR   directory where to find the SN file with the light curve data
+	  -s, --save            saves the SN object into a pickle file
+	  -sd SAVE_DIR, --save_dir SAVE_DIR
+		                directory where to save the SN object
+	  --mask_snr MASK_SNR   masks the data given a signal-to-noise threshold
+	  --mask_phase MASK_PHASE MASK_PHASE
+		                masks the data given a phase range
+	  -k1 {matern32,matern52,squaredexp}, --kernel1 {matern32,matern52,squaredexp}
+		                kernel to be used by the gaussian process fit of the time axis
+	  -k2 {matern32,matern52,squaredexp}, --kernel2 {matern32,matern52,squaredexp}
+		                kernel to be used by the gaussian process fit of the wavelength axis
+	  --min_phase MIN_PHASE
+		                minimum phase of the light curves to be used
+	  --max_phase           maximum phase of the light curves to be used
+	  -mk {matern32,matern52,squaredexp}, --mangling_kernel {matern32,matern52,squaredexp}
+		                kernel to be used by the mangling function
+	  --ebv EBV             E(B-V) value to be used instead of the dust maps
+	  -ds {0.86,1.0}, --dust_scaling {0.86,1.0}
+		                scaling of the dust maps
+	  -rl {ccm89,odonnell94,fitzpatrick99,calzetti00,fm07}, --reddening_law {ccm89,odonnell94,fitzpatrick99,calzetti00,fm07}
+		                dust extinction law
+	  -sfd DUSTMAPS_DIR, --dustmaps_dir DUSTMAPS_DIR
+
