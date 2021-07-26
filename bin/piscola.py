@@ -35,7 +35,6 @@ def main(args=None):
                         action="store",
                         help="directory where to save the SN object"
                         )
-    #parser.add_argument("-l", "--load", dest="load", action="store_true", help="loads the SN object from a pickle file")
 
     # masking
     parser.add_argument("--mask_snr",
@@ -47,7 +46,7 @@ def main(args=None):
                         dest="mask_phase",
                         action="store",
                         nargs=2,
-                        help="masks the data given a phase range"
+                        help="masks the data given a phase range (2 argument values required: min and max phases)"
                         )
 
     # lc fits
@@ -136,7 +135,7 @@ def main(args=None):
     sn.calculate_lc_params()
 
     if args.save:
-        sn.save(path=args.save_dir)
+        sn.save_sn(path=args.save_dir)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
