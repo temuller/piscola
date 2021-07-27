@@ -12,10 +12,10 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from peakutils import peak
+import pickle5 as pickle
 import pandas as pd
 import numpy as np
 import random
-import pickle
 import math
 import glob
 import os
