@@ -77,7 +77,7 @@ For the last option you can run this from a terminal (this requires ``wget`` whi
 
 .. code::
 
-	chmod -x download_dustmaps.py
+	chmod +x download_dustmaps.py
 	python download_dustmaps.py <path/where/to/download>
 
 If the argument is empty, the ``sfddata-master`` directory with SFD maps files will be downloaded in your current directory, or you can use ``piscola`` as argument, which will download the files under the default directory (:code:`src/piscola/sfddata-master`) if PISCOLA is installed. You can also give a different path as argument if desired.
