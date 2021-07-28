@@ -43,6 +43,8 @@ python download_dustmaps.py piscola
 
 ## Recommended installation
 
+Here is an easy way of installing and making PISCOLA work:
+
 ```
 conda create -n pisco pip  # creates an environment called pisco with pip
 conda activate pisco
