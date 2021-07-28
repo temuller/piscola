@@ -37,19 +37,15 @@ To install the code from source, do the following:
 
 	git clone https://github.com/temuller/piscola.git
 
-This will clone the repository locally (`git <https://git-scm.com/>`_ needs to be installed). You will need to change directory (:code:`cd piscola`) and install the dependencies:
+This will clone the repository locally (`git <https://git-scm.com/>`_ needs to be installed). You will need to change directory (:code:`cd piscola`) and install the package:
 
 .. code::
 
-	pip install -r requirements.txt
+	pip install .
 
-And finally proceed to install the code in the usual way:
+**Note:** Have in mind that installing from source could install an unstable/broken package as I am constantly developing it.
 
-.. code::
-
-	python setup.py install
-
-If you use the ``--user`` flag, the package will be installed in the user ``site-packages``. Alternatively, you can use the ``--home`` or ``--prefix`` option to install the package in a different location (where you have the necessary permissions). The last command also installs the dependencies, but some of them are needed for the installation of the package (like ``numpy``).
+Another option would be using :code:`python setup.py install`, although the requirements would need to be installed before with :code:`pip install -r requirements.txt`. If you use the ``--user`` flag, the package will be installed in the user ``site-packages``. Alternatively, you can use the ``--home`` or ``--prefix`` option to install the package in a different location (where you have the necessary permissions). However, it is highly recommended to use environments (see :ref:`envconf`).
 
 Using pip + git
 ########################
@@ -67,21 +63,41 @@ SFD dust maps
 
 PISCOLA uses dust maps taken from the `sfdmap repository <https://github.com/kbarbary/sfdmap>`_ to calculate extinction. By default, PISCOLA looks under the :code:`src/piscola/sfddata-master` directory (they will already be there if you cloned the repository), although you can change the path where the dust maps are found (see the `Extinction correction <extinction_correction>`_ section). There are a few ways to download these dust maps:
 
-	1. Manually download the files from this links: `https://github.com/kbarbary/sfddata <https://github.com/kbarbary/sfddata/>`_.
+	1. Use the ``download_dustmaps.py`` script included in the repository which will download and extract the files in a directory with the name ``sfddata-master`` (**recommended**, see below).
 
 	2. Run this command on a terminal: ``wget https://github.com/kbarbary/sfddata/archive/master.tar.gz && tar xzf master.tar.gz``.
 
-	3. Use the ``download_dustmaps.py`` script included in the repository which will download and extract the files in a directory with the name ``sfddata-master``.
+	3. Manually download the files from this links: `https://github.com/kbarbary/sfddata <https://github.com/kbarbary/sfddata/>`_.
 
-For the last option you can run this from a terminal (this requires ``wget`` which is in the package's requirements):
+For option 1, you can run this from a terminal (this requires ``wget`` which is in the package's requirements):
 
 .. code::
 
 	chmod +x download_dustmaps.py
-	python download_dustmaps.py <path/where/to/download>
+	download_dustmaps.py piscola
 
-If the argument is empty, the ``sfddata-master`` directory with SFD maps files will be downloaded in your current directory, or you can use ``piscola`` as argument, which will download the files under the default directory (:code:`src/piscola/sfddata-master`) if PISCOLA is installed. You can also give a different path as argument if desired.
+or simply:
 
+.. code::
+
+	python download_dustmaps.py piscola
+
+The ``piscola`` argument will download the files under the default directory (:code:`/path/to/piscola/sfddata-master`) if PISCOLA is installed (**recommended**). You can also give a different path as argument if desired or leave an empty argument, which will download the ``sfddata-master`` directory with SFD maps files in your current directory.
+
+Recommended installation
+########################
+
+This is some sort of "summary" with the recommended and easy way of installing and making PISCOLA work:
+
+.. code::
+
+	conda create -n pisco pip  # creates an environment called pisco with pip
+	conda activate pisco
+	pip install piscola
+	wget https://raw.githubusercontent.com/temuller/piscola/master/download_dustmaps.py
+	python download_dustmaps.py piscola
+
+and that is all!
 
 Test the installation
 ########################

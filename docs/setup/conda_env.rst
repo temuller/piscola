@@ -13,9 +13,9 @@ To setup your environment through conda environment use:
 
 .. code::
 
-	conda create --name <env_name>
+	conda create --name <env_name> pip
 
-By adding the ``--file requirements.txt`` flag you will create the environment with the required dependencies for PISCOLA to work (the ``requirements.txt`` file can be downloaded from the repository). 
+By installing pip in the environment, you can then use it and it will not affect your packages outside the environment. By adding the ``--file requirements.txt`` flag you will create the environment with the required dependencies for PISCOLA to work (the ``requirements.txt`` file can be downloaded from the repository). Have in mind that this will use the conda versions of the packages.
 
 **Note:** the versions of the packages installed with conda are not always the same as the ones installed with pip.
 
@@ -29,4 +29,3 @@ If your prefer to use pyenv, you can use:
 
 	pyenv virtualenv <env_name>
 
-But you will need to install the dependencies with a separate command. 
