@@ -23,12 +23,7 @@ setuptools.setup(
     url="https://github.com/temuller/piscola",
     package_dir={"": "src"},
     packages=setuptools.find_packages(where="src"),
-    #scripts=["bin/piscola"],
-    entry_points ={
-            'console_scripts': [
-                'piscola = bin.piscola:main'
-            ]
-        },
+    scripts=["bin/piscola"],
     python_requires=">=3.6",
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -38,5 +33,4 @@ setuptools.setup(
     install_requires=requirements,
     package_data={'piscola' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*", "standards/*"]},
     include_package_data=True,
-    #zip_safe=True,
 )
