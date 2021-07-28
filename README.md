@@ -30,9 +30,7 @@ git clone https://github.com/temuller/piscola.git
 
 cd piscola
 
-pip install -r requirements.txt
-
-python setup.py install
+pip install .
 ```
 
 ## SFD dust maps
@@ -40,8 +38,16 @@ python setup.py install
 PISCOLA uses the dust maps from the [sfddata](https://github.com/kbarbary/sfddata/) repository. These can be downloaded and moved into the directory where PISCOLA looks for them by default, by using the ``download_dustmaps.py`` script included in this repository (this script relies on [wget](https://pypi.org/project/wget/)):
 
 ```
-chmod +x download_dustmaps.py
+python download_dustmaps.py piscola
+```
 
+## Recommended installation
+
+```
+conda create -n pisco pip  # creates an environment called pisco with pip
+conda activate pisco
+pip install piscola
+wget https://raw.githubusercontent.com/temuller/piscola/master/download_dustmaps.py
 python download_dustmaps.py piscola
 ```
 
