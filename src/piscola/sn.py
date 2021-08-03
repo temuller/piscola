@@ -40,7 +40,8 @@ def _initialise_sn(sn_file):
 
     """
 
-    name, z, ra, dec = pd.read_csv(sn_file, delim_whitespace=True, nrows=1).iloc[0].values
+    name, z, ra, dec = pd.read_csv(sn_file, delim_whitespace=True, nrows=1,
+                                    converters={'name':str, 'z':float, 'ra':float, 'dec':float}).iloc[0].values
     sn_df = pd.read_csv(sn_file, delim_whitespace=True, skiprows=2)
     sn_df.columns = sn_df.columns.str.lower()
 
