@@ -209,26 +209,25 @@ def gp_mf_fit(x_data, y_data, yerr_data=0.0, kernel='squaredexp', x_edges=[1e3, 
     mean_model = y.mean()
 
     var, length = np.var(y), 20  # fixed length to give smooth fits
-    bounds_var, bounds_length = [(np.log(1e-8), np.log(1e4))], [(np.log(1e-6), np.log(1e4))]
 
     # a constant kernel is used to allow adding bounds
-    k1 = george.kernels.ConstantKernel(np.log(var), bounds=bounds_var)
+    k1 = george.kernels.ConstantKernel(np.log(var))
 
     if kernel == 'matern52':
-        k2 = george.kernels.Matern52Kernel(length**2, metric_bounds=bounds_length)
+        k2 = george.kernels.Matern52Kernel(length**2)
     elif kernel == 'matern32':
-        k2 = george.kernels.Matern32Kernel(length**2, metric_bounds=bounds_length)
+        k2 = george.kernels.Matern32Kernel(length**2)
     elif kernel == 'squaredexp':
-        k2 = george.kernels.ExpSquaredKernel(length**2, metric_bounds=bounds_length)
+        k2 = george.kernels.ExpSquaredKernel(length**2)
     else:
         raise ValueError(f'"{kernel}" is not a valid kernel.')
 
     ker = k1*k2
 
-    gp = george.GP(kernel=ker, mean=mean_model)
+    gp = george.GP(kernel=ker, mean=mean_model, solver=george.HODLRSolver)
     gp.compute(x, yerr)
 
-    step = 1/x_norm
+    step = 5/x_norm
     x_pred = np.arange(x_min, x_max+step, step)
 
     mean, var = gp.predict(y, x_pred, return_var=True)
@@ -329,7 +328,7 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kerne
     ker1, ker2 = kernels_dict[kernel1], kernels_dict[kernel2]
     ker = var * ker1(length1**2, ndim=2, axes=0) * ker2(length2**2, ndim=2, axes=1)
 
-    mean_function =  y.min()
+    mean_function =  y.max()  # in mag-space -> faintest datapoint
     gp = george.GP(kernel=ker, mean=mean_function, fit_mean=True)
     # initial guess
     gp.compute(X, yerr)

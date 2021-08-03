@@ -121,7 +121,7 @@ def mangle(wave_array, flux_ratio_array, flux_ratios_err_array, sed_wave, sed_fl
 
     args=(flux_ratios_err_array, wave_array, sed_wave, sed_flux, obs_fluxes, norm,
                                                                 bands, filters, method, kernel, x_edges, linear_extrap)
-    lmfit_results = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-4, ftol=1e-4, max_nfev=80)
+    lmfit_results = lmfit.minimizer.minimize(fcn=residual, params=params, args=args, xtol=1e-2, ftol=1e-2, max_nfev=30)
 
     ###############################
     #### Use Optimized Results ####
