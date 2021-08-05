@@ -341,15 +341,13 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0, kernel1='matern52', kerne
 
     # check edges
     if np.any(x1_edges):
-        x1_edges = np.copy(x1_edges)
-        x1_edges /= x1_norm
-        x1_min, x1_max = x1_edges[0], x1_edges[-1]
+        x1_edges = np.copy(x1_edges)/x1_norm
+        x1_min, x1_max = x1_edges
     else:
         x1_min, x1_max = x1.min(), x1.max()
     if np.any(x2_edges):
-        x2_edges = np.copy(x2_edges)
-        x2_edges /= x2_norm
-        x2_min, x2_max = x2_edges[0] - 200/x2_norm, x2_edges[-1] + 200/x2_norm  # extrapolate wavelength edges a bit further
+        x2_edges = np.copy(x2_edges)/x2_norm
+        x2_min, x2_max = x2_edges
     else:
         x2_min, x2_max = x2.min(), x2.max()
 

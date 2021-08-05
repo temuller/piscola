@@ -615,11 +615,11 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel='matern52', kernel2='matern52', fit_mag=True):
+    def fit_lcs(self, kernel='matern52', kernel2='matern52', fit_mag=True, min_time_extrap=-3, max_time_extrap=5,
+                                                                        min_wave_extrap=-200, max_wave_extrap=200):
         """Fits the data for each band using gaussian process
 
-        The fits are done independently for each band. The initial B-band peak time is estimated with
-        the pivot band as long as a peak can me calculated, having a derivative equal to zero.
+        The time of rest-frame B-band peak luminosity is estimated by finding where the derivative is equal to zero.
 
         Parameters
         ----------
@@ -630,6 +630,16 @@ class sn(object):
         fit_mag : bool, default ``True``
             If ``True``, the data is fitted in magnitude space (this is recommended for 2D fits). Otherwise, the data is
             fitted in flux space.
+        min_time_extrap : int or float, default ``-3``
+            Number of days the light-curve fit is extrapolated in the time axis with respect to first epoch.
+        max_time_extrap : int or float, default ``5``
+            Number of days the light-curve fit is extrapolated in the time axis with respect to last epoch.
+        min_wave_extrap : int or float, default ``-200``
+            Number of angstroms the light-curve fit is extrapolated in the wavelengths axis with respect to reddest wavelength.
+            This depends on the reddest filter.
+        max_wave_extrap : int or float, default ``200``
+            Number of angstroms the light-curve fit is extrapolated in the wavelengths axis with respect to bluest wavelength.
+            This depends on the bluest filter.
         """
         ########################
         ####### GP Fit #########
@@ -644,15 +654,15 @@ class sn(object):
         wave_array = np.hstack([[self.filters[band]['eff_wave']]*len(self.data[band]['time']) for band in self.bands])
 
         # edges to extrapolate in time and wavelength
-        time_edges = np.array([time_array.min()-3, time_array.max()+5])  # the numbers are extrapolation in days
+        time_edges = np.array([time_array.min()+min_time_extrap, time_array.max()+max_time_extrap])
         bands_waves = np.hstack([self.filters[band]['wave'] for band in self.bands])
-        bands_edges = np.array([bands_waves.min(), bands_waves.max()])
+        bands_edges = np.array([bands_waves.min()+min_wave_extrap, bands_waves.max()+max_wave_extrap])
 
         if fit_mag:
-            mask = flux_array > 0.0  # prevents invalid inputs in logarithm
-            mag_array, mag_err_array = flux2mag(flux_array[mask], 0.0, flux_err_array[mask])  # ZPs are not necessary for fitting
-            time_array = time_array[mask]
-            wave_array = wave_array[mask]
+            mask = flux_array > 0.0  # prevents nan values
+            # ZPs are set to 0.0 to retrieve flux values after the GP fit
+            mag_array, mag_err_array = flux2mag(flux_array[mask], 0.0, flux_err_array[mask])
+            time_array, wave_array = time_array[mask], wave_array[mask]
 
             timeXwave, lc_mean, lc_std, gp_results = gp_2d_fit(time_array, wave_array, mag_array, mag_err_array,  kernel1=kernel,
                                                         kernel2=kernel2, x1_edges=time_edges, x2_edges=bands_edges)
