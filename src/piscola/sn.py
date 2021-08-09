@@ -1351,18 +1351,19 @@ class sn(object):
             dm15 = B15 - mb
 
             # covariance from the 2D gp fit to the light curves
-            gp_results = self.lc_fits['gp_results']
-            gp = gp_results['gp']
-            x1_norm, x2_norm, y_norm = gp_results['x1_norm'], gp_results['x2_norm'], gp_results['y_norm']
-
-            x1_range = np.array([self.tmax, self.tmax + 15*(1+self.z)])/x1_norm
-
-            eff_wave_B = self.filters[bessell_b]['eff_wave']*(1+self.z)
-            x2_range = np.array([eff_wave_B])/x2_norm
-
-            X_predict = np.array(np.meshgrid(x1_range, x2_range)).reshape(2, -1).T
-            _, cov_matrix = gp(X_predict)
-            cov_B0_B15 = cov_matrix[0][1]*y_norm**2
+            # gp_results = self.lc_fits['gp_results']
+            # gp = gp_results['gp']
+            # x1_norm, x2_norm, y_norm = gp_results['x1_norm'], gp_results['x2_norm'], gp_results['y_norm']
+            #
+            # x1_range = np.array([self.tmax, self.tmax + 15*(1+self.z)])/x1_norm
+            #
+            # eff_wave_B = self.filters[bessell_b]['eff_wave']*(1+self.z)
+            # x2_range = np.array([eff_wave_B])/x2_norm
+            #
+            # X_predict = np.array(np.meshgrid(x1_range, x2_range)).reshape(2, -1).T
+            # _, cov_matrix = gp(X_predict)
+            # cov_B0_B15 = cov_matrix[0][1]*y_norm**2
+            cov_B0_B15 = 0.0  # no covariance included
 
             dm15_err = np.sqrt(np.abs(mb_err**2 + B15_err**2 - 2*cov_B0_B15))
 
@@ -1383,19 +1384,20 @@ class sn(object):
                 colour = mb - V0
 
                 # covariance from the 2D gp fit to the light curves
-                gp_results = self.lc_fits['gp_results']
-                gp = gp_results['gp']
-                x1_norm, x2_norm, y_norm = gp_results['x1_norm'], gp_results['x2_norm'], gp_results['y_norm']
-
-                x1_range = np.array([self.tmax])/x1_norm
-
-                eff_wave_B = self.filters[bessell_b]['eff_wave']*(1+self.z)
-                eff_wave_V = self.filters[bessell_v]['eff_wave']*(1+self.z)
-                x2_range = np.array([eff_wave_B, eff_wave_V])/x2_norm
-
-                X_predict = np.array(np.meshgrid(x1_range, x2_range)).reshape(2, -1).T
-                _, cov_matrix = gp(X_predict)
-                cov_B_V = cov_matrix[0][1]*y_norm**2
+                # gp_results = self.lc_fits['gp_results']
+                # gp = gp_results['gp']
+                # x1_norm, x2_norm, y_norm = gp_results['x1_norm'], gp_results['x2_norm'], gp_results['y_norm']
+                #
+                # x1_range = np.array([self.tmax])/x1_norm
+                #
+                # eff_wave_B = self.filters[bessell_b]['eff_wave']*(1+self.z)
+                # eff_wave_V = self.filters[bessell_v]['eff_wave']*(1+self.z)
+                # x2_range = np.array([eff_wave_B, eff_wave_V])/x2_norm
+                #
+                # X_predict = np.array(np.meshgrid(x1_range, x2_range)).reshape(2, -1).T
+                # _, cov_matrix = gp(X_predict)
+                # cov_B_V = cov_matrix[0][1]*y_norm**2
+                cov_B_V = 0.0  # no covariance included
 
                 colour_err = np.sqrt(np.abs(mb_err**2 + V0_err**2 - 2*cov_B_V))
 
