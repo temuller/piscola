@@ -640,7 +640,7 @@ class sn(object):
         kernel : str, default ``matern52``
             Kernel to be used in the **time**-axis when fitting the light curves with gaussian process. E.g.,
             ``matern52``, ``matern32``, ``squaredexp``.
-        kernel2 : str, default ``squaredexp``
+        kernel2 : str, default ``matern52``
             Kernel to be used in the **wavelengt**-axis when fitting the light curves with gaussian process. E.g.,
             ``matern52``, ``matern32``, ``squaredexp``.
         fit_mag : bool, default ``True``
