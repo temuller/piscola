@@ -11,7 +11,6 @@
 [![PyPI](https://img.shields.io/pypi/v/piscola?label=PyPI&logo=pypi&logoColor=white)](https://pypi.org/project/piscola/)
 [![Conda Version](https://img.shields.io/conda/vn/temuller/piscola?label=conda%20version)](https://anaconda.org/temuller/piscola)
 
-
 Read the full documentation at: [piscola.readthedocs.io](http://piscola.readthedocs.io/). See below for a summary.
 
 ___
@@ -75,6 +74,27 @@ sn.do_magic()
 ```
 
 You can find an example of input file in the [data](https://github.com/temuller/piscola/tree/master/data) directory.
+
+## Citing PISCOLA
+
+If you make use of PISCOLA in your projects, please cite [Müller-Bravo et al. (2021)](https://ui.adsabs.harvard.edu/abs/2021MNRAS.tmp.2778M/abstract). See below for the bibtex format:
+
+```code
+@ARTICLE{2021MNRAS.tmp.2778M,
+       author = {{M{\"u}ller-Bravo}, Tom{\'a}s E. and {Sullivan}, Mark and {Smith}, Mathew and {Frohmaier}, Chris and {Guti{\'e}rrez}, Claudia P. and {Wiseman}, Philip and {Zontou}, Zoe},
+	title = "{PISCOLA: a data-driven transient light-curve fitter}",
+      journal = {\mnras},
+     keywords = {software: data analysis, supernovae: general, cosmology: observations, distance scale, Astrophysics - High Energy Astrophysical Phenomena, Astrophysics - Cosmology and Nongalactic Astrophysics, Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Solar and Stellar Astrophysics},
+	 year = 2021,
+	month = oct,
+	  doi = {10.1093/mnras/stab3065},
+archivePrefix = {arXiv},
+       eprint = {2110.11340},
+ primaryClass = {astro-ph.HE},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2021MNRAS.tmp.2778M},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+```
 
 ## Contributing and raising an issue
 
