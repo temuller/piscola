@@ -1349,23 +1349,7 @@ class sn(object):
             B15, B15_err = b_mag[id_15], b_mag_err[id_15]
 
             dm15 = B15 - mb
-
-            # covariance from the 2D gp fit to the light curves
-            # gp_results = self.lc_fits['gp_results']
-            # gp = gp_results['gp']
-            # x1_norm, x2_norm, y_norm = gp_results['x1_norm'], gp_results['x2_norm'], gp_results['y_norm']
-            #
-            # x1_range = np.array([self.tmax, self.tmax + 15*(1+self.z)])/x1_norm
-            #
-            # eff_wave_B = self.filters[bessell_b]['eff_wave']*(1+self.z)
-            # x2_range = np.array([eff_wave_B])/x2_norm
-            #
-            # X_predict = np.array(np.meshgrid(x1_range, x2_range)).reshape(2, -1).T
-            # _, cov_matrix = gp(X_predict)
-            # cov_B0_B15 = cov_matrix[0][1]*y_norm**2
-            cov_B0_B15 = 0.0  # no covariance included
-
-            dm15_err = np.sqrt(np.abs(mb_err**2 + B15_err**2 - 2*cov_B0_B15))
+            dm15_err = np.sqrt(np.abs(mb_err**2 + B15_err**2))
 
         else:
             dm15 = dm15_err = np.nan
@@ -1382,24 +1366,7 @@ class sn(object):
                 V0, V0_err = v_mag[id_v0], v_mag_err[id_v0]
 
                 colour = mb - V0
-
-                # covariance from the 2D gp fit to the light curves
-                # gp_results = self.lc_fits['gp_results']
-                # gp = gp_results['gp']
-                # x1_norm, x2_norm, y_norm = gp_results['x1_norm'], gp_results['x2_norm'], gp_results['y_norm']
-                #
-                # x1_range = np.array([self.tmax])/x1_norm
-                #
-                # eff_wave_B = self.filters[bessell_b]['eff_wave']*(1+self.z)
-                # eff_wave_V = self.filters[bessell_v]['eff_wave']*(1+self.z)
-                # x2_range = np.array([eff_wave_B, eff_wave_V])/x2_norm
-                #
-                # X_predict = np.array(np.meshgrid(x1_range, x2_range)).reshape(2, -1).T
-                # _, cov_matrix = gp(X_predict)
-                # cov_B_V = cov_matrix[0][1]*y_norm**2
-                cov_B_V = 0.0  # no covariance included
-
-                colour_err = np.sqrt(np.abs(mb_err**2 + V0_err**2 - 2*cov_B_V))
+                colour_err = np.sqrt(np.abs(mb_err**2 + V0_err**2))
 
         self.lc_parameters = {'mb':mb, 'mb_err':mb_err, 'dm15':dm15,
                               'dm15_err':dm15_err, 'colour':colour, 'colour_err':colour_err}
@@ -1509,3 +1476,71 @@ class sn(object):
         self.fit_lcs()
         self.mangle_sed()
         self.calculate_lc_params()
+
+
+    def export_fits(output_file=None):
+        """Exports the light-curve fits into an output file.
+
+        Parameters
+        ----------
+        output_file : str, default ``None``
+            Name of the output file.
+        """
+
+        if output_file is None:
+            output_file = f'{self.name}_fits.dat'
+
+        df_list = []
+        columns = ['time', 'phase', 'flux', 'flux_err',
+                           'mag', 'mag_err', 'zp', 'band']
+
+        for band in self.bands:
+            band_info = self.lc_fits[band]
+            zp = self.data[band]['zp']
+            band_info['zp'] = zp
+            # dictionary for rounding numbers for pretty output
+            rounding_dict = {key:3 if 'flux' not in key else 99 for
+                                                 key in band_info.keys() }
+            band_info['band'] = band
+
+            # dataframe
+            band_df = pd.DataFrame(band_info)
+            band_df = band_df.round(rounding_dict)
+            df_list.append(band_df[columns])
+
+        # concatenate the dataframes for all the bands for exporting
+        df_fits = pd.concat(df_list)
+        df_fits.to_csv(output_file, sep='\t', index=False)
+
+
+    def export_restframe_lcs(output_file=None):
+        """Exports the corrected, rest-frame light-curves into an output file.
+
+        Parameters
+            ----------
+            output_file : str, default ``None``
+                Name of the output file.
+        """
+
+        if output_file is None:
+                output_file = f'{self.name}_restframe_lcs.dat'
+
+        df_list = []
+        columns = ['phase', 'flux', 'flux_err',
+                           'mag', 'mag_err', 'zp', 'band']
+
+        for band in self.bands:
+            band_info = self.corrected_lcs[band]
+            # dictionary for rounding numbers for pretty output
+            rounding_dict = {key:3 if 'flux' not in key else 99 for
+                                                 key in band_info.keys() }
+            band_info['band'] = band
+
+            # dataframe
+            band_df = pd.DataFrame(band_info)
+            band_df = band_df.round(rounding_dict)
+            df_list.append(band_df[columns])
+
+        # concatenate the dataframes for all the bands for exporting
+        df_fits = pd.concat(df_list)
+        df_fits.to_csv(output_file, sep='\t', index=False)
