@@ -29,7 +29,7 @@ PISCOLA is being actively developed in `a public repository on GitHub
 
 .. toctree::
    :maxdepth: 1
-   :caption: User Guide
+   :caption: API User Guide
 
    user/sn_object.rst
    user/extinction_correction.rst

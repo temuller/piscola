@@ -42,17 +42,16 @@ The ``sn`` object will contain the SN information, i.e., name, redshift, RA, DEC
 	dict_keys(['Megacam_g', 'Megacam_r', 'Megacam_i', 'Megacam_z'])
 	dict_keys(['time', 'flux', 'flux_err', 'zp', 'mag_sys'])
 
-We need to **normalize** the data so the flux is converted to physical units if it is not already in those units. We can also mask the data according to the signal-to-noise ratio (``S/N > 5``, by default) and/or phases wanted by using :func:`sn.mask_data()`. The latter is not done by default when calling the function. The light curves can be plotted by calling :func:`sn.plot_data()`.
+We can mask the data according to the signal-to-noise ratio (``S/N > 5``, by default) and/or phases wanted by using :func:`sn.mask_data()`. The latter is not done by default when calling the function. The light curves can be plotted by calling :func:`sn.plot_data()`.
 
 .. code:: python
 
-	sn.normalize_data()
 	sn.mask_data()
 	sn.plot_data()
 
 .. image:: basic_example/03D1au_lcs.png
 
-To fit the light curves one needs to use :func:`sn.fit_lcs()`, where the user can decide which kernel to use (``matern52`` by default). One can also plot the fits afterwards by using ``sn.plot_fits()``. From the light curve fits you will get an initial estimation of the rest-frame B-band peak (plotted as a vertical black dashed line).
+To fit the light curves one needs to use :func:`sn.fit_lcs()`, where the user can decide which kernel to use (``matern52`` by default). The light-curves are **normalized** internally before being fitted, so the flux is converted to physical units if it is not already in those units. One can also plot the fits afterwards by using ``sn.plot_fits()``. From the light curve fits you will get an initial estimation of the rest-frame B-band peak (plotted as a vertical black dashed line).
 
 
 .. code:: python
@@ -104,7 +103,6 @@ Putting it all together
 
 	sn = piscola.call_sn('03D1au')
 
-	sn.normalize_data()
 	sn.fit_lcs()
 	sn.mangle_sed()
 	sn.calculate_lc_params()

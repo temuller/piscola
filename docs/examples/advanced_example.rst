@@ -6,15 +6,13 @@ Advanced Example
 Exploring fitting parameters
 ############################
 
-In here we will see in more detail the different functionality PISCOLA incorporates. As a reminder, PISCOLA looks for the supernova file in the directory called :code:`data` under the working directory. Always remember to use :code:`sn.normalize_data()` so PISCOLA converts all fluxes to physical units. This line is run explicitly so the user can understand what the code is doing "under the hood". We can plot the data in magnitude or flux space:
+In here we will see in more detail the different functionality PISCOLA incorporates. As a reminder, PISCOLA looks for the supernova file in the directory called :code:`data` under the working directory. We can plot the data in magnitude or flux space:
 
 .. code:: python
 
 	import piscola
 
 	sn = piscola.call_sn('03D1au', directory='data') 
-
-	sn.normalize_data()
 	sn.plot_data(plot_type='mag')
 
 .. image:: advanced_example/lcs.png
@@ -28,7 +26,7 @@ Let's mask the data. We can chose to keep the data with a signal-to-noise (S/N) 
 
 .. image:: advanced_example/lcs2.png
 
-The data looks much nicer now. We can fit the light-curves with Gaussian Process using different kernels for the time (:code:`kernel`) and wavelength :code:`kernel2` axes. We can also choose to plot the fitted light curves together or separately:
+The data looks much nicer now. We can fit the light-curves with Gaussian Process using different kernels for the time (:code:`kernel`) and wavelength :code:`kernel2` axes. Remember that PISCOLA normalizes the light curves internally, converting all th fluxes to physical units (see :code:`sn._normalize_data()` for more information on how the code does it "under the hood"). We can also choose to plot the fitted light curves together or separately:
 
 .. code:: python
 	
@@ -124,6 +122,22 @@ The user can access the corrected SED (end product) saved in:
 
 which comes in a pandas ``DataFrame``. With this SED, one can estimate the rest-frame light curves in any bands desired. Remember that PISCOLA only estimates the rest-frame light curves in the standard Bessell filters and the filters used for the observations by default. If the user wants to use other filters, this needs to be done manually.
 
+Exporting the results
+#####################
+
+After finishing the whole correction process, PISCOLA gives you an easy way of exporting the light-curve fits:
+
+.. code:: python
+
+	sn.export_fits(<output_file>)
+
+and the corrected, restframe light curves:
+
+.. code:: python
+
+	sn.export_restframe_lcs(<output_file>)
+
+The format of the output files consists of columns with their respective names, which makes them easy to read with `pandas <https://pandas.pydata.org/>`_ and other packages.
 
 Saving and loading a supernova object
 #####################################
