@@ -607,11 +607,11 @@ class sn(object):
         plt.show()
 
     def normalize_data(self):
-        """This function is depricated starting from v0.1.5 as it is now included in ``self.fit_lcs()``.
+        """This function is depricated starting from v0.1.5 as it is now included in :func:`fit_lcs()`.
 
         **Note**: if you call this function, it will not change the results. It is just
         maintained for compatibility purposes, but might be removed in future versions.
-        See ``self._normalize_data()`` for the original documentation.
+        See :func:`_normalize_data()` for the original documentation.
         """
 
         self._normalize_data()
@@ -1203,7 +1203,7 @@ class sn(object):
     def _calculate_corrected_lcs(self):
         """Calculates the SN light curves applying extinction and k-corrections.
 
-        **Note:** this function is used inside :func:`self.calculate_lc_params()`
+        **Note:** this function is used inside :func:`calculate_lc_params()`
         """
 
         corrected_lcs = {}
