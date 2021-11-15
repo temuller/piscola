@@ -1488,7 +1488,7 @@ class sn(object):
         self.calculate_lc_params()
 
 
-    def export_fits(output_file=None):
+    def export_fits(self, output_file=None):
         """Exports the light-curve fits into an output file.
 
         Parameters
@@ -1523,7 +1523,7 @@ class sn(object):
         df_fits.to_csv(output_file, sep='\t', index=False)
 
 
-    def export_restframe_lcs(output_file=None):
+    def export_restframe_lcs(self, output_file=None):
         """Exports the corrected, rest-frame light-curves into an output file.
 
         Parameters
