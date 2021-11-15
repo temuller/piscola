@@ -606,8 +606,17 @@ class sn(object):
 
         plt.show()
 
-
     def normalize_data(self):
+        """This function is depricated starting from v0.1.5 as it is now included in ``self.fit_lcs()``.
+
+        **Note**: if you call this function, it will not change the results. It is just
+        maintained for compatibility purposes, but might be removed in future versions.
+        See ``self._normalize_data()`` for the original documentation.
+        """
+
+        self._normalize_data()
+
+    def _normalize_data(self):
         """Normalizes the fluxes and zero-points (ZPs).
 
         Fluxes are converted to physical units by calculating the ZPs according to the
@@ -661,6 +670,7 @@ class sn(object):
         ####### GP Fit #########
         ########################
 
+        self._normalize_data()
         self.calc_pivot()
 
         flux_array = np.hstack([self.data[band]['flux'] for band in self.bands])
