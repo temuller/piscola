@@ -443,8 +443,8 @@ class sn(object):
         """Sets the effective wavelength of each band using the current state of the SED."""
 
         for band in self.filters.keys():
-            self.filters[band]['eff_wave'] = calc_eff_wave(self.sed['wave'],
-                                                           self.sed['flux'],
+            self.filters[band]['eff_wave'] = calc_eff_wave(self.sed['data']['wave'],
+                                                           self.sed['data']['flux'],
                                                            self.filters[band]['wave'],
                                                            self.filters[band]['transmission'],
                                                            self.filters[band]['response_type'])
