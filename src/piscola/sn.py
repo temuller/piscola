@@ -1038,7 +1038,7 @@ class sn(object):
             self.mangled_sed = pd.concat([self.mangled_sed, phase_df])  # updated mangled SED for a single epoch
 
         # correct mangled SED for MW extinction first and then de-redshift it ("move" it back in z)
-        self.corrected_sed = self.mangled_sed.copy()
+        self.corrected_sed = self.mangled_sed.astype('float64').copy()
         if correct_extinction:
             self.corrected_sed.flux = deredden(self.corrected_sed.wave.values, self.corrected_sed.flux.values,
                                                                                     self.ra, self.dec, scaling,
