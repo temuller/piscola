@@ -6,7 +6,7 @@
 [![repo](https://img.shields.io/badge/GitHub-temuller%2Fpiscola-blue.svg?style=flat)](https://github.com/temuller/piscola)
 [![documentation status](https://readthedocs.org/projects/piscola/badge/?version=latest&style=flat)](https://piscola.readthedocs.io/en/latest/?badge=latest)
 [![license](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/temuller/piscola/blob/master/LICENSE)
-[![ci](http://img.shields.io/travis/temuller/piscola/master.svg?style=flat)](https://travis-ci.org/temuller/piscola)
+[![Build Status](https://app.travis-ci.com/temuller/piscola.svg?branch=master)](https://app.travis-ci.com/temuller/piscola)
 ![Python Version](https://img.shields.io/badge/Python-3.6%2B-blue)
 [![PyPI](https://img.shields.io/pypi/v/piscola?label=PyPI&logo=pypi&logoColor=white)](https://pypi.org/project/piscola/)
 [![Conda Version](https://img.shields.io/conda/vn/temuller/piscola?label=conda%20version)](https://anaconda.org/temuller/piscola)
