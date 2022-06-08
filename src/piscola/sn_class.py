@@ -2,11 +2,15 @@
 # This is the skeleton of PISCOLA, the main file
 
 import piscola
+from .lightcurves_class import lightcurves
+from .filters_class import multi_filters
+from .sed_class import sed_template
+
 from .filter_utils import integrate_filter, calc_eff_wave, calc_pivot_wave, calc_zp, filter_effective_range
 from .gaussian_process import gp_lc_fit, gp_2d_fit
 from .extinction_correction import redden, deredden, calculate_ebv
 from .mangling import mangle
-from .pisco_utils import trim_filters, flux2mag, mag2flux, change_zp
+from .utils import flux2mag, mag2flux, change_zp
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
@@ -20,114 +24,113 @@ import math
 import glob
 import os
 
-### Initialisation functions ###
-# These are mainly used by the 'sn' class below
-
-def _initialise_sn(sn_file):
-    """Initialise the :func:`sn` object.
-
-    The object is initialised with all the necessary information like filters, fluxes, etc.
+def call_sn(lc_file):
+    """Loads a supernova from a file and initialises
+    the :func:`sn` object. The object is initialised
+    with all the necessary information like filters,
+    fluxes, etc.
 
     Parameters
     ----------
-    sn_file : str
-        Name of the SN or SN file.
+    lc_file : str
+        File with the SN info and light curves.
 
     Returns
     -------
     sn_obj : obj
         New :func:`sn` object.
-
     """
+    err_message = f'File {lc_file} not found.'
+    assert os.path.isfile(lc_file), err_message
 
-    name, z, ra, dec = pd.read_csv(sn_file, delim_whitespace=True, nrows=1,
-                                    converters={'name':str, 'z':float, 'ra':float, 'dec':float}).iloc[0].values
-    sn_df = pd.read_csv(sn_file, delim_whitespace=True, skiprows=2)
-    sn_df.columns = sn_df.columns.str.lower()
+    converters = {'name': str, 'z': float,
+                  'ra': float, 'dec': float}
+    name, z, ra, dec = pd.read_csv(lc_file, nrows=1,
+                                   delim_whitespace=True,
+                                   converters=converters).values[0]
 
-    # call sn object
-    sn_obj = sn(name, z=z, ra=ra, dec=dec)
-    sn_obj.set_sed_template()  # Set the SED template to be used in the entire process
-    sn_obj.bands = [band for band in list(sn_df['band'].unique())]
-    sn_obj.call_filters()
-
-    # order bands by effective wavelength (estimated from the SED template)
-    eff_waves = [sn_obj.filters[band]['eff_wave'] for band in sn_obj.bands]
-    sorted_idx = sorted(range(len(eff_waves)), key=lambda k: eff_waves[k])
-    sn_obj.bands = [sn_obj.bands[x] for x in sorted_idx]
-
-    # add data to each band
-    for band in sn_obj.bands:
-        band_info = sn_df[sn_df['band']==band]
-        time, flux = band_info['time'].values, band_info['flux'].values
-        flux_err, zp = band_info['flux_err'].values, float(band_info['zp'].unique()[0])
-        mag, mag_err = flux2mag(flux, zp, flux_err)
-        mag_sys = band_info['mag_sys'].unique()[0]
-
-        sn_obj.data[band] = {'time':time,
-                             'flux':flux,
-                             'flux_err':flux_err,
-                             'mag':mag,
-                             'mag_err':mag_err,
-                             'zp':zp,
-                             'mag_sys':mag_sys,
-                            }
+    sn_obj = supernova(name, z, ra, dec, lc_file)
 
     return sn_obj
 
-
-def call_sn(sn_file, directory='data'):
-    """Loads a supernova from a file and initialises it.
-
-    Parameters
-    ----------
-    sn_file: str
-        Name of the SN or SN file.
-    directory : str, default ``data``
-        Directory where to look for the SN file unless the full or relative path is given in ``sn_file``.
-
-    """
-
-    sn_full_path = os.path.join(directory, sn_file)
-    # if sn_file is the file name
-    if os.path.isfile(sn_full_path):
-        return _initialise_sn(sn_full_path)
-
-    # if sn_file is the SN name
-    elif os.path.isfile(sn_full_path + '.dat'):
-        return _initialise_sn(sn_full_path + '.dat')
-
-    # if sn_file is the file name with full or relative path
-    elif os.path.isfile(sn_file):
-        return _initialise_sn(sn_file)
-
-    else:
-        raise ValueError(f'{sn_file} was not a valid SN name or file.')
-
-
-def load_sn(name, path=None):
+def load_sn(piscola_file):
     """Loads a :func:`sn` oject that was previously saved as a pickle file.
 
     Parameters
     ----------
-    name : str
-        Name of the SN object.
-    path: str, default ``None``
-        Path where to save the SN file given the ``name``.
+    piscola_file : str
+        File with the SN object saved with PISCOLA.
 
     Returns
     -------
     pickle.load(file) : obj
         :func:`sn` object previously saved as a pickle file.
-
     """
+    err_message = f'File {piscola_file} not found.'
+    assert os.path.isfile(piscola_file), err_message
 
-    if path is None:
-        with open(f'{name}.pisco', 'rb') as file:
-            return pickle.load(file)
-    else:
-        with open(os.path.join(path, name) + '.pisco', 'rb') as file:
-            return pickle.load(file)
+    with open(os.path.join(path, name) + '.pisco', 'rb') as sn_file:
+        sn_obj = pickle.load(sn_file)
+
+    return sn_obj
+
+class supernova(object):
+    """Supernova class.
+    """
+    def __init__(self, name, z=0.0, ra=None, dec=None,
+                 lc_file=None, template='conley09f'):
+        self.name = name
+        self.z = z
+        self.ra = ra
+        self.dec = dec
+
+        if not self.ra or not self.dec:
+            print('Warning, RA and/or DEC not specified.')
+
+        # add light curves and filters
+        if lc_file:
+            self.lcs = lightcurves(lc_file)
+            self.filters = multi_filters(self.lcs.bands)
+
+            # order bands by effective wavelength
+            eff_waves = [self.filters[band]['eff_wave']
+                         for band in self.filters.bands]
+            sorted_idx = sorted(range(len(eff_waves)),
+                                key=lambda k: eff_waves[k])
+            sorted_bands = [self.filters.bands[x]
+                            for x in sorted_idx]
+            self.bands = sorted_bands
+            self.lcs.bands = self.filters.bands = sorted_bands
+
+        # add SED template
+        self.sed = sed_template(z, ra, dec, template)
+
+    def __repr__(self):
+        rep = (f'name: {self.name}, z: {self.z:.5}, '
+               f'ra: {self.ra}, dec: {self.dec}\n')
+        return rep
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def save_sn(self, path=None):
+        """Saves a SN object into a pickle file
+
+        Parameters
+        ----------
+        path: str, default ``None``
+            Path where to save the SN file given the ``name``. If None,
+            use current directory
+        """
+        if name is None:
+            name = self.name
+
+        if path is None:
+            path = ''
+
+        outfile = os.path.join(path, f'{self.name}.pisco')
+        with open(outfile, 'wb') as pfile:
+            pickle.dump(self, pfile, pickle.HIGHEST_PROTOCOL)
 
 ################################################################################
 ################################################################################
@@ -139,7 +142,7 @@ class sn(object):
 
     def __init__(self, name, z=0, ra=None, dec=None):
         self.name = name
-        self.z = z # redshift
+        self.z = z  # redshift
         self.ra = ra # coordinates in degrees
         self.dec = dec
 
@@ -329,16 +332,13 @@ class sn(object):
                                           'response_type': response_type}
 
 
-    def plot_filters(self, filter_list=None, save=False):
+    def plot_filters(self, filter_list=None):
         """Plot the filters' transmission functions.
 
         Parameters
         ----------
         filter_list : list, default ``None``
             List of bands.
-        save : bool, default ``False``
-            If ``True``, saves the plot into a file with the name "filters.png".
-
         """
 
         if filter_list is None:
@@ -358,10 +358,6 @@ class sn(object):
         ax.tick_params(which='major', length=6, width=1, direction='in', top=True, right=True)
         ax.tick_params(which='minor', length=3, width=1, direction='in', top=True, right=True)
         plt.legend(loc='upper right', bbox_to_anchor=(1.2, 1.0))
-
-        if save:
-            #fig.tight_layout()
-            plt.savefig('filters.png')
 
         plt.show()
 

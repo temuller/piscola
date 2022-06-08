@@ -1,15 +1,17 @@
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+
+import sfdmap
+import extinction
+
 import piscola
 from .filter_utils import integrate_filter
 
-import extinction
-import sfdmap
+pisco_path = piscola.__path__[0]
+dustmaps_dir = os.path.join(pisco_path, 'sfddata-master')
 
-import matplotlib.pyplot as plt
-import numpy as np
-import os
-
-
-def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None, r_v=3.1, ebv=None):
+def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v=3.1, ebv=None):
     """Reddens the given spectrum, given a right ascension and declination or :math:`E(B-V)`.
 
     Parameters
@@ -43,18 +45,18 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dus
         Redden flux values.
 
     """
-    pisco_path = piscola.__path__[0]
-    if dustmaps_dir is None:
-        dustmaps_dir = os.path.join(pisco_path, 'sfddata-master')
+    global dustmaps_dir
 
     if ebv is None:
+        dustmaps_dir = os.path.join(pisco_path, 'sfddata-master')
         m = sfdmap.SFDMap(mapdir=dustmaps_dir, scaling=scaling)
         ebv = m.ebv(ra, dec) # RA and DEC in degrees
 
     a_v = r_v*ebv
 
     rl_list = ['ccm89', 'odonnell94', 'fitzpatrick99', 'calzetti00', 'fm07']
-    assert reddening_law in rl_list, f'Choose one of the available reddening laws: {rl_list}'
+    err_message = f'Choose one of the available reddening laws: {rl_list}'
+    assert reddening_law in rl_list, err_message
 
     if reddening_law=='ccm89':
         ext = extinction.ccm89(wave, a_v, r_v)
@@ -72,7 +74,7 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dus
     return redden_flux
 
 
-def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None, r_v=3.1, ebv=None):
+def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v=3.1, ebv=None):
     """Dereddens the given spectrum, given a right ascension and declination or :math:`E(B-V)`.
 
     Parameters
@@ -106,9 +108,7 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', d
         Deredden flux values.
 
     """
-    pisco_path = piscola.__path__[0]
-    if dustmaps_dir is None:
-        dustmaps_dir = os.path.join(pisco_path, 'sfddata-master')
+    global dustmaps_dir
 
     if ebv is None:
         m = sfdmap.SFDMap(mapdir=dustmaps_dir, scaling=scaling)
@@ -135,7 +135,7 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', d
     return deredden_flux
 
 
-def calculate_ebv(ra, dec, scaling=0.86, dustmaps_dir=None):
+def calculate_ebv(ra, dec, scaling=0.86):
     """Calculates Milky Way colour excess, :math:`E(B-V)`, for a given right ascension and declination.
 
     Parameters
@@ -155,20 +155,14 @@ def calculate_ebv(ra, dec, scaling=0.86, dustmaps_dir=None):
     -------
     ebv :  float
         Reddening value, :math:`E(B-V)``.
-
     """
-
-    pisco_path = piscola.__path__[0]
-    if dustmaps_dir is None:
-        dustmaps_dir = os.path.join(pisco_path, 'sfddata-master')
-
+    global dustmaps_dir
     m = sfdmap.SFDMap(mapdir=dustmaps_dir, scaling=scaling)
     ebv = m.ebv(ra, dec) # RA and DEC in degrees
 
     return ebv
 
-
-def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None, r_v=3.1, ebv=None):
+def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v=3.1, ebv=None):
     """Estimate the extinction for a given filter, given a right ascension and declination or :math:`E(B-V)`.
 
     Parameters
@@ -200,11 +194,10 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, redde
     -------
     A : float
         Extinction value in magnitudes.
-
     """
-
     flux = 100
-    deredden_flux = deredden(filter_wave, flux, ra, dec, scaling, reddening_law, dustmaps_dir, r_v, ebv)
+    deredden_flux = deredden(filter_wave, flux, ra, dec, scaling,
+                             reddening_law, r_v, ebv)
 
     f1 = integrate_filter(filter_wave, flux, filter_wave, filter_response)
     f2 = integrate_filter(filter_wave, deredden_flux, filter_wave, filter_response)
@@ -213,7 +206,7 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, redde
     return A
 
 
-def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustmaps_dir=None, r_v=3.1, ebv=None):
+def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v=3.1, ebv=None):
     """Plots the extinction curve for a given right ascension and declination or :math:`E(B-V)`.
 
     Parameters
@@ -241,7 +234,8 @@ def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99', dustm
 
     flux = 100
     wave = np.arange(1000, 25001)  # in Angstroms
-    deredden_flux = deredden(wave, flux, ra, dec, scaling, reddening_law, dustmaps_dir, r_v, ebv)
+    deredden_flux = deredden(wave, flux, ra, dec, scaling,
+                             reddening_law, r_v, ebv)
     ff = 1 - flux/deredden_flux
 
     f, ax = plt.subplots(figsize=(8,6))

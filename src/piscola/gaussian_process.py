@@ -2,7 +2,7 @@ import numpy as np
 import george
 import scipy
 
-from .pisco_utils import extrapolate_mangling_edges
+from .utils import extrapolate_mangling_edges
 from scipy.interpolate import UnivariateSpline
 from functools import partial
 

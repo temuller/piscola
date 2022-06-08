@@ -21,9 +21,9 @@ def flux2mag(flux, zp, flux_err=0.0):
     mag_err : array
         Flux errors converted to errors in magnitudes.
     """
-
     if type(flux)==np.ndarray:
-        flux_ = np.array([f if f>=0.0 else np.nan for f in flux ])  # turns negative and 0.0 values to NaN
+        # turns negative and 0.0 values into NaNs
+        flux_ = np.array([f if f>=0.0 else np.nan for f in flux])
     elif flux<=0.0:
         flux_ = np.nan
     else:
@@ -53,7 +53,6 @@ def mag2flux(mag, zp, mag_err=0.0):
     flux_err : array
         Magnitude errors converted to errors in fluxes.
     """
-
     flux = 10**( -0.4*(mag-zp) )
     flux_err =  np.abs( flux*0.4*np.log(10)*mag_err )
 
@@ -77,53 +76,10 @@ def change_zp(flux, zp, new_zp):
     -------
     new_flux : float or array
         Fluxes with with a new zero-point.
-
     """
-
     new_flux = flux*10**( -0.4*(zp - new_zp) )
 
     return new_flux
-
-def trim_filters(response):
-    """Trim the leading and trailing zeros from a 1-D array or sequence, leaving
-    one zero on each side. This is a modified version of numpy.trim_zeros.
-
-    Parameters
-    ----------
-    response : 1-D array or sequence
-        Input array.
-
-    Returns
-    -------
-    first : int
-        Index of the last leading zero.
-    last : int
-        Index of the first trailing zero.
-    """
-
-    first = 0
-    for i in response:
-        if i != 0.:
-            if first == 0:
-                first += 1  # to avoid filters with non-zero edges
-            break
-        else:
-            first = first + 1
-
-    last = len(response)
-    for i in response[::-1]:
-        if i != 0.:
-            if last == len(response):
-                last -= 1  # to avoid filters with non-zero edges
-            break
-        else:
-            last = last - 1
-
-    first -= 1
-    last += 1
-
-    return first, last
-
 
 def extrapolate_mangling_edges(x, y, yerr, x_edges, extra_extension=0.0):
     """"Extrapolates the edges of y according to the giving edges in x, x_edges.

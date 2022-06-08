@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from .sn import call_sn, load_sn, sn
+from .sn_class import call_sn, load_sn, supernova
+from . import filters_class
+from . import sed_class
+
 from . import extinction_correction
 from . import filter_utils
 from . import gaussian_process
 from . import mangling
-from . import pisco_utils
+from . import utils
 from ._version import __version__
