@@ -2,14 +2,13 @@
 # This is the skeleton of PISCOLA, the main file
 
 import piscola
-from .lightcurves_class import lightcurves
+from .lightcurves_class import lightcurves, fitted_lightcurves
 from .filters_class import multi_filters
 from .sed_class import sed_template
 
 from .filter_utils import integrate_filter, calc_eff_wave, calc_pivot_wave, calc_zp, filter_effective_range
 from .gaussian_process import gp_lc_fit, gp_2d_fit
 from .extinction_correction import redden, deredden, calculate_ebv
-from .mangling import mangle
 from .utils import flux2mag, mag2flux, change_zp
 
 import matplotlib.gridspec as gridspec
@@ -83,6 +82,7 @@ class supernova(object):
         self.z = z
         self.ra = ra
         self.dec = dec
+        self.init_fits = {}
 
         if not self.ra or not self.dec:
             print('Warning, RA and/or DEC not specified.')
@@ -104,6 +104,7 @@ class supernova(object):
 
         # add SED template
         self.sed = sed_template(z, ra, dec, template)
+        self.sed.calculate_obs_lightcurves(self.filters)
 
     def __repr__(self):
         rep = (f'name: {self.name}, z: {self.z:.5}, '
@@ -131,6 +132,117 @@ class supernova(object):
         outfile = os.path.join(path, f'{self.name}.pisco')
         with open(outfile, 'wb') as pfile:
             pickle.dump(self, pfile, pickle.HIGHEST_PROTOCOL)
+
+    def set_sed_template(self, template):
+        """Sets the SED template to be used for the mangling function.
+
+        Parameters
+        ----------
+        template : str
+            Template name. E.g., ``conley09f``, ``jla``, etc.
+        """
+        self.sed.set_sed_template(template)
+        self.sed.calculate_obs_lightcurves(self.filters)
+
+    def _stack_lcs(self):
+        """For 2D fitting.
+        """
+        for band in self.lcs.bands:
+            # mask negative fluxes
+            mask = ~np.isnan(self.lcs[band].mag)
+            self.lcs[band].mask_lc(mask)
+
+        time = np.hstack([self.lcs[band].masked_time for band in self.bands])
+        wave = np.hstack([[self.filters[band].eff_wave]*len(self.lcs[band].masked_time)
+                          for band in self.bands])
+        flux = np.hstack([self.lcs[band].masked_flux for band in self.bands])
+        flux_err = np.hstack([self.lcs[band].masked_flux_err for band in self.bands])
+        mag = np.hstack([self.lcs[band].masked_mag for band in self.bands])
+        mag_err = np.hstack([self.lcs[band].masked_mag_err for band in self.bands])
+
+        self._stacked_time = time
+        self._stacked_wave = wave
+        self._stacked_flux = flux
+        self._stacked_flux_err = flux_err
+        self._stacked_mag = mag
+        self._stacked_mag_err = mag_err
+
+    def _fit_lcs(self, kernel1='matern52', kernel2='squaredexp', gp_mean='max'):
+        """Fits the data for each band using gaussian process
+
+        The time of rest-frame B-band peak luminosity is estimated by finding where the derivative is equal to zero.
+
+        Parameters
+        ----------
+        kernel : str, default ``matern52``
+            Kernel to be used in the **time**-axis when fitting the light curves with gaussian process. E.g.,
+            ``matern52``, ``matern32``, ``squaredexp``.
+        kernel2 : str, default ``matern52``
+            Kernel to be used in the **wavelengt**-axis when fitting the light curves with gaussian process. E.g.,
+            ``matern52``, ``matern32``, ``squaredexp``.
+        """
+        self._stack_lcs()
+        timeXwave, lc_mean, lc_std, gp_pred, gp = gp_2d_fit(self._stacked_time,
+                                                            self._stacked_wave,
+                                                            self._stacked_mag,
+                                                            self._stacked_mag_err,
+                                                            kernel1, kernel2, gp_mean)
+
+        self.init_fits['timeXwave'], self.init_fits['lc_mean'] = timeXwave, lc_mean
+        self.init_fits['lc_std'], self.init_fits['gp_pred'] = lc_std, gp_pred
+        self.init_fits['gp']= gp
+
+        # Estimate B-band Peak
+        sed_wave, sed_flux = self.sed.get_phase_data(0.0)
+        B_eff_wave = self.filters.Bessell_B.calc_eff_wave(sed_wave, sed_flux)
+
+        times, waves = timeXwave.T[0], timeXwave.T[1]
+        wave_ind = np.argmin(np.abs(B_eff_wave*(1+self.z) - waves))
+        eff_wave = waves[wave_ind]
+        Bmask = waves == eff_wave
+        Btime, Bmag = times[Bmask], lc_mean[Bmask]
+
+        peak_id = peak.indexes(-Bmag, thres=.3, min_dist=len(Btime)//2)[0]
+        self.init_tmax = np.round(Btime[peak_id], 2)
+
+    def fit(self, kernel1='matern52', kernel2='squaredexp', gp_mean='mean'):
+        self._fit_lcs(kernel1, kernel2, gp_mean)
+
+        sed_lcs = self.sed.obs_lcs_fit  # interpolated light curves
+        sed_times = sed_lcs.phase.values + self.init_tmax
+        flux_ratios = []
+        flux_err = []
+        for band in self.bands:
+            sed_flux = np.interp(self.lcs[band].masked_time, sed_times,
+                                 sed_lcs[band].values, left=0.0, right=0.0)
+            flux_ratios.append(self.lcs[band].masked_flux/sed_flux)
+            flux_err.append(self.lcs[band].masked_flux_err/sed_flux)
+        stacked_ratios = np.hstack(flux_ratios)
+        stacked_err = np.hstack(flux_err)
+        timeXwave, mf_mean, mf_std, gp_pred, gp = gp_2d_fit(self._stacked_time,
+                                                            self._stacked_wave,
+                                                            stacked_ratios,
+                                                            stacked_err,
+                                                            kernel1, kernel2,
+                                                            gp_mean)
+
+        fits_dict = {band: None for band in self.bands}
+        times, waves = timeXwave.T[0], timeXwave.T[1]
+        for band in self.bands:
+            wave_ind = np.argmin(np.abs(self.filters[band]['eff_wave'] - waves))
+            eff_wave = waves[wave_ind]
+            mask = waves == eff_wave
+            time, mf, std = times[mask], mf_mean[mask], mf_std[mask]
+
+            sed_flux = np.interp(time, sed_times, sed_lcs[band].values, 
+                                 left=0.0, right=0.0)
+            lc_fit = sed_flux*mf
+            lc_std = sed_flux*std
+            fits_dict[band] = {'time':time, 'flux':lc_fit,
+                               'flux_err':lc_std, 'zp':self.lcs[band].zp}
+
+        self.fits_dict = fits_dict
+        self.lc_fits = fitted_lightcurves(fits_dict)
 
 ################################################################################
 ################################################################################
@@ -206,313 +318,6 @@ class sn(object):
         else:
             with open(os.path.join(path, name) + '.pisco', 'wb') as pfile:
                 pickle.dump(self, pfile, pickle.HIGHEST_PROTOCOL)
-
-
-    ############################################################################
-    ################################ Filters ###################################
-    ############################################################################
-
-    def call_filters(self):
-        """Obtains the transmission functions for the observed filters and the Bessell filters as well.
-        """
-
-        path = piscola.__path__[0]
-        sed_df = self.sed['data']
-        sed_df = sed_df[sed_df.phase==0.0]
-        sed_wave, sed_flux = sed_df.wave.values, sed_df.flux.values
-
-        # add filters of the observed bands
-        for band in self.bands:
-            file = f'{band}.dat'
-
-            for root, dirs, files in os.walk(os.path.join(path, 'filters')):
-                if file in files:
-                    wave0, transmission0 = np.loadtxt(os.path.join(root, file)).T
-                    # linearly interpolate filters
-                    wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max()-wave0.min()))
-                    transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
-                    # remove long tails of zero values on both edges
-                    imin, imax = trim_filters(transmission)
-                    wave, transmission = wave[imin:imax], transmission[imin:imax]
-
-                    # retrieve response type; if none, assumed to be photon type
-                    try:
-                        with open(os.path.join(root, 'response_type.txt')) as resp_file:
-                            for line in resp_file:
-                                response_type = line.split()[0].lower()
-                    except:
-                        response_type = 'photon'
-                    assert response_type in ['photon', 'energy'], f'"{response_type}" is not a valid response type \
-                                                                            ("photon" or "energy") for {band} filter.'
-
-                    self.filters[band] = {'wave':wave,
-                                          'transmission':transmission,
-                                          'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave,
-                                                                   transmission, response_type=response_type),
-                                          'response_type':response_type}
-
-        # add Bessell filters
-        file_paths = [file for file in glob.glob(os.path.join(path, 'filters/Bessell/*.dat'))]
-
-        for file_path in file_paths:
-            band = os.path.basename(file_path).split('.')[0]
-            wave0, transmission0 = np.loadtxt(file_path).T
-            # linearly interpolate filters
-            wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max()-wave0.min()))
-            transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
-            # remove long tails of zero values on both edges
-            imin, imax = trim_filters(transmission)
-            wave, transmission = wave[imin:imax], transmission[imin:imax]
-
-            # retrieve response type; if none, assumed to be photon type
-            try:
-                with open(os.path.join(root, 'response_type.txt')) as resp_file:
-                    for line in resp_file:
-                        response_type = line.split()[0].lower()
-            except:
-                response_type = 'photon'
-            assert response_type in ['photon', 'energy'], f'"{response_type}" is not a valid response type \
-                                                                    ("photon" or "energy") for {band} filter.'
-
-            self.filters[band] = {'wave':wave,
-                                  'transmission':transmission,
-                                  'eff_wave':calc_eff_wave(sed_wave, sed_flux, wave, transmission,
-                                                           response_type=response_type),
-                                  'response_type':response_type}
-
-
-    def add_filters(self, filter_list, response_type='photon'):
-        """Add choosen filters. You can add a complete directory with filters in it or add filters given in a list.
-
-        Parameters
-        ----------
-        filter_list : list
-            List of filters.
-        response_type : str, default ``photon``
-            Response type of the filter. The options are: ``photon`` and ``energy``.
-
-        """
-
-        path = piscola.__path__[0]
-        sed_df = self.sed['data']
-        sed_df = sed_df[sed_df.phase==0.0]
-        sed_wave, sed_flux = sed_df.wave.values, sed_df.flux.values
-
-        if type(filter_list)==str:
-            filter_list = [filter_list]
-
-        for band in filter_list:
-            file = f'{band}.dat'
-
-            for root, dirs, files in os.walk(os.path.join(path, 'filters')):
-                if file in files:
-                    wave0, transmission0 = np.loadtxt(os.path.join(root, file)).T
-                    # linearly interpolate filters
-                    wave = np.linspace(wave0.min(), wave0.max(), int(wave0.max() - wave0.min()))
-                    transmission = np.interp(wave, wave0, transmission0, left=0.0, right=0.0)
-                    # remove long tails of zero values on both edges
-                    imin, imax = trim_filters(transmission)
-                    wave, transmission = wave[imin:imax], transmission[imin:imax]
-
-                    # retrieve response type; if none, assumed to be photon type
-                    try:
-                        with open(os.path.join(root, 'response_type.txt')) as resp_file:
-                            for line in resp_file:
-                                response_type = line.split()[0].lower()
-                    except:
-                        response_type = 'photon'
-                    assert response_type in ['photon',
-                                             'energy'], f'"{response_type}" is not a valid response type \
-                                                                             ("photon" or "energy") for {band} filter.'
-
-                    self.filters[band] = {'wave': wave,
-                                          'transmission': transmission,
-                                          'eff_wave': calc_eff_wave(sed_wave, sed_flux, wave,
-                                                                    transmission, response_type=response_type),
-                                          'response_type': response_type}
-
-
-    def plot_filters(self, filter_list=None):
-        """Plot the filters' transmission functions.
-
-        Parameters
-        ----------
-        filter_list : list, default ``None``
-            List of bands.
-        """
-
-        if filter_list is None:
-            filter_list = self.bands
-
-        fig, ax = plt.subplots(figsize=(8,6))
-        for band in filter_list:
-            norm = self.filters[band]['transmission'].max()
-            ax.plot(self.filters[band]['wave'], self.filters[band]['transmission']/norm, label=band)
-
-        ax.set_xlabel(r'wavelength ($\AA$)', fontsize=18, family='serif')
-        ax.set_ylabel('normalized response', fontsize=18, family='serif')
-        ax.set_title(r'Filters response functions', fontsize=18, family='serif')
-        ax.xaxis.set_tick_params(labelsize=15)
-        ax.yaxis.set_tick_params(labelsize=15)
-        ax.minorticks_on()
-        ax.tick_params(which='major', length=6, width=1, direction='in', top=True, right=True)
-        ax.tick_params(which='minor', length=3, width=1, direction='in', top=True, right=True)
-        plt.legend(loc='upper right', bbox_to_anchor=(1.2, 1.0))
-
-        plt.show()
-
-
-    def calc_pivot(self, band_list=None):
-        """Calculates the observed band closest to Bessell-B filter.
-
-        Parameters
-        ----------
-        filter_list : list, default ``None``
-            List of bands.
-
-        """
-
-        BessellB_eff_wave = self.filters['Bessell_B']['eff_wave']
-
-        if band_list is None:
-            band_list = self.bands
-
-        bands_eff_wave =  np.array([self.filters[band]['eff_wave']/(1+self.z) for band in band_list])
-        idx = (np.abs(BessellB_eff_wave - bands_eff_wave)).argmin()
-        self.pivot_band = band_list[idx]
-
-
-    def remove_bands(self, bands, verbose=False):
-        """Remove chosen bands together with the data in it.
-
-        Parameters
-        ----------
-        bands : str or list
-            Band string (for a single band) or list of bands to be removed.
-        verbose : bool, default ``False``
-            If ``True``, a warning is given when a band from ``bands_list`` is not found within the SN bands.
-
-        """
-
-        if isinstance(bands, str):
-            bands = [bands]
-
-        for band in bands:
-            self.data.pop(band, None)
-            self.filters.pop(band, None)
-            if band in self.bands:
-                self.bands.remove(band)
-
-    ############################################################################
-    ############################### SED template ###############################
-    ############################################################################
-
-    def print_sed_templates(self):
-        """Prints all the available SED templates in the ``templates`` directory.
-        """
-
-        path = piscola.__path__[0]
-        template_path = os.path.join(path, "templates")
-        print('List of available SED templates:', [name for name in os.listdir(template_path)
-                                                           if os.path.isdir(os.path.join(template_path, name))])
-
-
-    def set_sed_template(self, template='jla'):
-        """Sets the SED template to be used for the mangling function.
-
-        **Note:** use :func:`print_sed_templates()` to see a list of available templates.
-
-        Parameters
-        ----------
-        template : str, default ``jla``
-            Template name. E.g., ``jla``, ``conley09f``, etc.
-
-        """
-        # This can be modified to accept other templates
-        path = piscola.__path__[0]
-        file = os.path.join(path, f'templates/{template}/snflux_1a.dat')
-        self.sed['data'] = pd.read_csv(file, delim_whitespace=True, names=['phase', 'wave', 'flux'])
-        self.sed['name'] = template
-
-
-    def set_eff_wave(self):
-        """Sets the effective wavelength of each band using the current state of the SED."""
-
-        for band in self.filters.keys():
-            self.filters[band]['eff_wave'] = calc_eff_wave(self.sed['data']['wave'],
-                                                           self.sed['data']['flux'],
-                                                           self.filters[band]['wave'],
-                                                           self.filters[band]['transmission'],
-                                                           self.filters[band]['response_type'])
-
-    ############################################################################
-    ########################### Light Curves Data ##############################
-    ############################################################################
-
-    def mask_data(self, band_list=None, mask_snr=True, snr=5, mask_phase=False, min_phase=-20, max_phase=40):
-        """Mask the data with the given signal-to-noise (S/N) in flux space and/or given range of days with respect to
-        B-band peak.
-
-        **Note:** If the light curves were not previously fitted, the phases are taken with respect to the measurement
-        with the largest flux.
-
-        Parameters
-        ----------
-        band_list : list, default ``None``
-            List of bands to plot. If ``None``, band list is set to ``self.bands``.
-        mask_snr : bool, default ``True``
-            If ``True``, keeps the flux values with S/N greater or equal to ``snr``.
-        snr : float, default ``5``
-            S/N threshold applied to mask data in flux space.
-        mask_phase : bool, default ``False``
-            If ``True``, keeps the flux values within the given phase range set by ``min_phase`` and ``max_phase``.
-            An initial estimation of the peak is needed first (can be set manually).
-        min_phase : int, default ``-20``
-            Minimum phase limit applied to mask data.
-        max_phase : int, default ``40``
-            Maximum phase limit applied to mask data.
-        """
-
-        if band_list is None:
-            band_list = self.bands
-
-        bands2remove = []
-
-        if mask_phase:
-            #assert self.tmax, 'An initial estimation of the peak is needed first!'
-            if self.tmax:
-                tmax = self.tmax
-            else:
-                self.calc_pivot()
-                id_peak = np.argmax(self.data[self.pivot_band]['flux'])
-                tmax = self.data[self.pivot_band]['time'][id_peak]
-
-            for band in band_list:
-                mask = np.where((self.data[band]['time'] - tmax >= min_phase*(1+self.z)) &
-                                (self.data[band]['time'] - tmax <= max_phase*(1+self.z))
-                               )
-                self.data[band]['time'] = self.data[band]['time'][mask]
-                self.data[band]['flux'] = self.data[band]['flux'][mask]
-                self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
-                self.data[band]['mag'] = self.data[band]['mag'][mask]
-                self.data[band]['mag_err'] = self.data[band]['mag_err'][mask]
-
-                if len(self.data[band]['flux']) == 0:
-                    bands2remove.append(band)
-
-        if mask_snr:
-            for band in band_list:
-                mask = np.abs(self.data[band]['flux']/self.data[band]['flux_err']) >= snr
-                self.data[band]['time'] = self.data[band]['time'][mask]
-                self.data[band]['flux'] = self.data[band]['flux'][mask]
-                self.data[band]['flux_err'] = self.data[band]['flux_err'][mask]
-                self.data[band]['mag'] = self.data[band]['mag'][mask]
-                self.data[band]['mag_err'] = self.data[band]['mag_err'][mask]
-
-                if len(self.data[band]['flux']) == 0:
-                    bands2remove.append(band)
-
-        self.remove_bands(bands2remove)
 
 
     def plot_data(self, band_list=None, plot_type='flux', save=False, fig_name=None):
@@ -634,8 +439,7 @@ class sn(object):
     ############################ Light Curves Fits #############################
     ############################################################################
 
-    def fit_lcs(self, kernel='matern52', kernel2='matern52', fit_mag=True, min_time_extrap=-3, max_time_extrap=5,
-                                                                        min_wave_extrap=-200, max_wave_extrap=200):
+    def fit_lcs(self, kernel='matern52', kernel2='squaredexp', gp_mean='max'):
         """Fits the data for each band using gaussian process
 
         The time of rest-frame B-band peak luminosity is estimated by finding where the derivative is equal to zero.
@@ -648,78 +452,49 @@ class sn(object):
         kernel2 : str, default ``matern52``
             Kernel to be used in the **wavelengt**-axis when fitting the light curves with gaussian process. E.g.,
             ``matern52``, ``matern32``, ``squaredexp``.
-        fit_mag : bool, default ``True``
-            If ``True``, the data is fitted in magnitude space (this is recommended for 2D fits). Otherwise, the data is
-            fitted in flux space.
-        min_time_extrap : int or float, default ``-3``
-            Number of days the light-curve fit is extrapolated in the time axis with respect to first epoch.
-        max_time_extrap : int or float, default ``5``
-            Number of days the light-curve fit is extrapolated in the time axis with respect to last epoch.
-        min_wave_extrap : int or float, default ``-200``
-            Number of angstroms the light-curve fit is extrapolated in the wavelengths axis with respect to reddest
-            wavelength. This depends on the reddest filter.
-        max_wave_extrap : int or float, default ``200``
-            Number of angstroms the light-curve fit is extrapolated in the wavelengths axis with respect to bluest
-            wavelength. This depends on the bluest filter.
         """
         ########################
         ####### GP Fit #########
         ########################
+        stacked_flux = np.hstack([self.lcs[band].flux
+                                  for band in self.bands])
+        stacked_flux_err = np.hstack([self.lcs[band].flux_err
+                                      for band in self.bands])
 
-        self._normalize_data()
-        self.calc_pivot()
+        stacked_time = np.hstack([self.lcs[band].time
+                                  for band in self.bands])
+        stacked_wave = np.hstack([[self.filters[band].eff_wave] * len(self.lcs[band].time)
+                                  for band in self.bands])
 
-        flux_array = np.hstack([self.data[band]['flux'] for band in self.bands])
-        flux_err_array = np.hstack([self.data[band]['flux_err'] for band in self.bands])
+        mask = stacked_flux > 0.0  # prevents nan values
+        # ZPs are set to 0.0 to retrieve flux values after the GP fit
+        stacked_mag, stacked_mag_err = flux2mag(stacked_flux[mask], 0.0,
+                                                stacked_flux_err[mask])
+        stacked_time, stacked_wave = stacked_time[mask], stacked_wave[mask]
 
-        time_array = np.hstack([self.data[band]['time'] for band in self.bands])
-        wave_array = np.hstack([[self.filters[band]['eff_wave']]*len(self.data[band]['time']) for band in self.bands])
+        timeXwave, lc_mean, lc_std, gp_pred, gp = gp_2d_fit(stacked_time, stacked_wave,
+                                                            stacked_mag, stacked_mag_err,
+                                                            kernel1, kernel2, gp_mean)
 
-        # edges to extrapolate in time and wavelength
-        time_edges = np.array([time_array.min()+min_time_extrap, time_array.max()+max_time_extrap])
-        bands_waves = np.hstack([self.filters[band]['wave'] for band in self.bands])
-        bands_edges = np.array([bands_waves.min()+min_wave_extrap, bands_waves.max()+max_wave_extrap])
+        self.init_fits['timeXwave'], self.init_fits['lc_mean'] = timeXwave, lc_mean
+        self.init_fits['lc_std'], self.init_fits['gp_pred'] = lc_std, gp_pred
+        self.init_fits['gp']= gp
 
-        if fit_mag:
-            mask = flux_array > 0.0  # prevents nan values
-            # ZPs are set to 0.0 to retrieve flux values after the GP fit
-            mag_array, mag_err_array = flux2mag(flux_array[mask], 0.0, flux_err_array[mask])
-            time_array, wave_array = time_array[mask], wave_array[mask]
+        # Estimate B-band Peak
+        sed_wave, sed_flux = self.sed.get_phase_data(0.0)
+        B_eff_wave = self.filters.Bessell_B.calc_eff_wave(sed_wave, sed_flux)
 
-            timeXwave, lc_mean, lc_std, gp_results = gp_2d_fit(time_array, wave_array, mag_array, mag_err_array,
-                                                                kernel1=kernel, kernel2=kernel2,
-                                                                x1_edges=time_edges, x2_edges=bands_edges)
-            lc_mean, lc_std = mag2flux(lc_mean, 0.0, lc_std)
-
-        else:
-            timeXwave, lc_mean, lc_std, gp_results = gp_2d_fit(time_array, wave_array, flux_array, flux_err_array,
-                                            kernel1=kernel, kernel2=kernel2, x2_edges=bands_edges)
-
-        self.lc_fits['timeXwave'], self.lc_fits['lc_mean'] = timeXwave, lc_mean
-        self.lc_fits['lc_std'], self.lc_fits['gp_results'] = lc_std, gp_results
-
-        ###############################
-        ##### Estimate B-band Peak ####
-        ###############################
         times, waves = timeXwave.T[0], timeXwave.T[1]
+        wave_ind = np.argmin(np.abs(B_eff_wave*(1+self.z) - waves))
+        eff_wave = waves[wave_ind]
+        mask = waves == eff_wave
+        time, mag = times[mask], lc_mean[mask]
 
-        wave_ind = np.argmin(np.abs(self.filters['Bessell_B']['eff_wave']*(1+self.z) - waves))
-        eff_wave = waves[wave_ind]  # closest wavelength from the gp grid to the effective_wavelength*(1+z) of Bessell_B
-        mask = waves==eff_wave
+        peak_id = peak.indexes(-mag, thres=.3, min_dist=len(time)//2)[0]
+        self.init_tmax = np.round(time[peak_id], 2)
 
-        time, flux, flux_err = times[mask], lc_mean[mask], lc_std[mask]
 
-        try:
-            peak_id = peak.indexes(flux, thres=.3, min_dist=len(time)//2)[0]
-            self.tmax = self.tmax0 = np.round(time[peak_id], 2)
-
-            phaseXwave = np.copy(timeXwave)
-            phaseXwave.T[0] = (times - self.tmax)/(1+self.z)
-            self.lc_fits['phaseXwave'] = phaseXwave
-        except:
-            raise ValueError(f'Unable to obtain an initial estimation of B-band peak for {self.name}\
-                                                                                            (poor peak coverage)')
-
+    def nada(self):
         ##################################
         ## Save individual light curves ##
         ##################################

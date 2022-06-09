@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 import piscola
 from .extinction_correction import redden, deredden, calculate_ebv
+from .gaussian_process import gp_lc_fit
 
 class sed_template(object):
     """Spectral energy distribution (SED) class
@@ -150,16 +151,31 @@ class sed_template(object):
 
         self.redshift()
         self.apply_extinction(scaling, reddening_law, r_v, ebv)
+
+        # obs. light curves
         photometry = {band:[] for band in filters.bands}
+        phases = np.unique(self.phase)
         for band in filters.bands:
-            for phase in np.unique(self.phase):
+            for phase in phases:
                 wave, flux = self.get_phase_data(phase)
                 obs_flux = filters[band].integrate_filter(wave, flux)
                 photometry[band].append(obs_flux)
 
-        photometry['phase'] = np.unique(self.phase)
+        photometry['phase'] = phases
         photometry_df = pd.DataFrame(photometry)
 
+        # GP fit for interpolation
+        fit_phot = {band:None for band in filters.bands}
+        for band in filters.bands:
+            flux = photometry_df[band].values
+            # assuming no errors in the observations or in the fit
+            phases_pred, flux_pred, _ = gp_lc_fit(phases, flux)
+            fit_phot[band] = flux_pred
+
+        fit_phot['phase'] = phases_pred
+        fit_phot_df = pd.DataFrame(fit_phot)
+
         self.obs_lcs = photometry_df
+        self.obs_lcs_fit = fit_phot_df
         self.correct_extinction()
         self.deredshift()

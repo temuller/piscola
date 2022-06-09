@@ -7,6 +7,5 @@ from . import sed_class
 from . import extinction_correction
 from . import filter_utils
 from . import gaussian_process
-from . import mangling
 from . import utils
 from ._version import __version__

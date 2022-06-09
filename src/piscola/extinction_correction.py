@@ -1,4 +1,6 @@
 import os
+import tarfile
+import requests
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -10,6 +12,35 @@ from .filter_utils import integrate_filter
 
 pisco_path = piscola.__path__[0]
 dustmaps_dir = os.path.join(pisco_path, 'sfddata-master')
+
+def _download_dustmaps():
+    """Downloads the dust maps for extinction calculation if they are not found
+    locally.
+    """
+    global dustmaps_dir
+
+    # check if files already exist locally
+    dust_files = [os.path.join(dustmaps_dir,
+                f'SFD_dust_4096_{sky}gp.fits') for sky in ['n', 's']]
+    mask_files = [os.path.join(dustmaps_dir,
+                f'SFD_mask_4096_{sky}gp.fits') for sky in ['n', 's']]
+    maps_files = dust_files + mask_files
+    existing_files = [os.path.isfile(file) for file in mask_files]
+
+    if not all(existing_files)==True:
+        # download dust maps
+        sfdmaps_url = 'https://github.com/kbarbary/sfddata/archive/master.tar.gz'
+        response = requests.get(sfdmaps_url)
+
+        master_tar = 'master.tar.gz'
+        with open(master_tar, 'wb') as file:
+            file.write(response.content)
+
+        # extract tar file under mapsdir directory
+        tar = tarfile.open(master_tar)
+        tar.extractall(pisco_path)
+        tar.close()
+        os.remove(master_tar)
 
 def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v=3.1, ebv=None):
     """Reddens the given spectrum, given a right ascension and declination or :math:`E(B-V)`.
@@ -45,6 +76,7 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v
         Redden flux values.
 
     """
+    _download_dustmaps()
     global dustmaps_dir
 
     if ebv is None:
@@ -108,6 +140,7 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r
         Deredden flux values.
 
     """
+    _download_dustmaps()
     global dustmaps_dir
 
     if ebv is None:
@@ -156,6 +189,7 @@ def calculate_ebv(ra, dec, scaling=0.86):
     ebv :  float
         Reddening value, :math:`E(B-V)``.
     """
+    _download_dustmaps()
     global dustmaps_dir
     m = sfdmap.SFDMap(mapdir=dustmaps_dir, scaling=scaling)
     ebv = m.ebv(ra, dec) # RA and DEC in degrees

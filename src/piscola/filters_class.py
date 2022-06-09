@@ -68,7 +68,7 @@ class single_filter(object):
 
     def calc_eff_wave(self, sed_wave=None, sed_flux=None):
 
-        if not sed_wave or not sed_flux:
+        if sed_wave is None or sed_flux is None:
             sed_wave = self.wave.copy()
             sed_flux = 100 * np.ones_like(sed_wave)
 
@@ -159,6 +159,21 @@ class multi_filters(object):
 
         for band in bands:
             self[band].calc_eff_wave(sed_wave, sed_flux)
+
+    def calc_pivot(self, z=0.0):
+        """Calculates the observed band closest to restframe
+        B filter (4500 Å).
+
+        Parameters
+        ----------
+        z : float, default ``0.0``
+            Redshift.
+        """
+        B_eff_wave = 4500
+        eff_waves =  np.array([self.filters[band].eff_wave/(1+z)
+                                for band in self.bands])
+        idx = (np.abs(B_eff_wave - eff_waves)).argmin()
+        self.pivot_band = self.bands[idx]
 
     def plot_filters(self, bands=None):
         """Plot the filters' transmission functions.
