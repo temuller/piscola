@@ -10,7 +10,6 @@ class single_filter(object):
     """
     def __init__(self, band):
         self.name = band
-        self._sed = None
         self.add_filter(band)
 
     def __repr__(self):
@@ -118,11 +117,74 @@ class single_filter(object):
 
         return flux_filter
 
+    def get_standard_flux(self, mag_sys_file):
+        if 'ab' in mag_sys_file.split('_'):
+            c = 2.99792458e18  # speed of light in [Angstroms/s]
+            ab_wave = np.arange(1000, 250000, 5)
+            ab_flux = 3631e-23 * c / ab_wave ** 2  # in [erg s^-1 cm^-2 A^-1]
+            f_sed = self.integrate_filter(ab_wave, ab_flux)
+
+        else:
+            pisco_path = piscola.__path__[0]
+            with open(mag_sys_file, 'rt') as file:
+                standard_sed = [line.split()[1] for line in file
+                                if 'standard_sed:' in line.split()][0]
+
+            sed_file = os.path.join(pisco_path, 'standards', standard_sed)
+            sed_wave, sed_flux = np.loadtxt(sed_file).T
+            f_sed = self.integrate_filter(sed_wave, sed_flux)
+
+        return f_sed
+
+    def get_standard_mag(self, mag_sys_file):
+
+        filt_names, mags = np.loadtxt(mag_sys_file, dtype=str).T
+        err_message = f'{self.name} not in {mag_sys_file}'
+        assert self.name in filt_names, err_message
+
+        ind = list(filt_names).index(self.name)
+        sed_mag = eval(mags[ind])
+
+        return sed_mag
+
+    def calc_zp(self, mag_sys):
+        """Calculates the zero point in the AB, Vega or BD17 magnitude systems.
+
+        Parameters
+        ----------.
+        mag_sys : str
+            Magnitude system. For example, ``AB``, ``BD17`` or ``Vega``.
+
+        Returns
+        -------
+        zp : float
+            Zero-point in the given natural magnitude system.
+        """
+        pisco_path = piscola.__path__[0]
+        mag_sys_file_path = os.path.join(pisco_path,
+                                         'standards',
+                                         'magnitude_systems.txt')
+
+        mag_sys_names, mag_sys_files = np.loadtxt(mag_sys_file_path,
+                                                  dtype=str).T
+        err_message = f'mag. system {mag_sys} not found in {mag_sys_file_path}'
+        assert mag_sys in mag_sys_names, err_message
+
+        ind = list(mag_sys_names).index(mag_sys)
+        mag_sys_file = os.path.join(pisco_path, 'standards',
+                                    mag_sys_files[ind])
+
+        f_sed = self.get_standard_flux(mag_sys_file)
+        m_sed = self.get_standard_mag(mag_sys_file)
+        zp = 2.5 * np.log10(f_sed) + m_sed
+
+        return zp
+
 class multi_filters(object):
     """Class representing multiple filters.
     """
     def __init__(self, bands):
-        self.bands = bands
+        self.bands = list(bands).copy()
 
         for band in bands:
             single_filt = single_filter(band)
@@ -132,8 +194,7 @@ class multi_filters(object):
         filters = 'UBVRI'
         for filt in filters:
             band = f'Bessell_{filt}'
-            single_filt = single_filter(band)
-            setattr(self, band, single_filt)
+            self.add_filter(band)
 
     def __repr__(self):
         return str(self.bands)

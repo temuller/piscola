@@ -1,0 +1,9 @@
+################
+standard_sed: bd_17d4708_stisnic_005.dat
+
+# Natural magnitude in the Swope telescope system of CSP
+# See https://csp.obs.carnegiescience.edu/data/filters
+Swope_u 10.518
+Swope_g 9.644
+Swope_r 9.352
+Swope_i 9.250

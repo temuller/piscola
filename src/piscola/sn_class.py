@@ -2,7 +2,7 @@
 # This is the skeleton of PISCOLA, the main file
 
 import piscola
-from .lightcurves_class import lightcurves, fitted_lightcurves
+from .lightcurves_class import lightcurves, generic_lightcurves
 from .filters_class import multi_filters
 from .sed_class import sed_template
 
@@ -13,6 +13,7 @@ from .utils import flux2mag, mag2flux, change_zp
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+
 from scipy.signal import savgol_filter
 from peakutils import peak
 import pickle5 as pickle
@@ -89,7 +90,9 @@ class supernova(object):
 
         # add light curves and filters
         if lc_file:
-            self.lcs = lightcurves(lc_file)
+            lcs_df = pd.read_csv(lc_file, delim_whitespace=True,
+                            skiprows=2)
+            self.lcs = lightcurves(lcs_df)
             self.filters = multi_filters(self.lcs.bands)
 
             # order bands by effective wavelength
@@ -99,8 +102,11 @@ class supernova(object):
                                 key=lambda k: eff_waves[k])
             sorted_bands = [self.filters.bands[x]
                             for x in sorted_idx]
-            self.bands = sorted_bands
-            self.lcs.bands = self.filters.bands = sorted_bands
+            lc_bands = [band for band in sorted_bands
+                          if band in lcs_df.band.values]
+            self.bands = self.lcs.bands =lc_bands
+            self.filters.bands = sorted_bands
+            self._normalize_lcs()
 
         # add SED template
         self.sed = sed_template(z, ra, dec, template)
@@ -143,6 +149,24 @@ class supernova(object):
         """
         self.sed.set_sed_template(template)
         self.sed.calculate_obs_lightcurves(self.filters)
+
+    def _normalize_lcs(self):
+        """Normalizes the fluxes and zero-points (ZPs).
+
+        Fluxes are converted to physical units by calculating the ZPs according to the
+        magnitude system, for example: **AB**, **BD17** or **Vega**.
+        """
+        for band in self.bands:
+            mag_sys = self.lcs[band].mag_sys
+            current_zp = self.lcs[band].zp
+
+            new_zp = self.filters[band].calc_zp(mag_sys)
+
+            self.lcs[band].flux = change_zp(self.lcs[band]['flux'],
+                                               current_zp, new_zp)
+            self.lcs[band].flux_err = change_zp(self.lcs[band]['flux_err'],
+                                                   current_zp, new_zp)
+            self.lcs[band].zp = new_zp
 
     def _stack_lcs(self):
         """For 2D fitting.
@@ -206,7 +230,7 @@ class supernova(object):
         self.init_tmax = np.round(Btime[peak_id], 2)
 
     def fit(self, kernel1='matern52', kernel2='squaredexp', gp_mean='mean'):
-        self._fit_lcs(kernel1, kernel2, gp_mean)
+        self._fit_lcs(kernel1, kernel2, gp_mean)  # to get initial tmax
 
         sed_lcs = self.sed.obs_lcs_fit  # interpolated light curves
         sed_times = sed_lcs.phase.values + self.init_tmax
@@ -225,9 +249,11 @@ class supernova(object):
                                                             stacked_err,
                                                             kernel1, kernel2,
                                                             gp_mean)
+        self.fit_results = {'timeXwave':timeXwave, 'mf_mean':mf_mean,
+                            'mf_std':mf_std, 'gp_pred':gp_pred, 'gp':gp}
 
-        fits_dict = {band: None for band in self.bands}
-        times, waves = timeXwave.T[0], timeXwave.T[1]
+        times, waves = timeXwave.T
+        fits_df_list = []
         for band in self.bands:
             wave_ind = np.argmin(np.abs(self.filters[band]['eff_wave'] - waves))
             eff_wave = waves[wave_ind]
@@ -238,11 +264,190 @@ class supernova(object):
                                  left=0.0, right=0.0)
             lc_fit = sed_flux*mf
             lc_std = sed_flux*std
-            fits_dict[band] = {'time':time, 'flux':lc_fit,
-                               'flux_err':lc_std, 'zp':self.lcs[band].zp}
 
-        self.fits_dict = fits_dict
-        self.lc_fits = fitted_lightcurves(fits_dict)
+            fit_df = pd.DataFrame({'time':time, 'flux':lc_fit,
+                                   'flux_err':lc_std})
+            fit_df['zp'] = self.lcs[band].zp
+            fit_df['band'] = band
+            fit_df['mag_sys'] = self.lcs[band].mag_sys
+            fits_df_list.append(fit_df)
+
+        self.lc_fits = lightcurves(pd.concat(fits_df_list))
+        self._mangle_sed()
+        self._get_rest_lightcurves()
+
+    def _mangle_sed(self):
+        times, waves = self.fit_results['timeXwave'].T
+        mf_mean = self.fit_results['mf_mean']
+        mf_std = self.fit_results['mf_std']
+
+        # mangle SED in observer frame
+        mangled_sed = {'flux': [], 'flux_err': []}
+        for phase in np.unique(self.sed.phase):
+            # SED
+            phase_mask = self.sed.phase == phase
+            sed_wave = self.sed.wave[phase_mask]
+            sed_flux = self.sed.flux[phase_mask]
+
+            # mangling function
+            phases = (times - self.init_tmax)
+            phase_id = np.argmin(np.abs(phases - phase))
+            phase_mask = phases == phases[phase_id]
+            mang_wave = waves[phase_mask]
+            mang_func = mf_mean[phase_mask]
+            mang_func_std = mf_std[phase_mask]
+
+            mang_func = np.interp(sed_wave, mang_wave, mang_func)
+            mang_func_std = np.interp(sed_wave, mang_wave, mang_func_std)
+            mangled_flux = mang_func * sed_flux
+            mangled_flux_err = mang_func_std * sed_flux
+
+            mangled_sed['flux'] += list(mangled_flux)
+            mangled_sed['flux_err'] += list(mangled_flux_err)
+
+        self.sed.flux = np.array(mangled_sed['flux'])
+        self.sed.flux_err = np.array(mangled_sed['flux_err'])
+
+    def _get_rest_lightcurves(self):
+
+        self.sed.calculate_rest_lightcurves(self.filters)
+        lcs_df_list = []
+        fits_df_list = []
+        for band in self.filters.bands:
+            if 'Bessell' in band:
+                mag_sys = 'VEGA'
+            else:
+                mag_sys = self.lcs[band].mag_sys
+            zp = self.filters[band].calc_zp(mag_sys)
+
+            lc = self.sed.rest_lcs
+            lc_df = pd.DataFrame({'time': lc.phase.values,
+                                  'flux': lc[band].values,
+                                  'flux_err': lc[f'{band}_err'].values
+                                  })
+            lc_df['zp'] = zp
+            lc_df['band'] = band
+            lc_df['mag_sys'] = mag_sys
+            lcs_df_list.append(lc_df)
+
+            fit = self.sed.rest_lcs_fit
+            fit_df = pd.DataFrame({'time': fit.phase.values,
+                                  'flux': fit[band].values,
+                                  'flux_err': [0.0]*len(fit.phase.values)
+                                  })
+            fit_df['zp'] = zp
+            fit_df['band'] = band
+            fit_df['mag_sys'] = mag_sys
+            fits_df_list.append(fit_df)
+
+        self.rest_lcs = lightcurves(pd.concat(lcs_df_list))
+        self.rest_lcs_fits = lightcurves(pd.concat(fits_df_list))
+
+    def plot_fits(self, plot_mag=False, fig_name=None):
+        """Plots the light-curves fits results.
+
+        Plots the observed data for each band together with the gaussian process fits. The initial B-band
+        peak estimation is plotted. The final B-band peak estimation after light-curves corrections is
+        also potted if corrections have been applied.
+
+        Parameters
+        ----------
+        plot_together : bool, default ``False``
+            If ``False``, plots the bands separately. Otherwise, all bands are plotted together.
+        plot_type : str, default ``flux``
+            Type of value used for the data: either ``mag`` or ``flux``.
+        save : bool, default ``False``
+            If ``True``, saves the plot into a file.
+        fig_name : str, default ``None``
+            Name of the saved plot. If ``None`` is used the name of the file will be '{``self.name``}_lc_fits.png'.
+            Only works if ``save`` is set to ``True``.
+
+        """
+        palette1 = [plt.get_cmap('Dark2')(i) for i in np.arange(8)]
+        palette2 = [plt.get_cmap('Set1')(i) for i in np.arange(8)]
+        colours = palette1 + palette2
+
+        # shift in time for visualization purposes
+        tmax_str = str(self.init_tmax.astype(int))
+        zeros = '0'*len(tmax_str[2:])
+        t_offset = int(tmax_str[:2] + zeros)
+
+        ZP = 27.5  # global zero-point for visualization
+
+        h = 3  # columns
+        v = math.ceil(len(self.bands) / h)  # rows
+
+        fig = plt.figure(figsize=(15, 5 * v))
+        gs = gridspec.GridSpec(v * 2, h, height_ratios=[3, 1] * v)
+
+        for i, band in enumerate(self.bands):
+            j = math.ceil(i % h)
+            k = i // h * 2
+            ax = plt.subplot(gs[k, j])
+            ax2 = plt.subplot(gs[k + 1, j])
+
+            x = self.lcs[band].time - t_offset
+            x_fit = self.lc_fits[band].time - t_offset
+            if not plot_mag:
+                y_norm = change_zp(1.0, self.lcs[band]['zp'], ZP)
+                y = self.lcs[band].flux * y_norm
+                yerr = self.lcs[band].flux_err * y_norm
+                y_fit = self.lc_fits[band].flux * y_norm
+                yerr_fit = self.lc_fits[band].flux_err * y_norm
+            else:
+                y = self.lcs[band].mag
+                yerr = self.lcs[band].mag_err
+                y_fit = self.lc_fits[band].mag
+                yerr_fit = self.lc_fits[band].mag_err
+                ax.invert_yaxis()
+                ax2.invert_yaxis()
+
+            colour = colours[i]
+            data_par = dict(fmt='o', color=colour, capsize=3,
+                            capthick=2, ms=8, elinewidth=3, mec='k')
+            fit_par = dict(ls='-', lw=2, zorder=16, color=colour)
+            fit_err_par = dict(alpha=0.5, color=colour)
+
+            # light curves
+            ax.errorbar(x, y, yerr, label=band, **data_par)
+            ax.plot(x_fit, y_fit, **fit_par)
+            ax.fill_between(x_fit, y_fit - yerr_fit, y_fit + yerr_fit,
+                            **fit_err_par)
+
+            # residuals
+            res = y - np.interp(x, x_fit, y_fit)
+            ax2.errorbar(x, res, yerr, **data_par)
+            ax2.plot(x_fit, np.zeros_like(y_fit), **fit_par)
+            ax2.fill_between(x_fit, -yerr_fit, yerr_fit, **fit_err_par)
+
+            for axis in [ax, ax2]:
+                axis.axvline(x=self.init_tmax - t_offset, color='k',
+                             linestyle='--', alpha=0.4)
+                axis.xaxis.set_tick_params(labelsize=15)
+                axis.yaxis.set_tick_params(labelsize=15)
+                axis.minorticks_on()
+                axis.tick_params(which='major', length=6, width=1,
+                                 direction='in', top=True, right=True)
+                axis.tick_params(which='minor', length=3, width=1,
+                                 direction='in', top=True, right=True)
+            ax.set_xticks([])
+            ax.legend(fontsize=16)
+
+        fig.text(0.5, 0.92, f'{self.name} (z = {self.z:.5})', ha='center',
+                 fontsize=20, family='serif')
+        fig.text(0.5, 0.05, f'Time - {t_offset} [days]', ha='center',
+                 fontsize=18, family='serif')
+        if not plot_mag:
+            fig.text(0.05, 0.5, f'Flux (ZP = {ZP})', va='center',
+                     rotation='vertical', fontsize=18, family='serif')
+        else:
+            fig.text(0.05, 0.5, r'Apparent Magnitude', va='center',
+                     rotation='vertical', fontsize=18, family='serif')
+
+        if fig_name is not None:
+            plt.savefig(fig_name)
+
+        plt.show()
 
 ################################################################################
 ################################################################################
@@ -276,48 +481,6 @@ class sn(object):
 
     def __repr__(self):
         return f'name = {self.name}, z = {self.z:.5}, ra = {self.ra}, dec = {self.dec}'
-
-    def __getattr__(self, attribute):
-        if attribute=='name':
-            return self.name
-        if attribute=='z':
-            return self.z
-        if attribute=='ra':
-            return self.ra
-        if attribute=='dec':
-            return self.dec
-        if 'data' in self.__dict__:
-            if attribute in self.data:
-                return(self.data[attribute])
-        else:
-            return f'Attribute {attribute} is not defined.'
-
-    def __getstate__(self):
-        return self.__dict__
-
-    def __setstate__(self, d):
-        self.__dict__.update(d)
-
-    def save_sn(self, name=None, path=None):
-        """Saves a SN object into a pickle file
-
-        Parameters
-        ----------
-        name : str, default ``None``
-            Name of the SN object. If no name is given, ``name`` is set to ``self.name``.
-        path: str, default ``None``
-            Path where to save the SN file given the ``name``.
-        """
-
-        if name is None:
-            name = self.name
-
-        if path is None:
-            with open(f'{name}.pisco', 'wb') as pfile:
-                pickle.dump(self, pfile, pickle.HIGHEST_PROTOCOL)
-        else:
-            with open(os.path.join(path, name) + '.pisco', 'wb') as pfile:
-                pickle.dump(self, pfile, pickle.HIGHEST_PROTOCOL)
 
 
     def plot_data(self, band_list=None, plot_type='flux', save=False, fig_name=None):
@@ -407,33 +570,6 @@ class sn(object):
 
         plt.show()
 
-    def normalize_data(self):
-        """This function is depricated starting from v0.1.5 as it is now included in :func:`fit_lcs()`.
-
-        **Note**: if you call this function, it will not change the results. It is just
-        maintained for compatibility purposes, but might be removed in future versions.
-        See :func:`_normalize_data()` for the original documentation.
-        """
-
-        self._normalize_data()
-
-    def _normalize_data(self):
-        """Normalizes the fluxes and zero-points (ZPs).
-
-        Fluxes are converted to physical units by calculating the ZPs according to the
-        magnitude system, for example: **AB**, **BD17** or **Vega**.
-        """
-
-        for band in self.bands:
-            mag_sys = self.data[band]['mag_sys']
-            current_zp = self.data[band]['zp']
-
-            new_zp = calc_zp(self.filters[band]['wave'], self.filters[band]['transmission'],
-                                        self.filters[band]['response_type'], mag_sys, band)
-
-            self.data[band]['flux'] = change_zp(self.data[band]['flux'], current_zp, new_zp)
-            self.data[band]['flux_err'] = change_zp(self.data[band]['flux_err'], current_zp, new_zp)
-            self.data[band]['zp'] = new_zp
 
     ############################################################################
     ############################ Light Curves Fits #############################

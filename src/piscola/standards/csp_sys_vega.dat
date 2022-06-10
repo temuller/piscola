@@ -1,0 +1,10 @@
+################
+standard_sed: alpha_lyr_stis_005.dat
+
+# Natural magnitude in the Swope telescope system of CSP
+# See https://csp.obs.carnegiescience.edu/data/filters
+Swope_B 0.030
+Swope_V 0.0096
+Swope_Y 0.0
+Swope_J 0.0
+Swope_H 0.0

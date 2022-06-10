@@ -25,7 +25,7 @@ class sed_template(object):
 
         self.set_sed_template(template)
         self.redshifted = False
-        self.extinction_corrected = False
+        self.extincted = False
 
     def __repr__(self):
         return f'name: {self.name}, z: {self.z:.5}, ra: {self.ra}, dec: {self.dec}'
@@ -95,7 +95,7 @@ class sed_template(object):
                          r_v=3.1, ebv=None):
 
         message = 'The SED template is already extincted.'
-        assert not self.extinction_corrected, message
+        assert not self.extincted, message
 
         for phase in np.unique(self.phase):
             mask = self.phase == phase
@@ -129,12 +129,16 @@ class sed_template(object):
                                        r_v=self.r_v, ebv=self.ebv)
         self.extinction_corrected = False
 
-    def get_phase_data(self, phase):
+    def get_phase_data(self, phase, include_err=False):
 
         mask = self.phase == phase
         wave, flux = self.wave[mask].copy(), self.flux[mask].copy()
 
-        return wave, flux
+        if not include_err:
+            return wave, flux
+        else:
+            flux_err = self.flux_err[mask].copy()
+            return wave, flux, flux_err
 
     def plot_sed(self, phase=0.0):
 
@@ -149,8 +153,10 @@ class sed_template(object):
                                  reddening_law='fitzpatrick99',
                                  r_v=3.1, ebv=None):
 
-        self.redshift()
-        self.apply_extinction(scaling, reddening_law, r_v, ebv)
+        if not self.redshifted:
+            self.redshift()
+        if not self.extincted:
+            self.apply_extinction(scaling, reddening_law, r_v, ebv)
 
         # obs. light curves
         photometry = {band:[] for band in filters.bands}
@@ -160,6 +166,42 @@ class sed_template(object):
                 wave, flux = self.get_phase_data(phase)
                 obs_flux = filters[band].integrate_filter(wave, flux)
                 photometry[band].append(obs_flux)
+
+        photometry['phase'] = phases
+        photometry_df = pd.DataFrame(photometry)
+        self.obs_lcs = photometry_df
+
+        # GP fit for interpolation
+        fit_phot = {band:None for band in filters.bands}
+        for band in filters.bands:
+            flux = photometry_df[band].values
+            # assuming no errors in the observations or in the fit
+            phases_pred, flux_pred, _ = gp_lc_fit(phases, flux)
+            fit_phot[band] = flux_pred
+
+        fit_phot['phase'] = phases_pred
+        fit_phot_df = pd.DataFrame(fit_phot)
+        self.obs_lcs_fit = fit_phot_df
+
+    def calculate_rest_lightcurves(self, filters):
+
+        if self.extincted:
+            self.correct_extinction()
+        if self.redshifted:
+            self.deredshift()
+
+        # restframe light curves
+        photometry = {band:[] for band in filters.bands}
+        photometry.update({f'{band}_err':[] for band in filters.bands})
+        phases = np.unique(self.phase)
+        for band in filters.bands:
+            filt = filters[band]
+            for phase in phases:
+                wave, flux, flux_err = self.get_phase_data(phase)
+                rest_flux = filt.integrate_filter(wave, flux)
+                rest_flux_err = filt.integrate_filter(wave, flux_err)
+                photometry[band].append(rest_flux)
+                photometry[f'{band}_err'].append(rest_flux_err)
 
         photometry['phase'] = phases
         photometry_df = pd.DataFrame(photometry)
@@ -175,7 +217,5 @@ class sed_template(object):
         fit_phot['phase'] = phases_pred
         fit_phot_df = pd.DataFrame(fit_phot)
 
-        self.obs_lcs = photometry_df
-        self.obs_lcs_fit = fit_phot_df
-        self.correct_extinction()
-        self.deredshift()
+        self.rest_lcs = photometry_df
+        self.rest_lcs_fit = fit_phot_df

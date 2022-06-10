@@ -1,0 +1,7 @@
+standard_sed: alpha_lyr_stis_005.dat
+
+Bessell_U	0.03
+Bessell_B	0.03
+Bessell_V	0.03
+Bessell_R	0.03
+Bessell_I	0.03

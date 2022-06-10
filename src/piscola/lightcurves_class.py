@@ -9,12 +9,10 @@ from .utils import flux2mag
 class lightcurve(object):
     """Light curve class.
     """
-    def __init__(self, band, lc_file):
+    def __init__(self, band, lcs_df):
         self.band = band
 
-        lc_df = pd.read_csv(lc_file, delim_whitespace=True,
-                            skiprows=2)
-        data = lc_df[lc_df.band == band]
+        data = lcs_df[lcs_df.band == band]
         self.time = data.time.values
         self.flux = data.flux.values
         self.flux_err = data.flux_err.values
@@ -40,13 +38,11 @@ class lightcurve(object):
 class lightcurves(object):
     """Multi-colour light curves class.
     """
-    def __init__(self, lc_file):
-        lc_df = pd.read_csv(lc_file, delim_whitespace=True,
-                            skiprows=2)
-        self.bands = lc_df.band.unique()
+    def __init__(self, lcs_df):
+        self.bands = lcs_df.band.unique()
 
         for band in self.bands:
-            lc = lightcurve(band, lc_file)
+            lc = lightcurve(band, lcs_df)
             setattr(self, band, lc)
 
     def __repr__(self):
@@ -56,7 +52,7 @@ class lightcurves(object):
         return getattr(self, item)
 
 
-class fitted_lightcurve(object):
+class generic_lightcurve(object):
     def __init__(self, band, time, flux, flux_err, zp):
         self.band = band
         self.time = time
@@ -75,12 +71,12 @@ class fitted_lightcurve(object):
     def __getitem__(self, item):
         return getattr(self, item)
 
-class fitted_lightcurves(object):
+class generic_lightcurves(object):
     def __init__(self, fits_dict):
         self.bands = list(fits_dict.keys())
 
         for band, lc_dict in fits_dict.items():
-            lc_fit = fitted_lightcurve(band, *lc_dict.values())
+            lc_fit = generic_lightcurve(band, *lc_dict.values())
             setattr(self, band, lc_fit)
 
     def __repr__(self):
