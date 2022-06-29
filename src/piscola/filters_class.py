@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 import piscola
 
-class single_filter(object):
+class SingleFilter(object):
     """Single filter class.
     """
     def __init__(self, band):
@@ -180,14 +180,14 @@ class single_filter(object):
 
         return zp
 
-class multi_filters(object):
+class MultiFilters(object):
     """Class representing multiple filters.
     """
     def __init__(self, bands):
         self.bands = list(bands).copy()
 
         for band in bands:
-            single_filt = single_filter(band)
+            single_filt = SingleFilter(band)
             setattr(self, band, single_filt)
 
         # add Bessell filters
@@ -203,7 +203,7 @@ class multi_filters(object):
         return getattr(self, item)
 
     def add_filter(self, band):
-        single_filt = single_filter(band)
+        single_filt = SingleFilter(band)
         setattr(self, band, single_filt)
         self.bands.append(band)
 

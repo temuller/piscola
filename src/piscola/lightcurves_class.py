@@ -4,7 +4,7 @@ import warnings
 
 from .utils import flux2mag
 
-class lightcurve(object):
+class Lightcurve(object):
     """Light curve class.
     """
     def __init__(self, band, lcs_df):
@@ -57,14 +57,14 @@ class lightcurve(object):
                 self.dm15 = self.dm15_err = np.nan
 
 
-class lightcurves(object):
+class Lightcurves(object):
     """Multi-colour light curves class.
     """
     def __init__(self, lcs_df):
         self.bands = lcs_df.band.unique()
 
         for band in self.bands:
-            lc = lightcurve(band, lcs_df)
+            lc = Lightcurve(band, lcs_df)
             setattr(self, band, lc)
 
     def __repr__(self):

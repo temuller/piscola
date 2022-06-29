@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 # This is the skeleton of PISCOLA, the main file
 
-from .lightcurves_class import lightcurves
-from .filters_class import multi_filters
-from .sed_class import sed_template
+from .lightcurves_class import Lightcurves
+from .filters_class import MultiFilters
+from .sed_class import SedTemplate
 
 from .gaussian_process import gp_lc_fit, gp_2d_fit
-from .utils import flux2mag, mag2flux, change_zp
+from .utils import change_zp
 
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
@@ -45,7 +45,7 @@ def call_sn(lc_file):
                                    delim_whitespace=True,
                                    converters=converters).values[0]
 
-    sn_obj = supernova(name, z, ra, dec, lc_file)
+    sn_obj = Supernova(name, z, ra, dec, lc_file)
 
     return sn_obj
 
@@ -70,8 +70,8 @@ def load_sn(piscola_file):
 
     return sn_obj
 
-class supernova(object):
-    """Supernova class.
+class Supernova(object):
+    """Class representing a supernova object.
     """
     def __init__(self, name, z=0.0, ra=None, dec=None,
                  lc_file=None, template='conley09f'):
@@ -88,8 +88,8 @@ class supernova(object):
         if lc_file:
             lcs_df = pd.read_csv(lc_file, delim_whitespace=True,
                             skiprows=2)
-            self.lcs = lightcurves(lcs_df)
-            self.filters = multi_filters(self.lcs.bands)
+            self.lcs = Lightcurves(lcs_df)
+            self.filters = MultiFilters(self.lcs.bands)
 
             # order bands by effective wavelength
             eff_waves = [self.filters[band]['eff_wave']
@@ -105,7 +105,7 @@ class supernova(object):
             self._normalize_lcs()
 
         # add SED template
-        self.sed = sed_template(z, ra, dec, template)
+        self.sed = SedTemplate(z, ra, dec, template)
         self.sed.calculate_obs_lightcurves(self.filters)
 
     def __repr__(self):
@@ -265,7 +265,7 @@ class supernova(object):
             fit_df['mag_sys'] = self.lcs[band].mag_sys
             fits_df_list.append(fit_df)
 
-        self.lc_fits = lightcurves(pd.concat(fits_df_list))
+        self.lc_fits = Lightcurves(pd.concat(fits_df_list))
         self._mangle_sed()
         self._get_rest_lightcurves()
         self._extract_lc_params()
@@ -334,8 +334,8 @@ class supernova(object):
             fit_df['mag_sys'] = mag_sys
             fits_df_list.append(fit_df)
 
-        self.rest_lcs = lightcurves(pd.concat(lcs_df_list))
-        self.rest_lcs_fits = lightcurves(pd.concat(fits_df_list))
+        self.rest_lcs = Lightcurves(pd.concat(lcs_df_list))
+        self.rest_lcs_fits = Lightcurves(pd.concat(fits_df_list))
 
     def _extract_lc_params(self):
         """Calculates the light-curves parameters.

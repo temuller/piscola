@@ -8,7 +8,7 @@ import piscola
 from .extinction_correction import redden, deredden, calculate_ebv
 from .gaussian_process import gp_lc_fit
 
-class sed_template(object):
+class SedTemplate(object):
     """Spectral energy distribution (SED) class
     for correcting a supernova.
 
