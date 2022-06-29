@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .sn_class import call_sn, load_sn, supernova
+from .sn_class import call_sn, load_sn, Supernova
 from . import filters_class
 from . import sed_class
 

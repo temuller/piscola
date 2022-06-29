@@ -40,6 +40,13 @@ sn = piscola.call_sn(<sn_file>)
 sn.fit()
 ```
 
+The light-curve parameters are saved in a dictionary and can be accessed directly:
+
+```python
+sn.lc_parameters  # dictionary
+sn.dm15
+```
+
 You can find an example of input file in the [data](https://github.com/temuller/piscola/tree/master/data) directory.
 
 ## Citing PISCOLA
