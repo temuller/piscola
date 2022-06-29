@@ -197,7 +197,7 @@ class sed_template(object):
         for band in filters.bands:
             filt = filters[band]
             for phase in phases:
-                wave, flux, flux_err = self.get_phase_data(phase)
+                wave, flux, flux_err = self.get_phase_data(phase, include_err=True)
                 rest_flux = filt.integrate_filter(wave, flux)
                 rest_flux_err = filt.integrate_filter(wave, flux_err)
                 photometry[band].append(rest_flux)

@@ -265,7 +265,6 @@ def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v=3
         Colour excess (:math:`E(B-V)`). If given, this is used instead of the dust map value.
 
     """
-
     flux = 100
     wave = np.arange(1000, 25001)  # in Angstroms
     deredden_flux = deredden(wave, flux, ra, dec, scaling,

@@ -1,6 +1,6 @@
 # PISCOLA: Python for Intelligent Supernova-COsmology Light-curve Analysis
 
-**Type Ia Supernova Light-curve fitting code in python**
+**Supernova light-curve fitting code in python**
 
 
 [![repo](https://img.shields.io/badge/GitHub-temuller%2Fpiscola-blue.svg?style=flat)](https://github.com/temuller/piscola)
