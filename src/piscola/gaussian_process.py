@@ -1,7 +1,7 @@
+import scipy
 import numpy as np
 from functools import partial
 
-import scipy
 import george
 from george.kernels import (Matern52Kernel, Matern32Kernel,
                             ExpSquaredKernel)
@@ -73,7 +73,6 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52'):
 
     # optimization routine for hyperparameters
     p0 = gp.get_parameter_vector()
-    bounds = gp.get_parameter_bounds()
     results = scipy.optimize.minimize(neg_log_like, p0, jac=grad_neg_log_like,
                                         method="L-BFGS-B")
     gp.set_parameter_vector(results.x)
@@ -91,7 +90,7 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52'):
 
 def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0,
               kernel1='matern52', kernel2='squaredexp',
-              gp_mean='mean'):
+              gp_mean='max'):
     """Gaussian Process fit in 2D. Used for fitting multi-colour
     light curves and magnling function.
 
@@ -113,6 +112,8 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0,
         Kernel for the time axis.
     kernel2: str, default ``squaredexp``
         Kernel for the wavelength acis.
+    gp_mean: str, default ``max``
+        Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
 
     Returns
     -------

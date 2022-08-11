@@ -1,6 +1,8 @@
 ########################################################################################
-### NOTE: This is the same file as in SNANA, but modified to be readable by PISCoLA ###
+### NOTE: This is the same file as in SNANA, but modified to be readable by piscola  ###
 ########################################################################################
+
+standard_sed: bd_17d4708_stisnic_005.dat  # used by piscola
 
 #SN_SED: Hsiao07.dat
 #BD17_SED:    bd17_stisnic_005.dat

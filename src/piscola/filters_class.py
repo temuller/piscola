@@ -107,7 +107,7 @@ class SingleFilter(object):
         transmission = self.transmission.copy()
         # check filter response type
         if self.response_type == 'energy':
-            ftransmission /= self.wave
+            transmission /= self.wave
 
         transmission = np.interp(sed_wave, self.wave, transmission,
                                  left=0.0, right=0.0)
@@ -118,21 +118,26 @@ class SingleFilter(object):
         return flux_filter
 
     def get_standard_flux(self, mag_sys_file):
-        if 'ab' in mag_sys_file.split('_'):
+        pisco_path = piscola.__path__[0]
+
+        # get standard SED file name
+        with open(mag_sys_file, 'rt') as file:
+            for line in file:
+                if len(line)>0:
+                    if 'standard_sed:' in line.split():
+                        standard_sed = line.split()[1]
+                        break
+
+        assert 'standard_sed' in locals(), f"Standard SED file not found in {mag_sys_file}"
+
+        if standard_sed.lower()=='ab':
             c = 2.99792458e18  # speed of light in [Angstroms/s]
-            ab_wave = np.arange(1000, 250000, 5)
-            ab_flux = 3631e-23 * c / ab_wave ** 2  # in [erg s^-1 cm^-2 A^-1]
-            f_sed = self.integrate_filter(ab_wave, ab_flux)
-
+            sed_wave = np.arange(1000, 250000, 1)
+            sed_flux = 3631e-23 * c / ab_wave ** 2  # in [erg s^-1 cm^-2 A^-1]
         else:
-            pisco_path = piscola.__path__[0]
-            with open(mag_sys_file, 'rt') as file:
-                standard_sed = [line.split()[1] for line in file
-                                if 'standard_sed:' in line.split()][0]
-
             sed_file = os.path.join(pisco_path, 'standards', standard_sed)
             sed_wave, sed_flux = np.loadtxt(sed_file).T
-            f_sed = self.integrate_filter(sed_wave, sed_flux)
+        f_sed = self.integrate_filter(sed_wave, sed_flux)
 
         return f_sed
 
@@ -162,7 +167,7 @@ class SingleFilter(object):
         """
         pisco_path = piscola.__path__[0]
         mag_sys_file_path = os.path.join(pisco_path,
-                                         'standards',
+                                         'mag_sys',
                                          'magnitude_systems.txt')
 
         mag_sys_names, mag_sys_files = np.loadtxt(mag_sys_file_path,
@@ -171,7 +176,7 @@ class SingleFilter(object):
         assert mag_sys in mag_sys_names, err_message
 
         ind = list(mag_sys_names).index(mag_sys)
-        mag_sys_file = os.path.join(pisco_path, 'standards',
+        mag_sys_file = os.path.join(pisco_path, 'mag_sys',
                                     mag_sys_files[ind])
 
         f_sed = self.get_standard_flux(mag_sys_file)
@@ -230,7 +235,7 @@ class MultiFilters(object):
         z : float, default ``0.0``
             Redshift.
         """
-        B_eff_wave = 4500
+        B_eff_wave = 4500.0
         eff_waves =  np.array([self.filters[band].eff_wave/(1+z)
                                 for band in self.bands])
         idx = (np.abs(B_eff_wave - eff_waves)).argmin()

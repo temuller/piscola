@@ -20,7 +20,7 @@ class Lightcurve(object):
         self.mag_sys = data.mag_sys.unique()[0]
 
     def __repr__(self):
-        return f'band: {self.band}, zp: {self.zp}, mag_sys: {self.mag_sys}'
+        return f'band: {self.band}, zp: {self.zp:.5}, mag_sys: {self.mag_sys}'
 
     def __getitem__(self, item):
         return getattr(self, item)
@@ -33,7 +33,8 @@ class Lightcurve(object):
         self.masked_mag_err = self.mag_err.copy()[mask]
 
     def get_max(self):
-        peak_ids = peak.indexes(-self.mag, thres=.3,
+        mag = np.nan_to_num(self.mag, nan=np.nanmean(self.mag))
+        peak_ids = peak.indexes(-mag, thres=.3,
                                min_dist=len(self.time) // 3)
         if len(peak_ids)==0:
             self.mmax = self.mmax_err = np.nan
@@ -43,6 +44,14 @@ class Lightcurve(object):
             self.mmax_err = self.mag_err[peak_ids[0]]
             self.tmax = self.time[peak_ids[0]]
 
+            # get tmax_err
+            # use only data around peak
+            mask = (self.time > self.tmax - 5) & (self.time < self.tmax + 5)
+            time = self.time[mask]
+            brightest_mag = (self.mag - self.mag_err)[mask]
+            id_err = np.argmin(np.abs(brightest_mag - self.mmax))
+            self.tmax_err = np.abs(time[id_err] - self.tmax)
+
     def get_dm15(self):
         self.get_max()
         if np.isnan(self.tmax):
@@ -51,8 +60,8 @@ class Lightcurve(object):
             phase = self.time - self.tmax
             if any(np.abs(phase-15) < 0.5):
                 dm15_id = np.argmin(np.abs(phase-15))
-                self.dm15 = self.mag[dm15_id]
-                self.dm15_err = self.mag_err[dm15_id]
+                self.dm15 = self.mag[dm15_id] - self.mmax
+                self.dm15_err = np.sqrt(self.mag_err[dm15_id]**2 + self.mmax_err**2)
             else:
                 self.dm15 = self.dm15_err = np.nan
 

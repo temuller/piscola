@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
 # This is the skeleton of PISCOLA, the main file
+import os
+import math
+import random
+import numpy as np
+import pandas as pd
+import pickle5 as pickle
+from peakutils import peak
 
-from .lightcurves_class import Lightcurves
-from .filters_class import MultiFilters
-from .sed_class import SedTemplate
-
-from .gaussian_process import gp_lc_fit, gp_2d_fit
-from .utils import change_zp
-
-import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+
+from .utils import change_zp
+from .sed_class import SedTemplate
+from .filters_class import MultiFilters
+from .lightcurves_class import Lightcurves
+from .gaussian_process import gp_lc_fit, gp_2d_fit
 
 from scipy.signal import savgol_filter
-from peakutils import peak
-import pickle5 as pickle
-import pandas as pd
-import numpy as np
-import random
-import math
-import os
+
 
 def call_sn(lc_file):
     """Loads a supernova from a file and initialises
@@ -65,10 +65,11 @@ def load_sn(piscola_file):
     err_message = f'File {piscola_file} not found.'
     assert os.path.isfile(piscola_file), err_message
 
-    with open(os.path.join(path, name) + '.pisco', 'rb') as sn_file:
+    with open(piscola_file, 'rb') as sn_file:
         sn_obj = pickle.load(sn_file)
 
     return sn_obj
+
 
 class Supernova(object):
     """Class representing a supernova object.
@@ -110,7 +111,7 @@ class Supernova(object):
 
     def __repr__(self):
         rep = (f'name: {self.name}, z: {self.z:.5}, '
-               f'ra: {self.ra}, dec: {self.dec}\n')
+               f'ra: {self.ra:.5}, dec: {self.dec:.5}\n')
         return rep
 
     def __getitem__(self, item):
@@ -197,6 +198,8 @@ class Supernova(object):
         kernel2 : str, default ``matern52``
             Kernel to be used in the **wavelengt**-axis when fitting the light curves with gaussian process. E.g.,
             ``matern52``, ``matern32``, ``squaredexp``.
+        gp_mean : str, default ``max``
+            Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
         """
         self._stack_lcs()
         timeXwave, lc_mean, lc_std, gp_pred, gp = gp_2d_fit(self._stacked_time,
@@ -217,27 +220,47 @@ class Supernova(object):
         wave_ind = np.argmin(np.abs(B_eff_wave*(1+self.z) - waves))
         eff_wave = waves[wave_ind]
         Bmask = waves == eff_wave
-        Btime, Bmag = times[Bmask], lc_mean[Bmask]
+        Btime, Bmag, Bmag_err = times[Bmask], lc_mean[Bmask], lc_std[Bmask]
 
         peak_id = peak.indexes(-Bmag, thres=.3, min_dist=len(Btime)//2)[0]
         self.init_tmax = np.round(Btime[peak_id], 2)
+
+        # get tmax_err
+        Bmax = Bmag[peak_id]
+        # use only data around peak
+        mask = (Btime > self.init_tmax - 5) & (Btime < self.init_tmax + 5)
+        Btime = Btime[mask]
+        brightest_mag = (Bmag - Bmag_err)[mask]
+        id_err = np.argmin(np.abs(brightest_mag - Bmax))
+        self.tmax_err = np.abs(Btime[id_err] - self.init_tmax)
 
     def fit(self, kernel1='matern52', kernel2='squaredexp', gp_mean='mean'):
         self._fit_lcs(kernel1, kernel2, gp_mean)  # to get initial tmax
 
         sed_lcs = self.sed.obs_lcs_fit  # interpolated light curves
         sed_times = sed_lcs.phase.values + self.init_tmax
-        flux_ratios = []
-        flux_err = []
+
+        times, waves = [], []
+        flux_ratios, flux_err = [], []
         for band in self.bands:
-            sed_flux = np.interp(self.lcs[band].masked_time, sed_times,
+            # this mask avoids observations beyond the SED template limits
+            mask = self.lcs[band].masked_time <= sed_times.max()
+            sed_flux = np.interp(self.lcs[band].masked_time[mask], sed_times,
                                  sed_lcs[band].values, left=0.0, right=0.0)
-            flux_ratios.append(self.lcs[band].masked_flux/sed_flux)
-            flux_err.append(self.lcs[band].masked_flux_err/sed_flux)
+
+            times.append(self.lcs[band].masked_time[mask])
+            waves.append([self.filters[band].eff_wave] * len(self.lcs[band].masked_time[mask]))
+            flux_ratios.append(self.lcs[band].masked_flux[mask]/sed_flux)
+            flux_err.append(self.lcs[band].masked_flux_err[mask]/sed_flux)
+
+        # prepare data for 2D fit
+        stacked_times = np.hstack(times)
+        stacked_waves = np.hstack(waves)
         stacked_ratios = np.hstack(flux_ratios)
         stacked_err = np.hstack(flux_err)
-        timeXwave, mf_mean, mf_std, gp_pred, gp = gp_2d_fit(self._stacked_time,
-                                                            self._stacked_wave,
+
+        timeXwave, mf_mean, mf_std, gp_pred, gp = gp_2d_fit(stacked_times,
+                                                            stacked_waves,
                                                             stacked_ratios,
                                                             stacked_err,
                                                             kernel1, kernel2,
@@ -327,7 +350,7 @@ class Supernova(object):
             fit = self.sed.rest_lcs_fit
             fit_df = pd.DataFrame({'time': fit.phase.values,
                                   'flux': fit[band].values,
-                                  'flux_err': [0.0]*len(fit.phase.values)
+                                  'flux_err': fit[f'{band}_err'].values
                                   })
             fit_df['zp'] = zp
             fit_df['band'] = band
@@ -343,18 +366,16 @@ class Supernova(object):
         Estimation of B-band peak apparent magnitude (m :math:`_B^{max}`), stretch (:math:`\Delta` m :math:`_{15}(B)`)
         and colour (:math:`(B-V)^{max}`) parameters. An interpolation of the corrected light curves is done as well as
         part of this process.
-
-        Parameters
-        ----------
-        maxiter : int, default ``5``
-            Maximum number of iteration of the correction process to estimate an accurate B-band peak.
-
         """
         self.rest_lcs.get_lc_params()
         band1 = 'Bessell_B'
         band2 = 'Bessell_V'
-        #self.tmax = self.rest_lcs[band1].tmax
         self.tmax = self.init_tmax
+        self.rest_lcs_fits[band1].get_max()
+        delta_tmax = self.rest_lcs_fits[band1].tmax
+        tmax_err = self.rest_lcs_fits[band1].tmax_err
+        self.tmax_err = np.sqrt(delta_tmax**2 + tmax_err**2)
+
         self.mmax = self.rest_lcs[band1].mmax
         self.mmax_err = self.rest_lcs[band1].mmax_err
         self.dm15 = self.rest_lcs[band1].dm15
@@ -362,30 +383,24 @@ class Supernova(object):
         self.colour, self.colour_err = self.rest_lcs.get_max_colour(band1, band2)
         self.stretch, self.stretch_err = self.rest_lcs.get_colour_stretch(band1, band2)
 
-        self.lc_parameters = {'mmax':self.mmax, 'mmax_err':self.mmax_err,
+        self.lc_parameters = {'tmax':self.tmax, 'tmax_err':self.tmax_err,
+                              'Bmax':self.mmax, 'Bmax_err':self.mmax_err,
                               'dm15':self.dm15, 'dm15_err':self.dm15_err,
                               'colour':self.colour, 'colour_err':self.colour_err,
-                              'stretch': self.stretch, 'stretch_err': self.stretch_err}
-
+                              'sBV': self.stretch, 'sBV_err': self.stretch_err}
 
     def plot_fits(self, plot_mag=False, fig_name=None):
         """Plots the light-curves fits results.
 
-        Plots the observed data for each band together with the gaussian process fits. The initial B-band
-        peak estimation is plotted. The final B-band peak estimation after light-curves corrections is
-        also potted if corrections have been applied.
+        Plots the observed data for each band together with the gaussian process fits.
+        The time of B-band peak is shown as a vertical dashed line.
 
         Parameters
         ----------
-        plot_together : bool, default ``False``
-            If ``False``, plots the bands separately. Otherwise, all bands are plotted together.
-        plot_type : str, default ``flux``
-            Type of value used for the data: either ``mag`` or ``flux``.
-        save : bool, default ``False``
-            If ``True``, saves the plot into a file.
+        plot_mag : bool, default ``False``
+            If ``True``, plots the bands in magnitude space.
         fig_name : str, default ``None``
-            Name of the saved plot. If ``None`` is used the name of the file will be '{``self.name``}_lc_fits.png'.
-            Only works if ``save`` is set to ``True``.
+            If  given, name of the output plot.
 
         """
         palette1 = [plt.get_cmap('Dark2')(i) for i in np.arange(8)]

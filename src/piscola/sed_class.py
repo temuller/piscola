@@ -60,6 +60,7 @@ class SedTemplate(object):
         self.phase = self.data.phase.values
         self.wave = self.data.wave.values
         self.flux = self.data.flux.values
+        self.flux_err = np.zeros_like(self.flux)
         self.name = template
 
         readme_file = os.path.join(pisco_path, 'templates',
@@ -210,9 +211,11 @@ class SedTemplate(object):
         fit_phot = {band:None for band in filters.bands}
         for band in filters.bands:
             flux = photometry_df[band].values
-            # assuming no errors in the observations or in the fit
-            phases_pred, flux_pred, _ = gp_lc_fit(phases, flux)
+            flux_err = photometry_df[f'{band}_err'].values
+            # errors are underestimated as they are already correlated
+            phases_pred, flux_pred, flux_pred_err = gp_lc_fit(phases, flux, flux_err)
             fit_phot[band] = flux_pred
+            fit_phot[f'{band}_err'] = flux_pred_err
 
         fit_phot['phase'] = phases_pred
         fit_phot_df = pd.DataFrame(fit_phot)
