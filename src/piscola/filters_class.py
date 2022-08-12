@@ -9,6 +9,12 @@ class SingleFilter(object):
     """Single filter class.
     """
     def __init__(self, band):
+        """
+        Parameters
+        ----------
+        band: str
+            Name of the band.
+        """
         self.name = band
         self.add_filter(band)
 
@@ -21,8 +27,13 @@ class SingleFilter(object):
         return getattr(self, item)
 
     def add_filter(self, filt_name):
-        """Add a filter from the available filters
+        """Adds a filter from the available filters
         in the PISCOLA library.
+
+        Parameters
+        ----------
+        filt_name: str
+            Name of the filter.
         """
         pisco_path = piscola.__path__[0]
         filt_pattern = os.path.join(pisco_path, 'filters',
@@ -66,7 +77,23 @@ class SingleFilter(object):
             self.comments = ''
 
     def calc_eff_wave(self, sed_wave=None, sed_flux=None):
+        """Calculates the effective wavelength.
 
+        The effective wavelength depends on the shape
+        of the given SED.
+
+        Parameters
+        ----------
+        sed_wave : array-like, default ``None``
+            SED's wavelength range. If ``None``, a flat SED is used.
+        sed_flux : array-like, default ``None``
+            SED's flux density distribution. If ``None``, a flat SED is used.
+
+        Returns
+        -------
+        eff_wave: float
+            Effective wavelength.
+        """
         if sed_wave is None or sed_flux is None:
             sed_wave = self.wave.copy()
             sed_flux = 100 * np.ones_like(sed_wave)
@@ -89,10 +116,10 @@ class SingleFilter(object):
 
         Parameters
         ----------
-        sed_wave : array
-            Spectrum's wavelength range.
-        sed_flux : array
-            Spectrum's flux density distribution.
+        sed_wave : array-like
+            SED's wavelength range.
+        sed_flux : array-like
+            SED's flux density distribution.
 
         Returns
         -------
@@ -118,6 +145,18 @@ class SingleFilter(object):
         return flux_filter
 
     def get_standard_flux(self, mag_sys_file):
+        """Calculates the integrated flux of a standard star SED.
+
+        Parameters
+        ----------
+        mag_sys_file: str
+            File with the magnitude system information.
+
+        Returns
+        -------
+        f_sed: float
+            Integrated flux density.
+        """
         pisco_path = piscola.__path__[0]
 
         # get standard SED file name
@@ -142,7 +181,18 @@ class SingleFilter(object):
         return f_sed
 
     def get_standard_mag(self, mag_sys_file):
+        """Obtains the tabulated magnitude of a standard star.
 
+        Parameters
+        ----------
+        mag_sys_file: str
+            File with the magnitude system information.
+
+        Returns
+        -------
+        sed_mag: float
+            Tabulated standard magnitude.
+        """
         filt_names, mags = np.loadtxt(mag_sys_file, dtype=str).T
         err_message = f'{self.name} not in {mag_sys_file}'
         assert self.name in filt_names, err_message
@@ -189,6 +239,12 @@ class MultiFilters(object):
     """Class representing multiple filters.
     """
     def __init__(self, bands):
+        """
+        Parameters
+        ----------
+        bands: list-like
+            Bands to include.
+        """
         self.bands = list(bands).copy()
 
         for band in bands:
@@ -208,11 +264,25 @@ class MultiFilters(object):
         return getattr(self, item)
 
     def add_filter(self, band):
+        """Adds a band object with a single-filter class.
+
+        Parameters
+        ----------
+        band: str
+            Name of the band.
+        """
         single_filt = SingleFilter(band)
         setattr(self, band, single_filt)
         self.bands.append(band)
 
     def remove_filter(self, band):
+        """Removes a band object.
+
+        Parameters
+        ----------
+        band: str
+            Name of the band.
+        """
         err_message = f'Filter not found: {self.bands}'
         assert band in self.bands, err_message
 
@@ -220,6 +290,21 @@ class MultiFilters(object):
         self.bands.remove(band)
 
     def calc_eff_wave(self, bands=None, sed_wave=None, sed_flux=None):
+        """Calculates the effective wavelength of multiple bands.
+
+        The effective wavelength depends on the shape
+        of the given SED.
+
+        Parameters
+        ----------
+        bands: list-like, default ``None``
+            Bands for calculating their effective wavelengths. If ``None``,
+            use of the available bands.
+        sed_wave : array-like, default ``None``
+            SED's wavelength range. If ``None``, a flat SED is used.
+        sed_flux : array-like, default ``None``
+            SED's flux density distribution. If ``None``, a flat SED is used.
+        """
         if not bands:
             bands = self.bands
 
@@ -247,7 +332,7 @@ class MultiFilters(object):
         Parameters
         ----------
         bands : list, default ``None``
-            List of bands.
+            Bands to plot. If ``None``, plots all the available bands.
         """
         if not bands:
             bands = self.bands

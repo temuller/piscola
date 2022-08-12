@@ -63,8 +63,6 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v
         Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
         ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
         :math:`R_V` = 3.1.)
-    dustmaps_dir : str, default ``None``
-        Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
     r_v : float, default ``3.1``
         Total-to-selective extinction ratio (:math:`R_V`)
     ebv : float, default ``None``
@@ -127,8 +125,6 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r
         Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
         ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
         :math:`R_V` = 3.1.)
-    dustmaps_dir : str, default ``None``
-        Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
     r_v : float, default ``3.1``
         Total-to-selective extinction ratio (:math:`R_V`)
     ebv : float, default ``None``
@@ -181,8 +177,6 @@ def calculate_ebv(ra, dec, scaling=0.86):
         Calibration of the Milky Way dust maps. Either ``0.86``
         for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
         dust map of Schlegel, Finkbeiner & Davis (1998).
-    dustmaps_dir : str, default ``None``
-        Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
 
     Returns
     -------
@@ -217,8 +211,6 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, redde
         Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
         ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
         :math:`R_V` = 3.1.)
-    dustmaps_dir : str, default ``None``
-        Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
     r_v : float, default ``3.1``
         Total-to-selective extinction ratio (:math:`R_V`)
     ebv : float, default ``None``
@@ -257,8 +249,6 @@ def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v=3
         Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
         ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
         :math:`R_V` = 3.1.)
-    dustmaps_dir : str, default ``None``
-        Directory where the dust maps of Schlegel, Fikbeiner & Davis (1998) are found.
     r_v : float, default ``3.1``
         Total-to-selective extinction ratio (:math:`R_V`)
     ebv : float, default ``None``

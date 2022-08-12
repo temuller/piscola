@@ -8,6 +8,15 @@ class Lightcurve(object):
     """Light curve class.
     """
     def __init__(self, band, lcs_df):
+        """
+
+        Parameters
+        ----------
+        band: str
+            Light-curve filter/band name.
+        lcs_df: Dataframe
+            Light-curve data: time, flux, error, zero-point and magnitude system.
+        """
         self.band = band
 
         data = lcs_df[lcs_df.band == band]
@@ -26,6 +35,13 @@ class Lightcurve(object):
         return getattr(self, item)
 
     def mask_lc(self, mask):
+        """Masks the light-curve data with the given mask.
+
+        Parameters
+        ----------
+        mask: bool list
+            Mask to apply to the light curve.
+        """
         self.masked_time = self.time.copy()[mask]
         self.masked_flux = self.flux.copy()[mask]
         self.masked_flux_err = self.flux_err.copy()[mask]
@@ -33,6 +49,8 @@ class Lightcurve(object):
         self.masked_mag_err = self.mag_err.copy()[mask]
 
     def get_max(self):
+        """Calculates the peak magnitude and its epoch.
+        """
         mag = np.nan_to_num(self.mag, nan=np.nanmean(self.mag))
         peak_ids = peak.indexes(-mag, thres=.3,
                                min_dist=len(self.time) // 3)
@@ -53,6 +71,8 @@ class Lightcurve(object):
             self.tmax_err = np.abs(time[id_err] - self.tmax)
 
     def get_dm15(self):
+        """Calculates the classic parameter delta_m15 (Phillips 1993).
+        """
         self.get_max()
         if np.isnan(self.tmax):
             self.dm15 = self.dm15_err = np.nan
@@ -83,6 +103,25 @@ class Lightcurves(object):
         return getattr(self, item)
 
     def get_max_colour(self, band1, band2):
+        """Calculates the colour at peak of ``band1``.
+
+        The colour is ``band1 - band2`` at the time of
+        peak magnitude in ``band1``.
+
+        Parameters
+        ----------
+        band1: str
+            Name of first band.
+        band2: str
+            Name of second band.
+
+        Returns
+        -------
+        colour: float
+            Colour at peak of ``band1``.
+        colour_err: float
+            Uncertainty on the colour parameter.
+        """
         cond1 = band1 in self.bands
         cond2 = band2 in self.bands
         assert cond1 and cond2, f"band(s) not in {self.bands}"
@@ -109,6 +148,27 @@ class Lightcurves(object):
         return colour, colour_err
 
     def get_colour_stretch(self, band1, band2):
+        """Calculates the colour stretch parameter (Burns et al. 2014).
+
+        ``colour-stretch = (T(band1−band2)max − Tmax)/30 days``, where
+        ``T(band1−band2)max`` is the time of maximum (reddest colour) in the
+        ``(band1−band2)`` colour curve and ``Tmax`` is the epoch of peak
+        magnitude in ``band1``.
+
+        Parameters
+        ----------
+        band1: str
+            Name of first band.
+        band2: str
+            Name of second band.
+
+        Returns
+        -------
+        stretch: float
+            Colour-stretch parameter.
+        stretch_err: float
+            Uncertainty on the colour-stretch parameter.
+        """
         cond1 = band1 in self.bands
         cond2 = band2 in self.bands
         assert cond1 and cond2, f"band(s) not in {self.bands}"
@@ -145,7 +205,8 @@ class Lightcurves(object):
 
 
     def get_lc_params(self):
-
+        """Calculates the peak magnitude, its epoch and delta_m15 for all bands.
+        """
         for band in self.bands:
             self[band].get_max()
             self[band].get_dm15()

@@ -76,6 +76,23 @@ class Supernova(object):
     """
     def __init__(self, name, z=0.0, ra=None, dec=None,
                  lc_file=None, template='conley09f'):
+        """
+        Parameters
+        ----------
+        name: str
+            Name of the supernova.
+        z: float, default ``0.0``
+            Redshift of the supernova.
+        ra: float, default ``None``
+            Right ascension of the supernova.
+        dec: float, default ``None``
+            Declination of the supernova.
+        lc_file: str, default ``None``
+            File with the supernova light-curve data.
+        template: str, default ``conley09f``
+            Name of the spectral energy distribution (SED) template.
+            E.g., ``conley09f``, ``jla``, etc.
+        """
         self.name = name
         self.z = z
         self.ra = ra
@@ -123,8 +140,9 @@ class Supernova(object):
         Parameters
         ----------
         path: str, default ``None``
-            Path where to save the SN file given the ``name``. If None,
-            use current directory
+            Path where to save the SN file given the. If None,
+            use current directory. The file will be saved with
+            the name '<SN name>.pisco'.
         """
         if path is None:
             path = ''
@@ -163,7 +181,10 @@ class Supernova(object):
             self.lcs[band].zp = new_zp
 
     def _stack_lcs(self):
-        """For 2D fitting.
+        """Stacks of light-curve properties
+
+        Times, wavelengths, fluxes, magnitudes and errors are
+        stacked for 2D fitting.
         """
         for band in self.lcs.bands:
             # mask negative fluxes
@@ -186,7 +207,7 @@ class Supernova(object):
         self._stacked_mag_err = mag_err
 
     def _fit_lcs(self, kernel1='matern52', kernel2='squaredexp', gp_mean='max'):
-        """Fits the data for each band using gaussian process
+        """Fits the multi-colour light-curve data with gaussian process.
 
         The time of rest-frame B-band peak luminosity is estimated by finding where the derivative is equal to zero.
 
@@ -235,6 +256,22 @@ class Supernova(object):
         self.tmax_err = np.abs(Btime[id_err] - self.init_tmax)
 
     def fit(self, kernel1='matern52', kernel2='squaredexp', gp_mean='mean'):
+        """Fits and corrects the multi-colour light curves.
+
+        The corrections include Milky-Way dust extinction and mangling of the SED.
+        Rest-frame light curves and parameters are calculated as end products.
+
+        Parameters
+        ----------
+        kernel : str, default ``matern52``
+            Kernel to be used in the **time**-axis when fitting the light curves with gaussian process. E.g.,
+            ``matern52``, ``matern32``, ``squaredexp``.
+        kernel2 : str, default ``matern52``
+            Kernel to be used in the **wavelengt**-axis when fitting the light curves with gaussian process. E.g.,
+            ``matern52``, ``matern32``, ``squaredexp``.
+        gp_mean : str, default ``max``
+            Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
+        """
         self._fit_lcs(kernel1, kernel2, gp_mean)  # to get initial tmax
 
         sed_lcs = self.sed.obs_lcs_fit  # interpolated light curves
@@ -294,6 +331,8 @@ class Supernova(object):
         self._extract_lc_params()
 
     def _mangle_sed(self):
+        """Mangles the supernova SED.
+        """
         times, waves = self.fit_results['timeXwave'].T
         mf_mean = self.fit_results['mf_mean']
         mf_std = self.fit_results['mf_std']
@@ -326,7 +365,8 @@ class Supernova(object):
         self.sed.flux_err = np.array(mangled_sed['flux_err'])
 
     def _get_rest_lightcurves(self):
-
+        """Calculates the rest-frame light curves after corrections.
+        """
         self.sed.calculate_rest_lightcurves(self.filters)
         lcs_df_list = []
         fits_df_list = []
@@ -401,7 +441,6 @@ class Supernova(object):
             If ``True``, plots the bands in magnitude space.
         fig_name : str, default ``None``
             If  given, name of the output plot.
-
         """
         palette1 = [plt.get_cmap('Dark2')(i) for i in np.arange(8)]
         palette2 = [plt.get_cmap('Set1')(i) for i in np.arange(8)]

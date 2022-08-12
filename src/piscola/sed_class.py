@@ -9,16 +9,25 @@ from .extinction_correction import redden, deredden, calculate_ebv
 from .gaussian_process import gp_lc_fit
 
 class SedTemplate(object):
-    """Spectral energy distribution (SED) class
-    for correcting a supernova.
+    """Spectral energy distribution (SED) class.
 
-    Parameters
-    ----------
-    template : str, default ``conley09f``
-        Template name. E.g., ``conley09f``, ``jla``, etc.
+    This is used for correcting a supernova's multi-colout light curves.
     """
 
     def __init__(self, z=0.0, ra=None, dec=None, template='conley09f'):
+        """
+        Parameters
+        ----------
+        z: float, default ``0.0``
+            Redshift.
+        ra: float, default ``None``
+            Right ascension.
+        dec: float, default ``None``
+            Declination.
+        template: str, default ``conley09f``
+            Name of the spectral energy distribution (SED) template.
+            E.g., ``conley09f``, ``jla``, etc.
+        """
         self.z = z
         self.ra = ra
         self.dec = dec
@@ -72,7 +81,8 @@ class SedTemplate(object):
             self.comments = ''
 
     def redshift(self):
-
+        """Redshifts the SED template if not already redshifted.
+        """
         message = 'The SED template is already redshifted.'
         assert not self.redshifted, message
 
@@ -82,7 +92,8 @@ class SedTemplate(object):
         self.redshifted = True
 
     def deredshift(self):
-
+        """De-redshifts the SED template if not already de-redshifted.
+        """
         message = 'The SED template is not redshifted.'
         assert self.redshifted, message
 
@@ -94,6 +105,23 @@ class SedTemplate(object):
     def apply_extinction(self, scaling=0.86,
                          reddening_law='fitzpatrick99',
                          r_v=3.1, ebv=None):
+        """Applies Milky-Way extinction to the SED template if not already applied.
+
+        Parameters
+        ----------
+        scaling: float, default ``0.86``
+            Calibration of the Milky Way dust maps. Either ``0.86``
+            for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
+            dust map of Schlegel, Fikbeiner & Davis (1998).
+        reddening_law: str, default ``fitzpatrick99``
+            Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989),
+            ``odonnell94`` (O’Donnell 1994), ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00``
+            (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with :math:`R_V` = 3.1.)
+        r_v : float, default ``3.1``
+            Total-to-selective extinction ratio (:math:`R_V`)
+        ebv : float, default ``None``
+            Colour excess (:math:`E(B-V)`). If given, this is used instead of the dust map value.
+        """
 
         message = 'The SED template is already extincted.'
         assert not self.extincted, message
@@ -116,7 +144,10 @@ class SedTemplate(object):
         self.extinction_corrected = True
 
     def correct_extinction(self):
+        """Corrects for Milky-Way extinction to the SED template if not already corrected.
 
+        The same parameters used to apply extinction are used to correct it.
+        """
         message = 'The SED template is not extincted.'
         assert self.extinction_corrected, message
 
@@ -131,7 +162,27 @@ class SedTemplate(object):
         self.extinction_corrected = False
 
     def get_phase_data(self, phase, include_err=False):
+        """Extracts the SED data for a given phase.
 
+        The phase is given by the epochs of the SED template.
+
+        Parameters
+        ----------
+        phase: int or float
+            Phase of the SED.
+        include_err: bool, default ``False``
+            Whether or not to include uncertainties.
+
+        Returns
+        -------
+        wave: array-like
+            SED's wavelength range at the given phase.
+        flux: array-like
+            SED's flunx density at the given phase.
+        flux_err: array-like
+            Associated uncertainty in flux density. Only returned
+            if ``include_err==True``.
+        """
         mask = self.phase == phase
         wave, flux = self.wave[mask].copy(), self.flux[mask].copy()
 
@@ -142,7 +193,16 @@ class SedTemplate(object):
             return wave, flux, flux_err
 
     def plot_sed(self, phase=0.0):
+        """Plots the SED template at the given phase.
 
+        The SED is shown at its current state, e.g. redshifted
+        and/or extincted.
+
+        Parameters
+        ----------
+        phase: int or float
+            Phase of the SED.
+        """
         err_message = f'Phase not found: {np.unique(self.phase)}'
         assert phase in self.phase, err_message
 
@@ -153,7 +213,30 @@ class SedTemplate(object):
     def calculate_obs_lightcurves(self, filters, scaling=0.86,
                                  reddening_law='fitzpatrick99',
                                  r_v=3.1, ebv=None):
+        """Calculates the multi-colour light curves of the SED as if
+        it were observed by a telescope.
 
+        Parameters
+        ----------
+        filters: list-like
+            Filters used.
+        scaling: float, default ``0.86``
+            Calibration of the Milky Way dust maps. Either ``0.86``
+            for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
+            dust map of Schlegel, Fikbeiner & Davis (1998).
+        reddening_law: str, default ``fitzpatrick99``
+            Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989),
+            ``odonnell94`` (O’Donnell 1994), ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00``
+            (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with :math:`R_V` = 3.1.)
+        r_v : float, default ``3.1``
+            Total-to-selective extinction ratio (:math:`R_V`)
+        ebv : float, default ``None``
+            Colour excess (:math:`E(B-V)`). If given, this is used instead of the dust map value.
+
+        Returns
+        -------
+
+        """
         if not self.redshifted:
             self.redshift()
         if not self.extincted:
@@ -185,7 +268,13 @@ class SedTemplate(object):
         self.obs_lcs_fit = fit_phot_df
 
     def calculate_rest_lightcurves(self, filters):
+        """Calculates rest-frame, corrected light curves of the SED.
 
+        Parameters
+        ----------
+        filters: list-like
+            Filters to use.
+        """
         if self.extincted:
             self.correct_extinction()
         if self.redshifted:
