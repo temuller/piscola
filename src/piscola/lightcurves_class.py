@@ -4,9 +4,10 @@ import warnings
 
 from .utils import flux2mag
 
+
 class Lightcurve(object):
-    """Light curve class.
-    """
+    """Light curve class."""
+
     def __init__(self, band, lcs_df):
         """
 
@@ -25,12 +26,11 @@ class Lightcurve(object):
         self.flux = data.flux.values
         self.flux_err = data.flux_err.values
         self.zp = float(data.zp.unique()[0])
-        self.mag, self.mag_err = flux2mag(self.flux, self.zp,
-                                          self.flux_err)
+        self.mag, self.mag_err = flux2mag(self.flux, self.zp, self.flux_err)
         self.mag_sys = data.mag_sys.unique()[0]
 
     def __repr__(self):
-        return f'band: {self.band}, zp: {self.zp:.5}, mag_sys: {self.mag_sys}'
+        return f"band: {self.band}, zp: {self.zp:.5}, mag_sys: {self.mag_sys}"
 
     def __getitem__(self, item):
         return getattr(self, item)
@@ -54,9 +54,8 @@ class Lightcurve(object):
         its epoch (:math:`t_{max}`).
         """
         mag = np.nan_to_num(self.mag, nan=np.nanmean(self.mag))
-        peak_ids = peak.indexes(-mag, thres=.3,
-                               min_dist=len(self.time) // 3)
-        if len(peak_ids)==0:
+        peak_ids = peak.indexes(-mag, thres=0.3, min_dist=len(self.time) // 3)
+        if len(peak_ids) == 0:
             self.mmax = self.mmax_err = np.nan
             self.tmax = np.nan
         else:
@@ -83,17 +82,17 @@ class Lightcurve(object):
             self.dm15 = self.dm15_err = np.nan
         else:
             phase = self.time - self.tmax
-            if any(np.abs(phase-15) < 0.5):
-                dm15_id = np.argmin(np.abs(phase-15))
+            if any(np.abs(phase - 15) < 0.5):
+                dm15_id = np.argmin(np.abs(phase - 15))
                 self.dm15 = self.mag[dm15_id] - self.mmax
-                self.dm15_err = np.sqrt(self.mag_err[dm15_id]**2 + self.mmax_err**2)
+                self.dm15_err = np.sqrt(self.mag_err[dm15_id] ** 2 + self.mmax_err**2)
             else:
                 self.dm15 = self.dm15_err = np.nan
 
 
 class Lightcurves(object):
-    """Multi-colour light curves class.
-    """
+    """Multi-colour light curves class."""
+
     def __init__(self, lcs_df):
         self.bands = lcs_df.band.unique()
 
@@ -198,18 +197,16 @@ class Lightcurves(object):
             mask = time > tmax
             colour_curve = np.copy(colour_curve[mask])
             time = np.copy(time[mask])
-            peak_ids = peak.indexes(colour_curve, thres=.3,
-                                    min_dist=len(time) // 3)
+            peak_ids = peak.indexes(colour_curve, thres=0.3, min_dist=len(time) // 3)
             if len(peak_ids) > 0:
                 colour_tmax = time[peak_ids[0]]
-                stretch = (colour_tmax - tmax)/30
-                stretch_err = tmax_err/30  # inaccurate error propagation
+                stretch = (colour_tmax - tmax) / 30
+                stretch_err = tmax_err / 30  # inaccurate error propagation
             else:
                 warnings.warn(f"The peak in the colour curve was not found")
                 stretch = stretch_err = np.nan
 
         return stretch, stretch_err
-
 
     def get_lc_params(self):
         """Calculates the peak magnitude (:math:`m_{max}`), its epoch

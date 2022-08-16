@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 
 import piscola
 
+
 class SingleFilter(object):
-    """Single filter class.
-    """
+    """Single filter class."""
+
     def __init__(self, band):
         """
         Parameters
@@ -19,8 +20,10 @@ class SingleFilter(object):
         self.add_filter(band)
 
     def __repr__(self):
-        rep = (f'name: {self.name}, eff_wave: {self.eff_wave:.1f} Å,'
-               f' response_type: {self.response_type}')
+        rep = (
+            f"name: {self.name}, eff_wave: {self.eff_wave:.1f} Å,"
+            f" response_type: {self.response_type}"
+        )
         return rep
 
     def __getitem__(self, item):
@@ -36,12 +39,13 @@ class SingleFilter(object):
             Name of the filter.
         """
         pisco_path = piscola.__path__[0]
-        filt_pattern = os.path.join(pisco_path, 'filters',
-                                    '*', f'{filt_name}.dat')
+        filt_pattern = os.path.join(pisco_path, "filters", "*", f"{filt_name}.dat")
         filt_file = glob.glob(filt_pattern, recursive=True)
 
-        err_message = ('No filter file or multiple files with '
-                       f'the pattern {filt_pattern} found.')
+        err_message = (
+            "No filter file or multiple files with "
+            f"the pattern {filt_pattern} found."
+        )
         assert len(filt_file) == 1, err_message
 
         filt_file = filt_file[0]
@@ -55,26 +59,28 @@ class SingleFilter(object):
 
         # retrieve response type; if none, assumed to be photon type
         filt_dir = os.path.dirname(filt_file)
-        resp_file = os.path.join(filt_dir, 'response_type.txt')
+        resp_file = os.path.join(filt_dir, "response_type.txt")
         if os.path.isfile(resp_file):
             with open(resp_file) as file:
                 line = file.readlines()[0]
                 self.response_type = line.split()[0].lower()
         else:
-            self.response_type = 'photon'
+            self.response_type = "photon"
 
-        err_message = (f'"{self.response_type}" is not a valid response type '
-                       f'"photon" or "energy") for {filt_name} filter.')
-        assert self.response_type in ['photon', 'energy'], err_message
+        err_message = (
+            f'"{self.response_type}" is not a valid response type '
+            f'"photon" or "energy") for {filt_name} filter.'
+        )
+        assert self.response_type in ["photon", "energy"], err_message
 
         self.eff_wave = self.calc_eff_wave()
 
-        readme_file = os.path.join(filt_dir, 'README.txt')
+        readme_file = os.path.join(filt_dir, "README.txt")
         if os.path.isfile(readme_file):
-            with open(readme_file, 'r') as file:
+            with open(readme_file, "r") as file:
                 self.comments = file.read()
         else:
-            self.comments = ''
+            self.comments = ""
 
     def calc_eff_wave(self, sed_wave=None, sed_flux=None):
         """Calculates the effective wavelength.
@@ -100,12 +106,11 @@ class SingleFilter(object):
 
         transmission = self.transmission.copy()
         # check filter response type
-        if self.response_type == 'energy':
+        if self.response_type == "energy":
             transmission /= self.wave
 
-        transmission = np.interp(sed_wave, self.wave, transmission,
-                                 left=0.0, right=0.0)
-        I1 = np.trapz((sed_wave ** 2) * transmission * sed_flux, sed_wave)
+        transmission = np.interp(sed_wave, self.wave, transmission, left=0.0, right=0.0)
+        I1 = np.trapz((sed_wave**2) * transmission * sed_flux, sed_wave)
         I2 = np.trapz(sed_wave * transmission * sed_flux, sed_wave)
         eff_wave = I1 / I2
 
@@ -128,16 +133,15 @@ class SingleFilter(object):
         """
         blue_edge_covered = sed_wave.min() <= self.wave.min()
         red_edge_covered = sed_wave.max() >= self.wave.max()
-        err_message = 'The SED does not completely overlap with {self.band} filter.'
+        err_message = "The SED does not completely overlap with {self.band} filter."
         assert blue_edge_covered and red_edge_covered, err_message
 
         transmission = self.transmission.copy()
         # check filter response type
-        if self.response_type == 'energy':
+        if self.response_type == "energy":
             transmission /= self.wave
 
-        transmission = np.interp(sed_wave, self.wave, transmission,
-                                 left=0.0, right=0.0)
+        transmission = np.interp(sed_wave, self.wave, transmission, left=0.0, right=0.0)
         I1 = np.trapz(sed_flux * transmission * sed_wave, sed_wave)
         I2 = np.trapz(self.transmission * self.wave, self.wave)
         flux_filter = I1 / I2
@@ -160,21 +164,23 @@ class SingleFilter(object):
         pisco_path = piscola.__path__[0]
 
         # get standard SED file name
-        with open(mag_sys_file, 'rt') as file:
+        with open(mag_sys_file, "rt") as file:
             for line in file:
-                if len(line)>0:
-                    if 'standard_sed:' in line.split():
+                if len(line) > 0:
+                    if "standard_sed:" in line.split():
                         standard_sed = line.split()[1]
                         break
 
-        assert 'standard_sed' in locals(), f"Standard SED file not found in {mag_sys_file}"
+        assert (
+            "standard_sed" in locals()
+        ), f"Standard SED file not found in {mag_sys_file}"
 
-        if standard_sed.lower()=='ab':
+        if standard_sed.lower() == "ab":
             c = 2.99792458e18  # speed of light in [Angstroms/s]
             sed_wave = np.arange(1000, 250000, 1)
-            sed_flux = 3631e-23 * c / sed_wave ** 2  # in [erg s^-1 cm^-2 A^-1]
+            sed_flux = 3631e-23 * c / sed_wave**2  # in [erg s^-1 cm^-2 A^-1]
         else:
-            sed_file = os.path.join(pisco_path, 'standards', standard_sed)
+            sed_file = os.path.join(pisco_path, "standards", standard_sed)
             sed_wave, sed_flux = np.loadtxt(sed_file).T
         f_sed = self.integrate_filter(sed_wave, sed_flux)
 
@@ -194,7 +200,7 @@ class SingleFilter(object):
             Tabulated standard magnitude.
         """
         filt_names, mags = np.loadtxt(mag_sys_file, dtype=str).T
-        err_message = f'{self.name} not in {mag_sys_file}'
+        err_message = f"{self.name} not in {mag_sys_file}"
         assert self.name in filt_names, err_message
 
         ind = list(filt_names).index(self.name)
@@ -217,18 +223,14 @@ class SingleFilter(object):
             Zero-point in the given natural magnitude system.
         """
         pisco_path = piscola.__path__[0]
-        mag_sys_file_path = os.path.join(pisco_path,
-                                         'mag_sys',
-                                         'magnitude_systems.txt')
+        mag_sys_file_path = os.path.join(pisco_path, "mag_sys", "magnitude_systems.txt")
 
-        mag_sys_names, mag_sys_files = np.loadtxt(mag_sys_file_path,
-                                                  dtype=str).T
-        err_message = f'mag. system {mag_sys} not found in {mag_sys_file_path}'
+        mag_sys_names, mag_sys_files = np.loadtxt(mag_sys_file_path, dtype=str).T
+        err_message = f"mag. system {mag_sys} not found in {mag_sys_file_path}"
         assert mag_sys in mag_sys_names, err_message
 
         ind = list(mag_sys_names).index(mag_sys)
-        mag_sys_file = os.path.join(pisco_path, 'mag_sys',
-                                    mag_sys_files[ind])
+        mag_sys_file = os.path.join(pisco_path, "mag_sys", mag_sys_files[ind])
 
         f_sed = self.get_standard_flux(mag_sys_file)
         m_sed = self.get_standard_mag(mag_sys_file)
@@ -236,9 +238,10 @@ class SingleFilter(object):
 
         return zp
 
+
 class MultiFilters(object):
-    """Class representing multiple filters.
-    """
+    """Class representing multiple filters."""
+
     def __init__(self, bands):
         """
         Parameters
@@ -253,9 +256,9 @@ class MultiFilters(object):
             setattr(self, band, single_filt)
 
         # add Bessell filters
-        filters = 'UBVRI'
+        filters = "UBVRI"
         for filt in filters:
-            band = f'Bessell_{filt}'
+            band = f"Bessell_{filt}"
             self.add_filter(band)
 
     def __repr__(self):
@@ -284,7 +287,7 @@ class MultiFilters(object):
         band: str
             Name of the band.
         """
-        err_message = f'Filter not found: {self.bands}'
+        err_message = f"Filter not found: {self.bands}"
         assert band in self.bands, err_message
 
         delattr(self, band)
@@ -322,8 +325,7 @@ class MultiFilters(object):
             Redshift.
         """
         B_eff_wave = 4500.0
-        eff_waves =  np.array([self[band].eff_wave/(1+z)
-                                for band in self.bands])
+        eff_waves = np.array([self[band].eff_wave / (1 + z) for band in self.bands])
         idx = (np.abs(B_eff_wave - eff_waves)).argmin()
         self.pivot_band = self.bands[idx]
 
@@ -338,22 +340,27 @@ class MultiFilters(object):
         if not bands:
             bands = self.bands
 
-        fig, ax = plt.subplots(figsize=(8,6))
+        fig, ax = plt.subplots(figsize=(8, 6))
         for band in bands:
-            norm = self[band]['transmission'].max()
-            ax.plot(self[band]['wave'], self[band]['transmission']/norm, label=band)
+            norm = self[band]["transmission"].max()
+            ax.plot(self[band]["wave"], self[band]["transmission"] / norm, label=band)
 
-        ax.set_xlabel(r'wavelength ($\AA$)', fontsize=18, family='serif')
-        ax.set_ylabel('normalized response', fontsize=18, family='serif')
-        ax.set_title(r'Filters response functions', fontsize=18, family='serif')
+        ax.set_xlabel(r"wavelength ($\AA$)", fontsize=18, family="serif")
+        ax.set_ylabel("normalized response", fontsize=18, family="serif")
+        ax.set_title(r"Filters response functions", fontsize=18, family="serif")
         ax.xaxis.set_tick_params(labelsize=15)
         ax.yaxis.set_tick_params(labelsize=15)
         ax.minorticks_on()
-        ax.tick_params(which='major', length=6, width=1, direction='in', top=True, right=True)
-        ax.tick_params(which='minor', length=3, width=1, direction='in', top=True, right=True)
-        plt.legend(loc='upper right', bbox_to_anchor=(1.2, 1.0))
+        ax.tick_params(
+            which="major", length=6, width=1, direction="in", top=True, right=True
+        )
+        ax.tick_params(
+            which="minor", length=3, width=1, direction="in", top=True, right=True
+        )
+        plt.legend(loc="upper right", bbox_to_anchor=(1.2, 1.0))
 
         plt.show()
+
 
 def trim_filters(response):
     """Trim the leading and trailing zeros from a 1-D array or sequence, leaving
@@ -374,7 +381,7 @@ def trim_filters(response):
 
     first = 0
     for i in response:
-        if i != 0.:
+        if i != 0.0:
             if first == 0:
                 first += 1  # to avoid filters with non-zero edges
             break
@@ -383,7 +390,7 @@ def trim_filters(response):
 
     last = len(response)
     for i in response[::-1]:
-        if i != 0.:
+        if i != 0.0:
             if last == len(response):
                 last -= 1  # to avoid filters with non-zero edges
             break

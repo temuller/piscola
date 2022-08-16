@@ -3,10 +3,10 @@ import numpy as np
 from functools import partial
 
 import george
-from george.kernels import (Matern52Kernel, Matern32Kernel,
-                            ExpSquaredKernel)
+from george.kernels import Matern52Kernel, Matern32Kernel, ExpSquaredKernel
 
-def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52'):
+
+def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel="matern52"):
     """Fits a single light curve with Gaussian Process.
 
     The package ``george`` is used for the gaussian process fit.
@@ -58,12 +58,12 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52'):
 
     var, length_scale = np.var(y), np.diff(x).max()
 
-    if kernel == 'matern52':
-        ker = var*Matern52Kernel(length_scale**2)
-    elif kernel == 'matern32':
-        ker = var*Matern32Kernel(length_scale**2)
-    elif kernel == 'squaredexp':
-        ker = var*ExpSquaredKernel(length_scale**2)
+    if kernel == "matern52":
+        ker = var * Matern52Kernel(length_scale**2)
+    elif kernel == "matern32":
+        ker = var * Matern32Kernel(length_scale**2)
+    elif kernel == "squaredexp":
+        ker = var * ExpSquaredKernel(length_scale**2)
     else:
         raise ValueError(f'"{kernel}" is not a valid kernel.')
 
@@ -73,24 +73,31 @@ def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel='matern52'):
 
     # optimization routine for hyperparameters
     p0 = gp.get_parameter_vector()
-    results = scipy.optimize.minimize(neg_log_like, p0, jac=grad_neg_log_like,
-                                        method="L-BFGS-B")
+    results = scipy.optimize.minimize(
+        neg_log_like, p0, jac=grad_neg_log_like, method="L-BFGS-B"
+    )
     gp.set_parameter_vector(results.x)
 
     step = 0.05  # days
-    x_pred = np.arange(x_min, x_max+step, step)
+    x_pred = np.arange(x_min, x_max + step, step)
 
     mean, var = gp.predict(y, x_pred, return_var=True)
     std = np.sqrt(var)
 
-    x_pred, y_pred, yerr_pred = x_pred, mean*y_norm, std*y_norm
+    x_pred, y_pred, yerr_pred = x_pred, mean * y_norm, std * y_norm
 
     return x_pred, y_pred, yerr_pred
 
 
-def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0,
-              kernel1='matern52', kernel2='squaredexp',
-              gp_mean='max'):
+def gp_2d_fit(
+    x1_data,
+    x2_data,
+    y_data,
+    yerr_data=0.0,
+    kernel1="matern52",
+    kernel2="squaredexp",
+    gp_mean="max",
+):
     """Fits multi-colour light curves in 2D with Gaussian Process.
 
     **Note1:** ``x1`` refers to `time` axis while ``x2`` refers to `wavelength` axis.
@@ -150,13 +157,14 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0,
     X = np.array([x1, x2]).reshape(2, -1).T
 
     # GP kernels
-    kernels_dict = {'matern52': Matern52Kernel,
-                    'matern32': Matern32Kernel,
-                    'squaredexp': ExpSquaredKernel,
-                    }
+    kernels_dict = {
+        "matern52": Matern52Kernel,
+        "matern32": Matern32Kernel,
+        "squaredexp": ExpSquaredKernel,
+    }
 
     valid_kernels = list(kernels_dict.keys())
-    err_message = f'Invalid kernel. Choose between:{valid_kernels}'
+    err_message = f"Invalid kernel. Choose between:{valid_kernels}"
     assert kernel1 in valid_kernels, err_message
     assert kernel2 in valid_kernels, err_message
 
@@ -165,14 +173,12 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0,
     length1 = np.diff(x1).max()
     length2 = np.diff(x2).max()
 
-    ker1 = kernels_dict[kernel1](length1 ** 2, ndim=2, axes=0)
-    ker2 = kernels_dict[kernel2](length2 ** 2, ndim=2, axes=1)
+    ker1 = kernels_dict[kernel1](length1**2, ndim=2, axes=0)
+    ker2 = kernels_dict[kernel2](length2**2, ndim=2, axes=1)
     ker = var * ker1 * ker2
 
     # GP mean function
-    mean_dict = {'mean': y.mean(),
-                 'min': y.min(),
-                 'max': y.max()}
+    mean_dict = {"mean": y.mean(), "min": y.min(), "max": y.max()}
     mean_func = mean_dict[gp_mean]
 
     gp = george.GP(kernel=ker, mean=mean_func, fit_mean=True)
@@ -181,9 +187,9 @@ def gp_2d_fit(x1_data, x2_data, y_data, yerr_data=0.0,
 
     # optimization routine for hyperparameters
     p0 = gp.get_parameter_vector()
-    results = scipy.optimize.minimize(neg_ln_like, p0,
-                                      jac=grad_neg_ln_like,
-                                      method="BFGS")
+    results = scipy.optimize.minimize(
+        neg_ln_like, p0, jac=grad_neg_ln_like, method="BFGS"
+    )
     gp.set_parameter_vector(results.x)
 
     # extrapolation edges

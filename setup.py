@@ -9,7 +9,7 @@ with open("requirements.txt") as requirements_file:
 with open("src/piscola/_version.py") as version_file:
     for line in version_file:
         if "__version__" in line:
-            __version__ = line.split()[-1].replace('"', '')
+            __version__ = line.split()[-1].replace('"', "")
 
 setuptools.setup(
     name="piscola",
@@ -31,6 +31,14 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=requirements,
-    package_data={'piscola' : ["filters/*", "filters/*/*", "templates/*", "templates/*/*", "standards/*"]},
+    package_data={
+        "piscola": [
+            "filters/*",
+            "filters/*/*",
+            "templates/*",
+            "templates/*/*",
+            "standards/*",
+        ]
+    },
     include_package_data=True,
 )

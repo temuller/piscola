@@ -4,13 +4,13 @@ import matplotlib.pyplot as plt
 
 import warnings
 
-class TestPiscola(unittest.TestCase):
 
+class TestPiscola(unittest.TestCase):
     def test_plot(self):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-            sn = piscola.call_sn('data/03D1au.dat')
+            sn = piscola.call_sn("data/03D1au.dat")
             plt.ion()
             sn.plot_lcs()
 
@@ -18,7 +18,7 @@ class TestPiscola(unittest.TestCase):
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-            sn = piscola.call_sn('data/03D1au.dat')
+            sn = piscola.call_sn("data/03D1au.dat")
             sn.fit()
 
             sn.export_fits()
@@ -27,5 +27,6 @@ class TestPiscola(unittest.TestCase):
             plt.ion()
             sn.plot_fits()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
