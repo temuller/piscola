@@ -5,6 +5,7 @@ peakutils
 requests
 sfdmap
 extinction
+astropy
 scipy
 george
 pickle5
