@@ -1,13 +1,10 @@
 numpy
 matplotlib
-scipy
 pandas
-lmfit
 peakutils
-astropy
+requests
 sfdmap
 extinction
+scipy
 george
-wget
 pickle5
-
