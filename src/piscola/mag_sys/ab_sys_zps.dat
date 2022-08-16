@@ -2,39 +2,36 @@
 ### NOTE: This is the same file as in SNANA, but modified to be readable by piscola  ###
 ########################################################################################
 
-standard_sed: bd_17d4708_stisnic_005.dat  # used by piscola
+standard_sed: AB  # used by piscola
 
-#SN_SED: Hsiao07.dat
+
 #BD17_SED:    bd17_stisnic_005.dat
 #MAGSYSTEM:  AB
 #FILTSYSTEM: COUNT
-#FILTPATH:   PS1/Pantheon/SDSS_Doi2010/CCDAVG
 sdss_u 0.00000
 sdss_g -0.0073-0.0029473880
 sdss_r -0.0088+0.0044133478
 sdss_i -0.0090+0.00072395845
 sdss_z -0.0094-0.0083579659
 
-#SN_SED: Hsiao07.dat
+
 #BD17_SED:    bd17_stisnic_005.dat
 #MAGSYSTEM:  AB
 #FILTSYSTEM: COUNT
-#FILTPATH:   PS1/Pantheon/SNLS3-Megacam
 Megacam_g -0.0067+0.0076605430
 Megacam_r -0.0081-0.0012669564
 Megacam_i -0.0073-0.0057157707
 Megacam_z -0.0078+0.0024809218
 
 
-#SN_SED:    Hsiao07.dat   # spectral template for SN
 #MAGSYSTEM:  AB
 #FILTSYSTEM: COUNT
-#FILTPATH: PS1/Pantheon/PS1
 ps1_g   -0.023-0.0037
 ps1_r   -0.033-0.0066
 ps1_i   -0.024-0.0043
 ps1_z   -0.024+0.008
 ps1_y   0.0
+
 
 #MAGSYSTEM:  AB
 des_g   0.0
@@ -44,12 +41,10 @@ des_z   0.0
 des_Y   0.0
 
 
-#SN_SED:       Hsiao07.extrap.dat
 #BD17_SED:     bd17.dat
 # Start filters for VERSION = CANDELs
 #MAGSYSTEM:   AB
 #FILTSYSTEM:  COUNT
-#FILTPATH:    PS1/Pantheon/HST/HST_Candles
 ACS_WFC_F435W  0.000 
 ACS_WFC_F475W  0.000 
 ACS_WFC_F606W  0.000 
@@ -75,7 +70,6 @@ WFC3_IR_F153M  0.000
 # Start filters for VERSION = PS1s_HST_GOODS_DS17
 #MAGSYSTEM:   AB
 #FILTSYSTEM:  COUNT
-#FILTPATH:    PS1/Pantheon/HST/HST_GOODS
 F110W_NIC2  0.0 
 F160W_NIC2  0.0 
 F606W_ACS  0.0 

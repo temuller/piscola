@@ -1,9 +1,9 @@
 .. _extinction_correction:
 
-Extinction correction
-========================
+Extinction Correction
+=====================
 
-Everything related to Milky Way extinction correction is documented bellow:
+This module is used to correct the observations for Milky Way dust extinction and is documented bellow:
 
 .. currentmodule:: piscola.extinction_correction
 .. autofunction:: redden

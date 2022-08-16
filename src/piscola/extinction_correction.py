@@ -8,7 +8,7 @@ import sfdmap
 import extinction
 
 import piscola
-from .filter_utils import integrate_filter
+from .utils import _integrate_filter
 
 pisco_path = piscola.__path__[0]
 dustmaps_dir = os.path.join(pisco_path, 'sfddata-master')
@@ -52,7 +52,7 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v
     flux : array
         Flux density values.
     ra : float
-        Right ascension.
+        Right ascension in degrees.
     dec : float
         Declination in degrees.
     scaling: float, default ``0.86``
@@ -62,7 +62,7 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v
     reddening_law: str, default ``fitzpatrick99``
         Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
         ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
-        :math:`R_V` = 3.1.)
+        :math:`R_V = 3.1`.)
     r_v : float, default ``3.1``
         Total-to-selective extinction ratio (:math:`R_V`)
     ebv : float, default ``None``
@@ -88,6 +88,7 @@ def redden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v
     err_message = f'Choose one of the available reddening laws: {rl_list}'
     assert reddening_law in rl_list, err_message
 
+    wave = np.copy(wave.astype('double'))
     if reddening_law=='ccm89':
         ext = extinction.ccm89(wave, a_v, r_v)
     elif reddening_law=='odonnell94':
@@ -124,7 +125,7 @@ def deredden(wave, flux, ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r
     reddening_law: str, default ``fitzpatrick99``
         Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
         ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
-        :math:`R_V` = 3.1.)
+        :math:`R_V = 3.1`.)
     r_v : float, default ``3.1``
         Total-to-selective extinction ratio (:math:`R_V`)
     ebv : float, default ``None``
@@ -170,9 +171,9 @@ def calculate_ebv(ra, dec, scaling=0.86):
     Parameters
     ----------
     ra : float
-        Right ascension.
+        Right ascension in degrees.
     dec : float
-        Declination
+        Declination in degrees.
     scaling: float, default ``0.86``
         Calibration of the Milky Way dust maps. Either ``0.86``
         for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
@@ -200,9 +201,9 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, redde
     filter_response : array
         Filter's response function.
     ra : float
-        Right ascension.
+        Right ascension in degrees.
     dec : float
-        Declinationin degrees.
+        Declination in degrees.
     scaling: float, default ``0.86``
         Calibration of the Milky Way dust maps. Either ``0.86``
         for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
@@ -210,7 +211,7 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, redde
     reddening_law: str, default ``fitzpatrick99``
         Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
         ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
-        :math:`R_V` = 3.1.)
+        :math:`R_V = 3.1`.)
     r_v : float, default ``3.1``
         Total-to-selective extinction ratio (:math:`R_V`)
     ebv : float, default ``None``
@@ -225,8 +226,8 @@ def extinction_filter(filter_wave, filter_response, ra, dec, scaling=0.86, redde
     deredden_flux = deredden(filter_wave, flux, ra, dec, scaling,
                              reddening_law, r_v, ebv)
 
-    f1 = integrate_filter(filter_wave, flux, filter_wave, filter_response)
-    f2 = integrate_filter(filter_wave, deredden_flux, filter_wave, filter_response)
+    f1 = _integrate_filter(filter_wave, flux, filter_wave, filter_response)
+    f2 = _integrate_filter(filter_wave, deredden_flux, filter_wave, filter_response)
     A = -2.5*np.log10(f1/f2)
 
     return A
@@ -238,7 +239,7 @@ def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v=3
     Parameters
     ----------
     ra : float
-        Right ascension.
+        Right ascension in degrees.
     dec : float
         Declination in degrees.
     scaling: float, default ``0.86``
@@ -248,7 +249,7 @@ def extinction_curve(ra, dec, scaling=0.86, reddening_law='fitzpatrick99', r_v=3
     reddening_law: str, default ``fitzpatrick99``
         Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
         ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
-        :math:`R_V` = 3.1.)
+        :math:`R_V = 3.1`.)
     r_v : float, default ``3.1``
         Total-to-selective extinction ratio (:math:`R_V`)
     ebv : float, default ``None``

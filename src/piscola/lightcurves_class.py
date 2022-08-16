@@ -15,7 +15,8 @@ class Lightcurve(object):
         band: str
             Light-curve filter/band name.
         lcs_df: Dataframe
-            Light-curve data: time, flux, error, zero-point and magnitude system.
+            Light-curve data: `time`, `flux`, `error`, `zero-point`
+            and `magnitude system`.
         """
         self.band = band
 
@@ -49,7 +50,8 @@ class Lightcurve(object):
         self.masked_mag_err = self.mag_err.copy()[mask]
 
     def get_max(self):
-        """Calculates the peak magnitude and its epoch.
+        """Calculates the peak magnitude (:math:`m_{max}`) and
+        its epoch (:math:`t_{max}`).
         """
         mag = np.nan_to_num(self.mag, nan=np.nanmean(self.mag))
         peak_ids = peak.indexes(-mag, thres=.3,
@@ -71,7 +73,10 @@ class Lightcurve(object):
             self.tmax_err = np.abs(time[id_err] - self.tmax)
 
     def get_dm15(self):
-        """Calculates the classic parameter delta_m15 (Phillips 1993).
+        """Calculates the classic parameter :math:`\Delta m_{15}`
+        (Phillips 1993), but using the epoch of peak magnitude of
+        the current light curve as reference (not necessarily :math:`B`
+        band).
         """
         self.get_max()
         if np.isnan(self.tmax):
@@ -103,9 +108,10 @@ class Lightcurves(object):
         return getattr(self, item)
 
     def get_max_colour(self, band1, band2):
-        """Calculates the colour at peak of ``band1``.
+        """Calculates the colour at the epoch of peak magnitude
+        in ``band1``.
 
-        The colour is ``band1 - band2`` at the time of
+        The colour is :math:`(band1 - band2)` at the time of
         peak magnitude in ``band1``.
 
         Parameters
@@ -118,7 +124,7 @@ class Lightcurves(object):
         Returns
         -------
         colour: float
-            Colour at peak of ``band1``.
+            Colour at the epoch of peak magnitude in ``band1``.
         colour_err: float
             Uncertainty on the colour parameter.
         """
@@ -150,10 +156,10 @@ class Lightcurves(object):
     def get_colour_stretch(self, band1, band2):
         """Calculates the colour stretch parameter (Burns et al. 2014).
 
-        ``colour-stretch = (T(band1−band2)max − Tmax)/30 days``, where
-        ``T(band1−band2)max`` is the time of maximum (reddest colour) in the
-        ``(band1−band2)`` colour curve and ``Tmax`` is the epoch of peak
-        magnitude in ``band1``.
+        The formula used is :math:`(T(band1-band2)_{max} - T_{max}/30)`, where
+        :math:`T(band1−band2)_{max}` is the time of maximum (reddest colour)
+        in the :math:`(band1−band2)` colour curve and :math:`T_{max}` is the
+        epoch of peak magnitude in ``band1``.
 
         Parameters
         ----------
@@ -182,6 +188,7 @@ class Lightcurves(object):
 
         self[band1].get_max()
         tmax = self[band1].tmax
+        tmax_err = self[band1].tmax_err
         time = self[band1].time
 
         if np.isnan(tmax):
@@ -196,7 +203,7 @@ class Lightcurves(object):
             if len(peak_ids) > 0:
                 colour_tmax = time[peak_ids[0]]
                 stretch = (colour_tmax - tmax)/30
-                stretch_err = 0.0
+                stretch_err = tmax_err/30  # inaccurate error propagation
             else:
                 warnings.warn(f"The peak in the colour curve was not found")
                 stretch = stretch_err = np.nan
@@ -205,7 +212,8 @@ class Lightcurves(object):
 
 
     def get_lc_params(self):
-        """Calculates the peak magnitude, its epoch and delta_m15 for all bands.
+        """Calculates the peak magnitude (:math:`m_{max}`), its epoch
+        (:math:`t_{max}`) and :math:`\Delta m_{15}` for all bands.
         """
         for band in self.bands:
             self[band].get_max()

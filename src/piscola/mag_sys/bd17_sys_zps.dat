@@ -1,30 +1,18 @@
 #######################################################################################
 ### NOTE: This is the same file as in SNANA, but modified to be readable by PISCOLA ###
 #######################################################################################
-
-# Combined kcor file create by
-#   ['/project/rkessler/SN/SNANA/SNANA_CURRENT/util/combine_dataVersions.py', 'COMBINE.INPUT']
-# User = dscolnic
-# Host = midway-login2
-# Mon Jun 12 15:00:06 2017
-
 # SN_SED:       Hsiao07.dat
 # BD17_SED:     bd_17d4708_stisnic_005.dat
 # LAMBDA_RANGE: 2100 12500 
 # OUTFILE:      kcor_PS1_LOWZ_COMBINED.fits
 
-########################################################################################
-### COLUMNS:									     ###
-### FILTER_NAME SYN_MAG_AB  SYN_MAG_LANDOLT					     ###
-########################################################################################
 
-# Start of PISCOLA file
 standard_sed: bd_17d4708_stisnic_005.dat
+
 
 # Start filters for VERSION = PS1s_CFA1_JRK07_DS16
 # MAGSYSTEM:   BD17
 # FILTSYSTEM:  COUNT
-# FILTPATH:    PS1/Pantheon/SNLS3-Landolt
 Standard_U 	9.724
 Standard_B 	9.907
 Standard_V 	9.464
@@ -34,7 +22,6 @@ Standard_I 	8.846
 # Start filters for VERSION = PS1s_CFA1_JRK07_DS16
 # MAGSYSTEM:   BD17
 # FILTSYSTEM:  COUNT
-# FILTPATH:    PS1/Pantheon/SNLS3-Landolt
 Bessell_U 	9.724
 Bessell_B  	9.907
 Bessell_V 	9.464
@@ -44,7 +31,6 @@ Bessell_I 	8.846
 # Start filters for VERSION = PS1s_CFA3_4SHOOTER2_DS17
 # MAGSYSTEM:   BD17
 # FILTSYSTEM:  COUNT
-# FILTPATH:   PS1/Pantheon/CFA3_native
 4Shooter2_U  	9.6930 
 4Shooter2_B  	9.87400-0.0345 
 4Shooter2_V  	9.47900-0.0087 
@@ -54,7 +40,6 @@ Bessell_I 	8.846
 # Start filters for VERSION = PS1s_CFA3_KEPLERCAM_DS17
 # MAGSYSTEM:   BD17
 # FILTSYSTEM:  COUNT
-# FILTPATH:    PS1/Pantheon/PS1_CFA4
 # CFA3_Keplercam filters are the same as in CFA4_p1. I just changed the filters names in case 
 # these are used (like in JLA), but Pantheon uses the CFA4_p1 filters for CFA3_Keplercam SNe.
 Keplercam_Us 	9.724
@@ -80,7 +65,6 @@ p2_i  	9.25521-0.0042374653
 # Start filters for VERSION = PS1s_CSPDR2_V_DS17
 # MAGSYSTEM:   BD17
 # FILTSYSTEM:  COUNT
-# FILTPATH:  PS1/Pantheon/CSP_Str11
 csp_u  	10.51952 
 csp_B  	9.87643-0.0082722800
 csp_o  	9.47663+0.0017663098

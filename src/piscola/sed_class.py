@@ -116,7 +116,7 @@ class SedTemplate(object):
         reddening_law: str, default ``fitzpatrick99``
             Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989),
             ``odonnell94`` (O’Donnell 1994), ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00``
-            (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with :math:`R_V` = 3.1.)
+            (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with :math:`R_V = 3.1`.)
         r_v : float, default ``3.1``
             Total-to-selective extinction ratio (:math:`R_V`)
         ebv : float, default ``None``

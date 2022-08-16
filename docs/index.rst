@@ -16,8 +16,14 @@ PISCOLA is being actively developed in `a public repository on GitHub
     :target: https://piscola.readthedocs.io/en/latest/?badge=latest
 .. image:: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
     :target: https://github.com/temuller/piscola/blob/master/LICENSE
-.. image:: http://img.shields.io/travis/temuller/piscola/master.svg?style=flat
-    :target: https://travis-ci.org/temuller/piscola
+.. image:: https://github.com/temuller/piscola/actions/workflows/main.yml/badge.svg
+    :target: https://github.com/temuller/piscola/actions/workflows/main.yml
+.. image:: https://img.shields.io/badge/Python-3.8%2B-blue.svg
+    :target: https://img.shields.io/badge/Python-3.8%2B-blue.svg   
+.. image:: https://img.shields.io/pypi/v/piscola?label=PyPI&logo=pypi&logoColor=white
+    :target: https://pypi.org/project/piscola/
+.. image:: https://img.shields.io/badge/ADS-_2022MNRAS.512.3266M_-2ea44f.svg
+    :target: https://ui.adsabs.harvard.edu/abs/2022MNRAS.512.3266M/abstract
 
 
 .. toctree::
@@ -26,17 +32,6 @@ PISCOLA is being actively developed in `a public repository on GitHub
 
    setup/installation.rst
    setup/conda_env.rst
-
-.. toctree::
-   :maxdepth: 1
-   :caption: API User Guide
-
-   user/sn_object.rst
-   user/extinction_correction.rst
-   user/gaussian_process.rst
-   user/mangling.rst
-   user/filter_utils.rst
-   user/pisco_utils.rst
 
 .. toctree::
    :maxdepth: 1
@@ -49,9 +44,47 @@ PISCOLA is being actively developed in `a public repository on GitHub
 
 .. toctree::
    :maxdepth: 1
+   :caption: API User Guide
+
+   user/sn_class.rst
+   user/filters_class.rst
+   user/lightcurves_class.rst
+   user/sed_class.rst
+   user/gaussian_process.rst
+   user/extinction_correction.rst
+   user/utils.rst
+   
+.. toctree::
+   :maxdepth: 1
    :caption: About the Code
 
    about/details.rst
+   
+   
+Citing PISCOLA
+--------------
+
+If you make use of PISCOLA, please cite the following `paper <https://ui.adsabs.harvard.edu/abs/2022MNRAS.512.3266M/abstract>`_:
+
+.. code-block:: tex
+
+	@ARTICLE{2022MNRAS.512.3266M,
+        	author = {{M{\"u}ller-Bravo}, Tom{\'a}s E. and {Sullivan}, Mark and {Smith}, Mathew and {Frohmaier}, Chris and {Guti{\'e}rrez}, Claudia P. and {Wiseman}, Philip and {Zontou}, Zoe},
+        	title = "{PISCOLA: a data-driven transient light-curve fitter}",
+      		journal = {\mnras},
+     		keywords = {supernovae: general, cosmology: observations, distance scale, Astrophysics - High Energy Astrophysical Phenomena, Astrophysics - Cosmology and Nongalactic Astrophysics, Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Solar and Stellar Astrophysics},
+        	year = 2022,
+        	month = may,
+       		volume = {512},
+       		number = {3},
+        	pages = {3266-3283},
+        	doi = {10.1093/mnras/stab3065},
+		archivePrefix = {arXiv},
+       		eprint = {2110.11340},
+		primaryClass = {astro-ph.HE},
+       		adsurl = {https://ui.adsabs.harvard.edu/abs/2022MNRAS.512.3266M},
+      		adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+	}
 
 
 License & Attribution

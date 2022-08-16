@@ -172,7 +172,7 @@ class SingleFilter(object):
         if standard_sed.lower()=='ab':
             c = 2.99792458e18  # speed of light in [Angstroms/s]
             sed_wave = np.arange(1000, 250000, 1)
-            sed_flux = 3631e-23 * c / ab_wave ** 2  # in [erg s^-1 cm^-2 A^-1]
+            sed_flux = 3631e-23 * c / sed_wave ** 2  # in [erg s^-1 cm^-2 A^-1]
         else:
             sed_file = os.path.join(pisco_path, 'standards', standard_sed)
             sed_wave, sed_flux = np.loadtxt(sed_file).T
@@ -203,12 +203,13 @@ class SingleFilter(object):
         return sed_mag
 
     def calc_zp(self, mag_sys):
-        """Calculates the zero point in the AB, Vega or BD17 magnitude systems.
+        """Calculates the zero point in the ``AB``, ``Vega`` or ``BD17``
+        magnitude systems.
 
         Parameters
-        ----------.
+        ----------
         mag_sys : str
-            Magnitude system. For example, ``AB``, ``BD17`` or ``Vega``.
+            Magnitude system. For example: ``AB``, ``BD17`` or ``Vega``.
 
         Returns
         -------
@@ -313,7 +314,7 @@ class MultiFilters(object):
 
     def calc_pivot(self, z=0.0):
         """Calculates the observed band closest to restframe
-        B filter (4500 Å).
+        :math:`B` band (:math:`4500 Å`).
 
         Parameters
         ----------
@@ -321,7 +322,7 @@ class MultiFilters(object):
             Redshift.
         """
         B_eff_wave = 4500.0
-        eff_waves =  np.array([self.filters[band].eff_wave/(1+z)
+        eff_waves =  np.array([self[band].eff_wave/(1+z)
                                 for band in self.bands])
         idx = (np.abs(B_eff_wave - eff_waves)).argmin()
         self.pivot_band = self.bands[idx]
@@ -356,7 +357,7 @@ class MultiFilters(object):
 
 def trim_filters(response):
     """Trim the leading and trailing zeros from a 1-D array or sequence, leaving
-    one zero on each side. This is a modified version of numpy.trim_zeros.
+    one zero on each side. This is a modified version of :func:`numpy.trim_zeros`.
 
     Parameters
     ----------
