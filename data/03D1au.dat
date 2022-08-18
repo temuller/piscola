@@ -59,7 +59,6 @@ time flux flux_err zp band mag_sys
 53022.32 1.554 3.804 27.5 Megacam_r AB
 53023.23 3.594 0.988 27.5 Megacam_r AB
 53026.34 3.191 1.154 27.5 Megacam_r AB
-53207.6 0.069 1.317 27.5 Megacam_r AB
 52881.56 0.774 4.835 27.5 Megacam_z AB
 52900.59 73.999 6.751 27.5 Megacam_z AB
 52909.61 98.789 6.468 27.5 Megacam_z AB
