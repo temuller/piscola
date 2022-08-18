@@ -14,7 +14,7 @@ This is conley09e with CSP and SDSS data.
 
 #Next lines edited by T. Müller
 
-"snflux_1av2.dat" is the same as the "snflux_1a.dat" 
+"sed_templatev2.dat" is the same as the "sed_template.dat" 
 template, but linearly interpolated to have spectra
 every 0.5 days.
 
