@@ -3,11 +3,22 @@
 Supernova File
 ========================
 
-Below is an example of a file with data of a supernova in a format that PISCOLA understand. It is recomended that the file has the same name as the supernova with ``.dat`` extension (``03D1au.dat`` in this example).
+Below is an example of a file with data of a supernova in a format that PISCOLA understand. It is recomended that the file has the same name as the supernova with ``.dat`` extension (e.g. ``03D1au.dat``).
 
-The file should contain: the supernova name (``name``), redshift (``z``), right ascension (``ra``), declination (``dec``), times (``time``), fluxes, (``flux``), flux errors (``flux_err``), zero-points (``zp``), bands (``band``), and magnitude system (``mag_sys``). The units of right ascension and declination should be in ``degrees``. The units for the other inputs can be arbitrary.
-
-The name of the band needs to match the name of one of the files containing the transmission functions under the ``piscola/filters`` directory. The magnitude system should be one between ``AB``, ``BD17`` or ``Vega`` (Vega needs some fixing).
+The file should contain the following information: 
+	
+	* Supernova name (``name``)
+	* Redshift (``z``)
+	* Right ascension in degrees (``ra``)
+	* Declination in degrees(``dec``)
+	* Times (``time``) 
+	* Fluxes (``flux``)
+	* Flux errors (``flux_err``)
+	* Zero-points (``zp``)
+	* Bands (``band``)
+	* Magnitude systems (``mag_sys``). 
+	
+The units of ``time``, ``flux`` and ``flux_err`` do not matter as long as they are consistent (e.g. using the appropiate ``zp``). The name of the band needs to match the name of one of the files containing the transmission functions under the ``piscola/filters`` `directory <https://github.com/temuller/piscola/tree/main/src/piscola/filters>`_. The magnitude system should be one between ``AB``, ``BD17`` or ``Vega``.
 
 The file shown below can be found in the Github repository `here <https://github.com/temuller/piscola/tree/master/data>`_:
 

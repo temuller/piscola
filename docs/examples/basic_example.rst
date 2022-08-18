@@ -3,163 +3,114 @@
 Basic Example
 ========================
 
-Simple usage
+Simple Usage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In here we show how to use PISCOLA in the simplest way possible. You can run this example on google colab: |Open In Colab|
-
-.. |Open In Colab| image:: https://colab.research.google.com/assets/colab-badge.svg
-   :target: https://colab.research.google.com/drive/1Tjel0cXtHxMOKjem0a-9iZzGJhTD-Oz8?usp=sharing
-
-As always, we start by importing the necessary packages.
+In here, we show how to use PISCOLA in the simplest way possible. As always, start by importing the necessary packages.
 
 .. code:: python
 
 	import piscola
+	version = piscola.__version__
+	print(f'PISCOLA version: v{version}')
+	
+.. code:: python
 
-PISCOLA uses its own format for a SN file (explained in the advanced implementation below) which is similar to the one used by other light-curve fitting codes. As an example we have SN ``03D1au`` (from the SNLS survey) in a file called ``03D1au.dat`` inside the ``data/`` directory. This file can be downloaded from the `repository <https://github.com/temuller/piscola/tree/master/data>`_ directly or with the command ``wget https://raw.githubusercontent.com/temuller/piscola/master/data/03D1au.dat`` on a terminal. To import a SN all you need to do is use the :func:`call_sn()` function which receives two arguments, the SN name (or file name) and the directory where to find the file (``data/`` by default).
+	PISCOLA version: v1.0.0
+	
+
+PISCOLA uses its own format for a SN file (explained SOMEWHERE ELSE) which has a similar format to that used by other codes. As an example, we have SN ``03D1au`` (from the SNLS survey) in a file called ``03D1au.dat``. This file can be downloaded from the `repository <https://github.com/temuller/piscola/tree/master/data>`_. To import a SN, all that needs to be done is use the :func:`call_sn()` function, which receives the name of the file as an argument:
 
 .. code:: python
 
-	sn = piscola.call_sn('03D1au')
+	sn = piscola.call_sn('03D1au.dat')
 	print(sn)
 	print(f'Observed bands: {sn.bands}')
 
 .. code:: python
 
-	name = 03D1au, z = 0.50349, ra = 36.043209, dec = -4.0374690000000015
+	name: 03D1au, z: 0.50349, ra: 36.043, dec: -4.0375
 	Observed bands: ['Megacam_g', 'Megacam_r', 'Megacam_i', 'Megacam_z']
 
-The ``sn`` object will contain the SN information, i.e., name, redshift, RA, DEC and light curves. The latter are found in ``sn.data``, a dictionary with the observed bands as **keys**, including the zero-point (``zp``), and magnitude system (``mag_sys``). **Note that PISCOLA accepts fluxes as input, not magnitudes**.
+The ``sn`` object will contain all the necessary information, i.e. name, redshift, RA, DEC and the observed multi-colour light curves. The latter are found in ``sn.lcs``, a :func:`Lightcurves` object, which also includes the zero-points (``zp``), and magnitude system (``mag_sys``):
 
 .. code:: python
 
-	print(sn.data.keys())
-	print(sn.data['Megacam_g'].keys())
+	print(sn.lcs)
+	print(sn.lcs.Megacam_g)
+	sn.lcs.Megacam_g.__dict__
 
 .. code:: python
 
-	dict_keys(['Megacam_g', 'Megacam_r', 'Megacam_i', 'Megacam_z'])
-	dict_keys(['time', 'flux', 'flux_err', 'zp', 'mag_sys'])
+	['Megacam_g', 'Megacam_r', 'Megacam_i', 'Megacam_z']
+	band: Megacam_g, zp: -20.846, mag_sys: AB
 
-We can mask the data according to the signal-to-noise ratio (``S/N > 5``, by default) and/or phases wanted by using :func:`sn.mask_data()`. The latter is not done by default when calling the function. The light curves can be plotted by calling :func:`sn.plot_data()`.
+	{'band': 'Megacam_g',
+	 'time': array([52880.58, 52900.49, 52904.6 , 52908.53, 52930.39, 52934.53,
+		52937.55, 52944.39, 52961.45, 52964.37, 52992.33, 52999.32]),
+	 'flux': array([-1.85848101e-20,  1.70044129e-18,  1.89317266e-18,  1.85866457e-18,
+		 4.68383103e-19,  3.39987304e-19,  3.07085307e-19,  1.45787510e-19,
+		 1.58865710e-19,  8.00752930e-20,  8.87940928e-20,  2.56975152e-21]),
+	 'flux_err': array([3.93722644e-20, 9.87059915e-20, 5.70393061e-20, 5.37353399e-20,
+		4.80910642e-20, 4.34563338e-20, 7.37426910e-20, 8.37463666e-20,
+		7.89280825e-20, 5.21292452e-20, 6.20411439e-20, 5.51119925e-20]),
+	 'zp': -20.845742237479524,
+	 'mag': array([        nan, 23.57785366, 23.4612822 , 23.48125521, 24.97775471,
+		25.32560101, 25.43611017, 26.24495696, 26.15168234, 26.89551142,
+		26.78329758, 30.62952993]),
+	 'mag_err': array([        nan,  0.06302403,  0.03271209,  0.03138942,  0.11147757,
+		 0.13877611,  0.26072595,  0.62369171,  0.53941833,  0.70681738,
+		 0.75861258, 23.28516396]),
+	 'mag_sys': 'AB'}
+
+The light curves can be plotted by calling the function :func:`sn.plot_lcs()`:
 
 .. code:: python
 
-	sn.mask_data()
-	sn.plot_data()
+	sn.plot_lcs()
 
 .. image:: basic_example/03D1au_lcs.png
 
-To fit the light curves one needs to use :func:`sn.fit_lcs()`, where the user can decide which kernel to use (``matern52`` by default). The light-curves are **normalized** internally before being fitted, so the flux is converted to physical units if it is not already in those units. One can also plot the fits afterwards by using ``sn.plot_fits()``. From the light curve fits you will get an initial estimation of the rest-frame B-band peak (plotted as a vertical black dashed line).
+To fit the light curves one needs to use :func:`sn.fit()`, where the user can decide which kernels to use. By default, PISCOLA uses ``matern52`` for the `time` axis, and ``squaredexp`` for the `wavelength` axis. One can also plot the fits afterwards by using ``sn.plot_fits()``. From the fits, one gets an estimation of the epoch of rest-frame B-band peak (plotted as a vertical dashed line):
 
 
 .. code:: python
 
-	sn.fit_lcs()
+	sn.fit()
 	sn.plot_fits()
-
-	print('Initial B-band peak estimation:', sn.tmax0)
 
 .. image:: basic_example/03D1au_lc_fits.png
 
-.. code:: python
 
-	Initial B-band peak estimation: 52907.8
-
-The next step is not find the *mangling function* which will warp the SED template to match the SN colours at the given epochs. This is done by using :func:`sn.mangle_sed()` and giving the minimum and maximum phase with respect to B-band peak estimated in the previous step (``-15`` and ``+30`` days by deaulft, respectively). The kernel used can also be chosen (``squaredexp`` by default). This process can take up to several minutes depending on several factors, but it usually takes about two minute. This is very slow compared to template-based fits, but the end product is worth it!
-
-.. code:: python
-
-	sn.mangle_sed()
-
-Extinction correction is calculated internally as part of the mangling process. Next comes the estimation of the light-curves parameters for which we use :func:`sn.calculate_lc_params()`. This step can also take a while to run as it compares the final estimation of the B-band peak with the initial one. If their difference is larger than a certain *threshold* (specified in the code), the whole mangling process is repeated (internally) until convergence is reached.
-
-.. code:: python
-
-	sn.calculate_lc_params()
-
-Finally, we can check the estimated light-curves parameters and plot the rest-frame B-band or any other band (restricted by the data coverage).
+The fitting process includes: the fits of the observed light curves, Milky-Way extinction correction and mangling of the SED template. Finally, we can check the calculated light-curves parameters:
 
 .. code:: python
 	
-	sn.display_results()
-	print(f't_peak = {sn.tmax} +/- {sn.tmax_err}')
-	print(sn.lc_parameters)
-
-.. image:: basic_example/03D1au_restframe_Bessell_B.png
+	sn.lc_parameters
 
 .. code:: python
 	
-	t_peak = 52907.61 +/- 0.12
-	{'mb': 23.01570005610094, 'mb_err': 0.009595737298040906, 'dm15': 0.9289279683676384, 'dm15_err': 0.007616849936084865, 'colour': nan, 'colour_err': nan}
+	{'tmax': 52907.9,
+	 'tmax_err': 0.934,
+	 'Bmax': 23.093,
+	 'Bmax_err': 0.008,
+	 'dm15': 0.825,
+	 'dm15_err': 0.017,
+	 'colour': 0.07,
+	 'colour_err': 0.017,
+	 'sBV': 0.967,
+	 'sBV_err': 0.033}
 
-where the ``nan`` values are shown because the data coverage is not enough to estimate colour.
+``Nan`` values correspond to parameters that were not calculated due limited data coverage.
 
-Putting it all together
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In Summary
+~~~~~~~~~~
+
+Simply follow these steps:
 
 .. code:: python
-
-	sn = piscola.call_sn('03D1au')
-
-	sn.fit_lcs()
-	sn.mangle_sed()
-	sn.calculate_lc_params()
-
-Or, if you just want to fit using the default values, you can use :func:`sn.do_magic()`.
-
-.. code:: python
-
-	sn = piscola.call_sn('03D1au')
-	sn.do_magic()
-
-Using the CLI
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-PISCOLA can also be used from a terminal. The command-line interface can be used as follows:
-
-.. code:: bash
-
-	piscola <sn_name> [options]
-
-To check the available options, type:
-
-.. code:: bash
-
-	piscola -h
-
-.. code:: bash
-
-	usage: piscola <sn_name> [options]
-
-	PISCOLA (v0.1.1) - Type Ia light-curve fitter
-
-	positional arguments:
-	  sn_name               name of the supernova
-
-	optional arguments:
-	  -h, --help            show this help message and exit
-	  --data_dir DATA_DIR   directory where to find the SN file with the light curve data
-	  -s, --save            saves the SN object into a pickle file
-	  -sd SAVE_DIR, --save_dir SAVE_DIR
-		                directory where to save the SN object
-	  --mask_snr MASK_SNR   masks the data given a signal-to-noise threshold
-	  --mask_phase MASK_PHASE MASK_PHASE
-		                masks the data given a phase range
-	  -k1 {matern32,matern52,squaredexp}, --kernel1 {matern32,matern52,squaredexp}
-		                kernel to be used by the gaussian process fit of the time axis
-	  -k2 {matern32,matern52,squaredexp}, --kernel2 {matern32,matern52,squaredexp}
-		                kernel to be used by the gaussian process fit of the wavelength axis
-	  --min_phase MIN_PHASE
-		                minimum phase of the light curves to be used
-	  --max_phase           maximum phase of the light curves to be used
-	  -mk {matern32,matern52,squaredexp}, --mangling_kernel {matern32,matern52,squaredexp}
-		                kernel to be used by the mangling function
-	  --ebv EBV             E(B-V) value to be used instead of the dust maps
-	  -ds {0.86,1.0}, --dust_scaling {0.86,1.0}
-		                scaling of the dust maps
-	  -rl {ccm89,odonnell94,fitzpatrick99,calzetti00,fm07}, --reddening_law {ccm89,odonnell94,fitzpatrick99,calzetti00,fm07}
-		                dust extinction law
-	  -sfd DUSTMAPS_DIR, --dustmaps_dir DUSTMAPS_DIR
-
+	
+	import piscola
+	
+	sn = piscola.call_sn('03D1au.dat')
+	sn.fit()

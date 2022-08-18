@@ -32,6 +32,33 @@ cd piscola
 pip install .
 ```
 
+### Requirements
+
+PISCOLA has the following requirements:
+
+```
+numpy
+pandas
+matplotlib
+peakutils
+requests
+sfdmap
+extinction
+astropy
+scipy
+george
+pickle5
+pytest  (optional: for testing the code)
+```
+
+### Tests
+
+To run the tests, go to the parent directory and run the following command:
+
+```
+pytest -v
+```
+
 ## Using PISCOLA
 
 PISCOLA can fit the supernova light curves and correct them in a few lines of code:

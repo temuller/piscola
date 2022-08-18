@@ -38,9 +38,19 @@ PISCOLA is being actively developed in `a public repository on GitHub
    :caption: Examples
 
    examples/basic_example.rst
-   examples/advanced_example.rst
    examples/sn_file.rst
-   examples/further_details.rst
+   
+.. toctree::
+   :maxdepth: 1
+   :caption: Further Information
+   
+   further_information/filters.rst
+   further_information/lightcurves.rst
+   further_information/sed.rst
+   further_information/gaussian_process.rst
+   further_information/extinction_correction.rst
+   further_information/calibration.rst  
+   further_information/supernova.rst
 
 .. toctree::
    :maxdepth: 1
