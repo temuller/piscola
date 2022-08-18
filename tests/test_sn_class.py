@@ -21,11 +21,11 @@ class TestPiscola(unittest.TestCase):
             sn = piscola.call_sn("data/03D1au.dat")
             sn.fit()
 
-            sn.export_fits()
-            sn.export_restframe_lcs()
-
             plt.ion()
             sn.plot_fits()
+
+            sn.export_fits()
+            sn.export_restframe_lcs()
 
 
 if __name__ == "__main__":
