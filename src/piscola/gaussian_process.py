@@ -96,7 +96,7 @@ def gp_2d_fit(
     yerr_data=0.0,
     kernel1="matern52",
     kernel2="squaredexp",
-    gp_mean="max",
+    gp_mean="mean",
 ):
     """Fits multi-colour light curves in 2D with Gaussian Process.
 
@@ -119,7 +119,7 @@ def gp_2d_fit(
         Kernel for the time axis.
     kernel2: str, default ``squaredexp``
         Kernel for the wavelength acis.
-    gp_mean: str, default ``max``
+    gp_mean: str, default ``mean``
         Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
 
     Returns

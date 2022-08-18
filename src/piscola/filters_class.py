@@ -17,7 +17,7 @@ class SingleFilter(object):
             Name of the band.
         """
         self.name = band
-        self.add_filter(band)
+        self._add_filter(band)
 
     def __repr__(self):
         rep = (
@@ -29,7 +29,7 @@ class SingleFilter(object):
     def __getitem__(self, item):
         return getattr(self, item)
 
-    def add_filter(self, filt_name):
+    def _add_filter(self, filt_name):
         """Adds a filter from the available filters
         in the PISCOLA library.
 
@@ -148,7 +148,7 @@ class SingleFilter(object):
 
         return flux_filter
 
-    def get_standard_flux(self, mag_sys_file):
+    def _get_standard_flux(self, mag_sys_file):
         """Calculates the integrated flux of a standard star SED.
 
         Parameters
@@ -176,9 +176,9 @@ class SingleFilter(object):
         ), f"Standard SED file not found in {mag_sys_file}"
 
         if standard_sed.lower() == "ab":
-            c = 2.99792458e18  # speed of light in [Angstroms/s]
-            sed_wave = np.arange(1000, 250000, 1)
-            sed_flux = 3631e-23 * c / sed_wave**2  # in [erg s^-1 cm^-2 A^-1]
+            c = 2.99792458e18  # speed of light in [Å/s]
+            sed_wave = np.arange(1000, 250000, 1)  # in [Å]
+            sed_flux = 3631e-23 * c / sed_wave**2  # in [erg s^-1 cm^-2 Å^-1]
         else:
             sed_file = os.path.join(pisco_path, "standards", standard_sed)
             sed_wave, sed_flux = np.loadtxt(sed_file).T
@@ -186,7 +186,7 @@ class SingleFilter(object):
 
         return f_sed
 
-    def get_standard_mag(self, mag_sys_file):
+    def _get_standard_mag(self, mag_sys_file):
         """Obtains the tabulated magnitude of a standard star.
 
         Parameters
@@ -232,8 +232,8 @@ class SingleFilter(object):
         ind = list(mag_sys_names).index(mag_sys)
         mag_sys_file = os.path.join(pisco_path, "mag_sys", mag_sys_files[ind])
 
-        f_sed = self.get_standard_flux(mag_sys_file)
-        m_sed = self.get_standard_mag(mag_sys_file)
+        f_sed = self._get_standard_flux(mag_sys_file)
+        m_sed = self._get_standard_mag(mag_sys_file)
         zp = 2.5 * np.log10(f_sed) + m_sed
 
         return zp
@@ -242,13 +242,16 @@ class SingleFilter(object):
 class MultiFilters(object):
     """Class representing multiple filters."""
 
-    def __init__(self, bands):
+    def __init__(self, bands=None):
         """
         Parameters
         ----------
         bands: list-like
-            Bands to include.
+            Bands to include. If ``None``, only include
+            Bessell filters.
         """
+        if bands is None:
+            bands = []
         self.bands = list(bands).copy()
 
         for band in bands:
@@ -345,11 +348,10 @@ class MultiFilters(object):
             norm = self[band]["transmission"].max()
             ax.plot(self[band]["wave"], self[band]["transmission"] / norm, label=band)
 
-        ax.set_xlabel(r"wavelength ($\AA$)", fontsize=18, family="serif")
-        ax.set_ylabel("normalized response", fontsize=18, family="serif")
-        ax.set_title(r"Filters response functions", fontsize=18, family="serif")
-        ax.xaxis.set_tick_params(labelsize=15)
-        ax.yaxis.set_tick_params(labelsize=15)
+        ax.set_xlabel(r"Wavelength ($\AA$)", fontsize=18, family="serif")
+        ax.set_ylabel("Normalised Transmission Function", fontsize=18, family="serif")
+        ax.xaxis.set_tick_params(labelsize=16)
+        ax.yaxis.set_tick_params(labelsize=16)
         ax.minorticks_on()
         ax.tick_params(
             which="major", length=6, width=1, direction="in", top=True, right=True
@@ -357,7 +359,9 @@ class MultiFilters(object):
         ax.tick_params(
             which="minor", length=3, width=1, direction="in", top=True, right=True
         )
-        plt.legend(loc="upper right", bbox_to_anchor=(1.2, 1.0))
+        plt.legend(loc="upper right", bbox_to_anchor=(1.3, 1.0), fontsize=14)
+        # plt.tight_layout()
+        # plt.savefig('filters.png')
 
         plt.show()
 

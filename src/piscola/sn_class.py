@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 from .utils import change_zp
-from .sed_class import SedTemplate
+from .sed_class import SEDTemplate
 from .filters_class import MultiFilters
 from .lightcurves_class import Lightcurves
 from .gaussian_process import gp_2d_fit
@@ -119,7 +119,7 @@ class Supernova(object):
             self._normalize_lcs()
 
         # add SED template
-        self.sed = SedTemplate(z, ra, dec, template)
+        self.sed = SEDTemplate(z, ra, dec, template)
         self.sed.calculate_obs_lightcurves(self.filters)
 
     def __repr__(self):
@@ -208,7 +208,7 @@ class Supernova(object):
         self._stacked_mag = mag
         self._stacked_mag_err = mag_err
 
-    def _fit_lcs(self, kernel1="matern52", kernel2="squaredexp", gp_mean="max"):
+    def _fit_lcs(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean"):
         """Fits the multi-colour light-curve data with gaussian process.
 
         The time of rest-frame B-band peak luminosity is estimated by finding where the derivative is equal to zero.
@@ -221,15 +221,15 @@ class Supernova(object):
         kernel2 : str, default ``matern52``
             Kernel to be used in the **wavelengt**-axis when fitting the light curves with gaussian process. E.g.,
             ``matern52``, ``matern32``, ``squaredexp``.
-        gp_mean : str, default ``max``
+        gp_mean : str, default ``mean``
             Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
         """
         self._stack_lcs()
         timeXwave, lc_mean, lc_std, gp_pred, gp = gp_2d_fit(
             self._stacked_time,
             self._stacked_wave,
-            self._stacked_mag,
-            self._stacked_mag_err,
+            self._stacked_flux,
+            self._stacked_flux_err,
             kernel1,
             kernel2,
             gp_mean,
@@ -247,18 +247,18 @@ class Supernova(object):
         wave_ind = np.argmin(np.abs(B_eff_wave * (1 + self.z) - waves))
         eff_wave = waves[wave_ind]
         Bmask = waves == eff_wave
-        Btime, Bmag, Bmag_err = times[Bmask], lc_mean[Bmask], lc_std[Bmask]
-
-        peak_id = peak.indexes(-Bmag, thres=0.3, min_dist=len(Btime) // 2)[0]
+        
+        Btime, Bflux, Bflux_err = times[Bmask], lc_mean[Bmask], lc_std[Bmask]
+        peak_id = peak.indexes(Bflux, thres=0.3, min_dist=len(Btime) // 2)[0]
         self.init_tmax = np.round(Btime[peak_id], 3)
 
         # get tmax_err
-        Bmax = Bmag[peak_id]
+        Bflux = Bflux[peak_id]
         # use only data around peak
         mask = (Btime > self.init_tmax - 5) & (Btime < self.init_tmax + 5)
         Btime = Btime[mask]
-        brightest_mag = (Bmag - Bmag_err)[mask]
-        id_err = np.argmin(np.abs(brightest_mag - Bmax))
+        brightest_flux = (Bflux + Bflux_err)[mask]
+        id_err = np.argmin(np.abs(brightest_flux - Bflux))
         self.tmax_err = np.abs(Btime[id_err] - self.init_tmax)
 
     def fit(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean"):
@@ -275,7 +275,7 @@ class Supernova(object):
         kernel2 : str, default ``matern52``
             Kernel to be used in the **wavelengt**-axis when fitting the light curves with gaussian process. E.g.,
             ``matern52``, ``matern32``, ``squaredexp``.
-        gp_mean : str, default ``max``
+        gp_mean : str, default ``mean``
             Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
         """
         self._fit_lcs(kernel1, kernel2, gp_mean)  # to get initial tmax
@@ -428,9 +428,8 @@ class Supernova(object):
     def _extract_lc_params(self):
         """Calculates the light-curves parameters.
 
-        Estimation of B-band peak apparent magnitude (m :math:`_B^{max}`), stretch (:math:`\Delta` m :math:`_{15}(B)`)
-        and colour (:math:`(B-V)^{max}`) parameters. An interpolation of the corrected light curves is done as well as
-        part of this process.
+        Estimation of B-band peak apparent magnitude, stretch, colour and colour-stretch parameters.
+        An interpolation of the corrected light curves is done as well as part of this process.
         """
         self.rest_lcs.get_lc_params()
         band1 = "Bessell_B"

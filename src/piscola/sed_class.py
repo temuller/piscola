@@ -9,7 +9,7 @@ from .extinction_correction import redden, deredden, calculate_ebv
 from .gaussian_process import gp_lc_fit
 
 
-class SedTemplate(object):
+class SEDTemplate(object):
     """Spectral energy distribution (SED) class.
 
     This is used for correcting a supernova's multi-colout light curves.
@@ -67,7 +67,7 @@ class SedTemplate(object):
         # This can be modified to accept other templates
         pisco_path = piscola.__path__[0]
         sed_file = glob.glob(
-            os.path.join(pisco_path, "templates", template, "snflux_1a.*")
+            os.path.join(pisco_path, "templates", template, "sed_template.*")
         )[0]
         self.data = pd.read_csv(
             sed_file, delim_whitespace=True, names=["phase", "wave", "flux"]
