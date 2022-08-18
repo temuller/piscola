@@ -1,6 +1,6 @@
 numpy
-matplotlib
 pandas
+matplotlib
 peakutils
 requests
 sfdmap
@@ -9,3 +9,4 @@ astropy
 scipy
 george
 pickle5
+pytest
