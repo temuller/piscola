@@ -15,3 +15,7 @@ src/piscola/sfddata-master
 
 ### docs ###
 docs/_build
+
+### tests ###
+03D1au_fits.dat
+03D1au_restframe_lcs.dat
