@@ -97,6 +97,8 @@ def gp_2d_fit(
     kernel1="matern52",
     kernel2="squaredexp",
     gp_mean="mean",
+    x1_ext=(5, 10),
+    x2_ext=(1000, 2000),
 ):
     """Fits multi-colour light curves in 2D with Gaussian Process.
 
@@ -121,6 +123,10 @@ def gp_2d_fit(
         Kernel for the wavelength acis.
     gp_mean: str, default ``mean``
         Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
+    x1_ext: str, default ``(5, 10)``
+        Extrapolation "leftward" and "rightward" for the time axis.
+    x2_ext: str, default ``(1000, 2000)``
+        Extrapolation "leftward" and "rightward" for the wavelength axis.
 
     Returns
     -------
@@ -187,14 +193,19 @@ def gp_2d_fit(
 
     # optimization routine for hyperparameters
     p0 = gp.get_parameter_vector()
-    results = scipy.optimize.minimize(
-        neg_ln_like, p0, jac=grad_neg_ln_like, method="BFGS"
-    )
+    try:
+        results = scipy.optimize.minimize(
+            neg_ln_like, p0, jac=grad_neg_ln_like, method="BFGS"
+        )
+    except:
+        results = scipy.optimize.minimize(
+            neg_ln_like, p0, jac=grad_neg_ln_like, method="L-BFGS-B"
+        )
     gp.set_parameter_vector(results.x)
 
     # extrapolation edges
-    x1_min, x1_max = x1.min() - 5, x1.max() + 10
-    x2_min, x2_max = x2.min() - 1000, x2.max() + 2000
+    x1_min, x1_max = x1.min() - x1_ext[0], x1.max() + x1_ext[1]
+    x2_min, x2_max = x2.min() - x2_ext[0], x2.max() + x2_ext[1]
 
     # x-axis prediction array
     step1 = 0.1  # in days

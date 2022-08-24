@@ -225,32 +225,44 @@ class Supernova(object):
             Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
         """
         self._stack_lcs()
-        timeXwave, lc_mean, lc_std, gp_pred, gp = gp_2d_fit(
-            self._stacked_time,
-            self._stacked_wave,
-            self._stacked_flux,
-            self._stacked_flux_err,
-            kernel1,
-            kernel2,
-            gp_mean,
-        )
+        for i in range(5):
+            x1_ext = (5*(i+1), 10)
+            timeXwave, lc_mean, lc_std, gp_pred, gp = gp_2d_fit(
+                self._stacked_time,
+                self._stacked_wave,
+                self._stacked_flux,
+                self._stacked_flux_err,
+                kernel1,
+                kernel2,
+                gp_mean,
+                x1_ext,
+            )
 
-        self.init_fits["timeXwave"], self.init_fits["lc_mean"] = timeXwave, lc_mean
-        self.init_fits["lc_std"], self.init_fits["gp_pred"] = lc_std, gp_pred
-        self.init_fits["gp"] = gp
+            self.init_fits["timeXwave"], self.init_fits["lc_mean"] = timeXwave, lc_mean
+            self.init_fits["lc_std"], self.init_fits["gp_pred"] = lc_std, gp_pred
+            self.init_fits["gp"] = gp
 
-        # Estimate B-band Peak
-        sed_wave, sed_flux = self.sed.get_phase_data(0.0)
-        B_eff_wave = self.filters.Bessell_B.calc_eff_wave(sed_wave, sed_flux)
+            # Estimate B-band Peak
+            sed_wave, sed_flux = self.sed.get_phase_data(0.0)
+            B_eff_wave = self.filters.Bessell_B.calc_eff_wave(sed_wave, sed_flux)
 
-        times, waves = timeXwave.T[0], timeXwave.T[1]
-        wave_ind = np.argmin(np.abs(B_eff_wave * (1 + self.z) - waves))
-        eff_wave = waves[wave_ind]
-        Bmask = waves == eff_wave
-        
-        Btime, Bflux, Bflux_err = times[Bmask], lc_mean[Bmask], lc_std[Bmask]
-        peak_id = peak.indexes(Bflux, thres=0.3, min_dist=len(Btime) // 2)[0]
+            times, waves = timeXwave.T[0], timeXwave.T[1]
+            wave_ind = np.argmin(np.abs(B_eff_wave * (1 + self.z) - waves))
+            eff_wave = waves[wave_ind]
+            Bmask = waves == eff_wave
+
+            Btime, Bflux, Bflux_err = times[Bmask], lc_mean[Bmask], lc_std[Bmask]
+            peak_ids = peak.indexes(Bflux, thres=0.3, min_dist=len(Btime) // 2)
+
+            if len(peak_ids) != 0:
+                peak_id = peak_ids[0]
+                break
+
+        if len(peak_ids) == 0:
+            # if still no peak is found, use the maximum
+            peak_id = np.argmax(Bflux)
         self.init_tmax = np.round(Btime[peak_id], 3)
+        self._x1_ext = x1_ext
 
         # get tmax_err
         Bflux = Bflux[peak_id]
@@ -317,6 +329,7 @@ class Supernova(object):
             kernel1,
             kernel2,
             gp_mean,
+            self._x1_ext
         )
         self.fit_results = {
             "timeXwave": timeXwave,
