@@ -35,19 +35,29 @@ class Lightcurve(object):
     def __getitem__(self, item):
         return getattr(self, item)
 
-    def mask_lc(self, mask):
+    def mask_lc(self, mask, copy=False):
         """Masks the light-curve data with the given mask.
 
         Parameters
         ----------
         mask: bool list
             Mask to apply to the light curve.
+        mask: bool, default ``False``
+            If ``True``, the masked light curves are saved on
+            separate arrays.
         """
-        self.masked_time = self.time.copy()[mask]
-        self.masked_flux = self.flux.copy()[mask]
-        self.masked_flux_err = self.flux_err.copy()[mask]
-        self.masked_mag = self.mag.copy()[mask]
-        self.masked_mag_err = self.mag_err.copy()[mask]
+        if not copy:
+            self.time = self.time[mask]
+            self.flux = self.flux[mask]
+            self.flux_err = self.flux_err[mask]
+            self.mag = self.mag[mask]
+            self.mag_err = self.mag_err[mask]
+        else:
+            self.masked_time = self.time[mask]
+            self.masked_flux = self.flux[mask]
+            self.masked_flux_err = self.flux_err[mask]
+            self.masked_mag = self.mag[mask]
+            self.masked_mag_err = self.mag_err[mask]
 
     def get_max(self):
         """Calculates the peak magnitude (:math:`m_{max}`) and

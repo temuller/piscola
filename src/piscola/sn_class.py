@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # This is the skeleton of PISCOLA, the main file
 import os
+import bz2
 import math
 import numpy as np
 import pandas as pd
@@ -62,7 +63,7 @@ def load_sn(piscola_file):
     err_message = f"File {piscola_file} not found."
     assert os.path.isfile(piscola_file), err_message
 
-    with open(piscola_file, "rb") as sn_file:
+    with bz2.BZ2File(piscola_file, "rb") as sn_file:
         sn_obj = pickle.load(sn_file)
 
     return sn_obj
@@ -95,7 +96,8 @@ class Supernova(object):
         self.z = z
         self.ra = ra
         self.dec = dec
-        self.init_fits = {}
+        self._init_fits = None
+        self._fit_results = None
 
         if not self.ra or not self.dec:
             print("Warning, RA and/or DEC not specified.")
@@ -145,8 +147,11 @@ class Supernova(object):
         if path is None:
             path = ""
 
+        self._init_fits = None
+        self._fit_results = None
+
         outfile = os.path.join(path, f"{self.name}.pisco")
-        with open(outfile, "wb") as pfile:
+        with bz2.BZ2File(outfile, "wb") as pfile:
             pickle.dump(self, pfile, pickle.HIGHEST_PROTOCOL)
 
     def set_sed_template(self, template):
@@ -184,22 +189,17 @@ class Supernova(object):
         Times, wavelengths, fluxes, magnitudes and errors are
         stacked for 2D fitting.
         """
-        for band in self.lcs.bands:
-            # mask negative fluxes
-            mask = ~np.isnan(self.lcs[band].mag)
-            self.lcs[band].mask_lc(mask)
-
-        time = np.hstack([self.lcs[band].masked_time for band in self.bands])
+        time = np.hstack([self.lcs[band].time for band in self.bands])
         wave = np.hstack(
             [
-                [self.filters[band].eff_wave] * len(self.lcs[band].masked_time)
+                [self.filters[band].eff_wave] * len(self.lcs[band].time)
                 for band in self.bands
             ]
         )
-        flux = np.hstack([self.lcs[band].masked_flux for band in self.bands])
-        flux_err = np.hstack([self.lcs[band].masked_flux_err for band in self.bands])
-        mag = np.hstack([self.lcs[band].masked_mag for band in self.bands])
-        mag_err = np.hstack([self.lcs[band].masked_mag_err for band in self.bands])
+        flux = np.hstack([self.lcs[band].flux for band in self.bands])
+        flux_err = np.hstack([self.lcs[band].flux_err for band in self.bands])
+        mag = np.hstack([self.lcs[band].mag for band in self.bands])
+        mag_err = np.hstack([self.lcs[band].mag_err for band in self.bands])
 
         self._stacked_time = time
         self._stacked_wave = wave
@@ -225,9 +225,10 @@ class Supernova(object):
             Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
         """
         self._stack_lcs()
+        self._x2_ext = (1000, 2000)
         for i in range(5):
-            x1_ext = (5*(i+1), 10)
-            timeXwave, lc_mean, lc_std, gp_pred, gp = gp_2d_fit(
+            self._x1_ext = (5*(i+1), 10)
+            timeXwave, lc_mean, lc_std, gp = gp_2d_fit(
                 self._stacked_time,
                 self._stacked_wave,
                 self._stacked_flux,
@@ -235,12 +236,14 @@ class Supernova(object):
                 kernel1,
                 kernel2,
                 gp_mean,
-                x1_ext,
+                self._x1_ext,
+                self._x2_ext,
             )
-
-            self.init_fits["timeXwave"], self.init_fits["lc_mean"] = timeXwave, lc_mean
-            self.init_fits["lc_std"], self.init_fits["gp_pred"] = lc_std, gp_pred
-            self.init_fits["gp"] = gp
+            self.init_gp = gp
+            self._init_fits = {}
+            self._init_fits["timeXwave"] = timeXwave
+            self._init_fits["lc_mean"] = lc_mean
+            self._init_fits["lc_std"] = lc_std
 
             # Estimate B-band Peak
             sed_wave, sed_flux = self.sed.get_phase_data(0.0)
@@ -262,7 +265,6 @@ class Supernova(object):
             # if still no peak is found, use the maximum
             peak_id = np.argmax(Bflux)
         self.init_tmax = np.round(Btime[peak_id], 3)
-        self._x1_ext = x1_ext
 
         # get tmax_err
         Bflux = Bflux[peak_id]
@@ -272,6 +274,7 @@ class Supernova(object):
         brightest_flux = (Bflux + Bflux_err)[mask]
         id_err = np.argmin(np.abs(brightest_flux - Bflux))
         self.tmax_err = np.abs(Btime[id_err] - self.init_tmax)
+
 
     def fit(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean"):
         """Fits and corrects the multi-colour light curves.
@@ -299,45 +302,45 @@ class Supernova(object):
         flux_ratios, flux_err = [], []
         for band in self.bands:
             # this mask avoids observations beyond the SED template limits
-            mask = self.lcs[band].masked_time <= sed_times.max()
+            mask = self.lcs[band].time <= sed_times.max()
+            self.lcs[band].mask_lc(mask, copy=True)
             sed_flux = np.interp(
-                self.lcs[band].masked_time[mask],
+                self.lcs[band].masked_time,
                 sed_times,
                 sed_lcs[band].values,
                 left=0.0,
                 right=0.0,
             )
 
-            times.append(self.lcs[band].masked_time[mask])
+            times.append(self.lcs[band].masked_time)
             waves.append(
-                [self.filters[band].eff_wave] * len(self.lcs[band].masked_time[mask])
+                [self.filters[band].eff_wave] * len(self.lcs[band].masked_time)
             )
-            flux_ratios.append(self.lcs[band].masked_flux[mask] / sed_flux)
-            flux_err.append(self.lcs[band].masked_flux_err[mask] / sed_flux)
+            flux_ratios.append(self.lcs[band].masked_flux / sed_flux)
+            flux_err.append(self.lcs[band].masked_flux_err / sed_flux)
 
         # prepare data for 2D fit
-        stacked_times = np.hstack(times)
-        stacked_waves = np.hstack(waves)
-        stacked_ratios = np.hstack(flux_ratios)
-        stacked_err = np.hstack(flux_err)
+        self._stacked_times = np.hstack(times)
+        self._stacked_waves = np.hstack(waves)
+        self._stacked_ratios = np.hstack(flux_ratios)
+        self._stacked_err = np.hstack(flux_err)
 
-        timeXwave, mf_mean, mf_std, gp_pred, gp = gp_2d_fit(
-            stacked_times,
-            stacked_waves,
-            stacked_ratios,
-            stacked_err,
+        timeXwave, mf_mean, mf_std, gp = gp_2d_fit(
+            self._stacked_times,
+            self._stacked_waves,
+            self._stacked_ratios,
+            self._stacked_err,
             kernel1,
             kernel2,
             gp_mean,
-            self._x1_ext
+            self._x1_ext,
+            self._x2_ext,
         )
-        self.fit_results = {
-            "timeXwave": timeXwave,
-            "mf_mean": mf_mean,
-            "mf_std": mf_std,
-            "gp_pred": gp_pred,
-            "gp": gp,
-        }
+        self.gp = gp
+        self._fit_results = {}
+        self._fit_results["timeXwave"] = timeXwave
+        self._fit_results["mf_mean"] = mf_mean
+        self._fit_results["mf_std"] = mf_std
 
         times, waves = timeXwave.T
         fits_df_list = []
@@ -364,11 +367,66 @@ class Supernova(object):
         self._get_rest_lightcurves()
         self._extract_lc_params()
 
+
+    def _calc_fits_results(self, lc):
+
+        if lc:
+            y = self._stacked_flux
+            x1, x2 = self._stacked_time, self._stacked_wave
+            gp = self.init_gp
+        else:
+            y = self._stacked_ratios
+            x1, x2 = self._stacked_times, self._stacked_waves
+            gp = self.gp
+
+        y_norm = y.max()
+        y /=  y_norm
+
+        x1_min, x1_max = x1.min() - self._x1_ext[0], x1.max() + self._x1_ext[1]
+        x2_min, x2_max = x2.min() - self._x2_ext[0], x2.max() + self._x2_ext[1]
+
+        # x-axis prediction array
+        step1 = 0.1  # in days
+        step2 = 10  # in angstroms
+        x1_pred = np.arange(x1_min, x1_max + step1, step1)
+        x2_pred = np.arange(x2_min, x2_max + step2, step2)
+        X_predict = np.array(np.meshgrid(x1_pred, x2_pred))
+        X_predict = X_predict.reshape(2, -1).T
+
+        mean, std = gp.predict(y, X_predict, return_var=True)
+        y_pred = mean * y_norm
+        yerr_pred = std * y_norm
+
+        if lc:
+            results = {"timeXwave": X_predict,
+                       "lc_mean": y_pred,
+                       "lc_std": yerr_pred}
+        else:
+            results = {"timeXwave": X_predict,
+                       "mf_mean": y_pred,
+                       "mf_std": yerr_pred}
+
+        return results
+
+    @property
+    def fit_results(self):
+        if self._fit_results is None:
+            self._fit_results = self._calc_fits_results(lc=False)
+
+        return self._fit_results
+
+    @property
+    def init_fits(self):
+        if self._init_fits is None:
+            self._init_fits = self._calc_fits_results(lc=True)
+
+        return self._init_fits
+
     def _mangle_sed(self):
         """Mangles the supernova SED."""
-        times, waves = self.fit_results["timeXwave"].T
-        mf_mean = self.fit_results["mf_mean"]
-        mf_std = self.fit_results["mf_std"]
+        times, waves = self._fit_results["timeXwave"].T
+        mf_mean = self._fit_results["mf_mean"]
+        mf_std = self._fit_results["mf_std"]
 
         # mangle SED in observer frame
         mangled_sed = {"flux": [], "flux_err": []}

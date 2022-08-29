@@ -136,10 +136,8 @@ def gp_2d_fit(
         Interpolated  values.
     yerr_pred: array
         Standard deviation (:math:`1\sigma`) of the interpolation.
-    gp_pred: ~functools.partial
-        Gaussian Process optimzied for prediction.
     gp: ~george.gp
-        Gaussian Process object.
+        Gaussian Process model.
     """
 
     # define the objective function for optimization
@@ -221,7 +219,4 @@ def gp_2d_fit(
     y_pred = mean * y_norm
     yerr_pred = std * y_norm
 
-    # useful for covariance calculation
-    gp_pred = partial(gp.predict, y)
-
-    return X_predict, y_pred, yerr_pred, gp_pred, gp
+    return X_predict, y_pred, yerr_pred, gp
