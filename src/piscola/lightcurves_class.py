@@ -82,7 +82,7 @@ class Lightcurve(object):
             self.tmax_err = np.abs(time[id_err] - self.tmax)
 
     def get_dm15(self):
-        """Calculates the classic parameter :math:`\Delta m_{15}`
+        r"""Calculates the classic parameter :math:`\Delta m_{15}`
         (Phillips 1993), but using the epoch of peak magnitude of
         the current light curve as reference (not necessarily :math:`B`
         band).
@@ -219,7 +219,7 @@ class Lightcurves(object):
         return stretch, stretch_err
 
     def get_lc_params(self):
-        """Calculates the peak magnitude (:math:`m_{max}`), its epoch
+        r"""Calculates the peak magnitude (:math:`m_{max}`), its epoch
         (:math:`t_{max}`) and :math:`\Delta m_{15}` for all bands.
         """
         for band in self.bands:

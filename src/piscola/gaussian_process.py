@@ -7,7 +7,7 @@ from george.kernels import Matern52Kernel, Matern32Kernel, ExpSquaredKernel
 
 
 def gp_lc_fit(x_data, y_data, yerr_data=0.0, kernel="matern52"):
-    """Fits a single light curve with Gaussian Process.
+    r"""Fits a single light curve with Gaussian Process.
 
     The package ``george`` is used for the gaussian process fit.
 
@@ -100,7 +100,7 @@ def gp_2d_fit(
     x1_ext=(5, 10),
     x2_ext=(1000, 2000),
 ):
-    """Fits multi-colour light curves in 2D with Gaussian Process.
+    r"""Fits multi-colour light curves in 2D with Gaussian Process.
 
     **Note1:** ``x1`` refers to `time` axis while ``x2`` refers to `wavelength` axis.
 
