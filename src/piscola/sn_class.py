@@ -275,6 +275,23 @@ class Supernova(object):
         id_err = np.argmin(np.abs(brightest_flux - Bflux))
         self.tmax_err = np.abs(Btime[id_err] - self.init_tmax)
 
+        # inital light-curve fits
+        times, waves = timeXwave.T
+        fits_df_list = []
+        for band in self.bands:
+            wave_ind = np.argmin(np.abs(self.filters[band]["eff_wave"] - waves))
+            eff_wave = waves[wave_ind]
+            mask = waves == eff_wave
+            time, mean, std = times[mask], lc_mean[mask], lc_std[mask]
+
+            fit_df = pd.DataFrame({"time": time, "flux": mean, "flux_err": std})
+            fit_df["zp"] = self.lcs[band].zp
+            fit_df["band"] = band
+            fit_df["mag_sys"] = self.lcs[band].mag_sys
+            fits_df_list.append(fit_df)
+
+        self._init_lc_fits = Lightcurves(pd.concat(fits_df_list))
+
 
     def fit(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean"):
         """Fits and corrects the multi-colour light curves.
