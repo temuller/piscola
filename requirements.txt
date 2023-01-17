@@ -8,5 +8,5 @@ extinction
 astropy
 scipy
 george
-pickle5; python_version < '3.9'
+pickle5; python_version <= '3.9'
 pytest
