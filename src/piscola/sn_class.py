@@ -7,10 +7,10 @@ import math
 import numpy as np
 import pandas as pd
 from peakutils import peak
-if sys.python_info.minor < 8:
+if sys.version_info.minor < 8:
     import pickle5 as pickle
 else:
-    # pickle is incorporated in python starting from v3.8
+    # pickle is a built-in package starting from python v3.8
     import pickle
 
 import matplotlib.pyplot as plt
