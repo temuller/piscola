@@ -157,7 +157,11 @@ class Supernova(object):
 
         outfile = os.path.join(path, f"{self.name}.pisco")
         with bz2.BZ2File(outfile, "wb") as pfile:
-            pickle.dump(self, pfile, pickle.HIGHEST_PROTOCOL)
+            if sys.version_info.minor < 8:
+                protocol = 4
+            else:
+                protocol = pickle.HIGHEST_PROTOCOL
+            pickle.dump(self, pfile, protocol)
 
     def set_sed_template(self, template):
         """Sets the SED template to be used for the mangling function.
