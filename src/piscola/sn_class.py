@@ -2,11 +2,16 @@
 # This is the skeleton of PISCOLA, the main file
 import os
 import bz2
+import sys
 import math
 import numpy as np
 import pandas as pd
-import pickle5 as pickle
 from peakutils import peak
+if sys.python_info.minor < 8:
+    import pickle5 as pickle
+else:
+    # pickle is incorporated in python starting from v3.8
+    import pickle
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
