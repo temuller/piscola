@@ -157,10 +157,7 @@ class Supernova(object):
 
         outfile = os.path.join(path, f"{self.name}.pisco")
         with bz2.BZ2File(outfile, "wb") as pfile:
-            if sys.version_info.minor < 8:
-                protocol = 4
-            else:
-                protocol = pickle.HIGHEST_PROTOCOL
+            protocol = 4
             pickle.dump(self, pfile, protocol)
 
     def set_sed_template(self, template):
