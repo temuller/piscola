@@ -177,7 +177,7 @@ class SingleFilter(object):
 
         if standard_sed.lower() == "ab":
             c = 2.99792458e18  # speed of light in [Å/s]
-            sed_wave = np.arange(1000, 250000, 1)  # in [Å]
+            sed_wave = np.arange(1000, 250000, 1.)  # in [Å]
             sed_flux = 3631e-23 * c / sed_wave**2  # in [erg s^-1 cm^-2 Å^-1]
         else:
             sed_file = os.path.join(pisco_path, "standards", standard_sed)
