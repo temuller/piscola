@@ -4,7 +4,7 @@ import requests
 import numpy as np
 import matplotlib.pyplot as plt
 
-import sfdmap
+from sfdmap2 import sfdmap
 import extinction
 
 import piscola
