@@ -213,7 +213,7 @@ class Lightcurves(object):
                 stretch = (colour_tmax - tmax) / 30
                 stretch_err = tmax_err / 30  # inaccurate error propagation
             else:
-                warnings.warn(f"The peak in the colour curve was not found")
+                # warnings.warn(f"The peak in the colour curve was not found")
                 stretch = stretch_err = np.nan
 
         return stretch, stretch_err
