@@ -1,0 +1,25 @@
+standard_sed: alpha_lyr_stis_005.dat
+
+# CSP
+Swope_B	 0.03
+Swope_V	 0.0096
+Swope_V1 0.015
+Swope_V0 0.0096
+Swope_Y  0.0
+Swope_Jrc2  0.0
+Swope_J  0.0
+Swope_H  0.0
+Swope_K  0.0
+
+Dupont_Ydw 0.0
+Dupont_Jdw 0.0
+Dupont_Hdw 0.0
+Dupont_Kdw 0.0
+
+# CSP2
+Swope_B2 0.03
+Swope_V2 0.009
+
+Dupont_Yd 0.0
+Dupont_Jd 0.0
+Dupont_Hd 0.0

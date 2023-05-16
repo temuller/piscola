@@ -1,0 +1,15 @@
+########################################################################################
+
+standard_sed: bd17_stisnic_005.dat  # used by piscola
+
+# CSP
+Swope_u 10.518
+Swope_g 9.644
+Swope_r 9.352
+Swope_i 9.250
+
+# CSP2
+Swope_u2 10.529
+Swope_g2 9.643
+Swope_r2 9.351
+Swope_i2 9.250

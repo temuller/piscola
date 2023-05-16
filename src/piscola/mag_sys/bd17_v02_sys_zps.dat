@@ -8,41 +8,41 @@ standard_sed: bd_17d4708_stisnic_002.dat
 
 
 # Magnitudes in the Landolt system : Landolt & Uomoto (2007)
-STANDARD_U 9.724
-STANDARD_B 9.907
-STANDARD_V 9.464
-STANDARD_R 9.166
-STANDARD_I 8.846
+Standard_U 9.724
+Standard_B 9.907
+Standard_V 9.464
+Standard_R 9.166
+Standard_I 8.846
 
 # Magnitudes in the Megacam 'local natural system' : Regnault et al (2009)
-MEGACAM_u 9.7688 # annexe of calibration paper
-MEGACAM_g 9.6906
-MEGACAM_r 9.2183
-MEGACAM_i 8.9142
-MEGACAM_z 8.7736
+Megacam_u 9.7688 # annexe of calibration paper
+Megacam_g 9.6906
+Megacam_r 9.2183
+Megacam_i 8.9142
+Megacam_z 8.7736
 
 # Magnitudes in the USNO system : Smith et al (2002)
-USNO u 10.56
-USNO g 9.64
-USNO r 9.35
-USNO i 9.25
-USNO z 9.23
+usno_u 10.56
+usno_g 9.64
+usno_r 9.35
+usno_i 9.25
+usno_z 9.23
 
 # Magnitudes in the Keplercam natural system : 
 # from linear transformations table 2 of Hicken et al 2009
-KEPLERCAM_U 9.6922
-KEPLERCAM_B 9.8803
-KEPLERCAM_V 9.4722
-KEPLERCAM_r 9.3524 
-KEPLERCAM_i 9.2542
+Keplercam_U 9.6922
+Keplercam_B 9.8803
+Keplercam_V 9.4722
+Keplercam_r 9.3524 
+Keplercam_i 9.2542
 
 # Magnitudes in the 4Shooter2 natural system : 
 # from linear transformations table 2 of Hicken et al 2009
-4SHOOTER2_U 9.6930
-4SHOOTER2_B 9.8744
-4SHOOTER2_V 9.4789
-4SHOOTER2_R 9.1554
-4SHOOTER2_I 8.8506
+4Shooter2_U 9.6930
+4Shooter2_B 9.8744
+4Shooter2_V 9.4789
+4Shooter2_R 9.1554
+4Shooter2_I 8.8506
 
 # Magnitude in the Swope telescope system of CSP
 # from Conley
