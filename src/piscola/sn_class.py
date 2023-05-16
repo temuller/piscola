@@ -331,8 +331,8 @@ class Supernova(object):
                 self.lcs[band].masked_time,
                 sed_times,
                 sed_lcs[band].values,
-                left=0.0,
-                right=0.0,
+                #left=0.0,
+                #right=0.0,
             )
 
             times.append(self.lcs[band].masked_time)
@@ -770,6 +770,9 @@ class Supernova(object):
                 )
             ax.set_xticks([])
             ax.legend(fontsize=16)
+
+            ax.set_xlim(x_fit.min(), x_fit.max())
+            ax2.set_xlim(x_fit.min(), x_fit.max())
 
         fig.text(
             0.5,

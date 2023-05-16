@@ -1,6 +1,6 @@
 ########################################################################################
 
-standard_sed: bd17_stisnic_005.dat  # used by piscola
+standard_sed: bd_17d4708_stisnic_005.dat  # used by piscola
 
 # CSP
 Swope_u 10.518
