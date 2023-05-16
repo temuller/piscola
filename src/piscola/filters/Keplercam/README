@@ -1,0 +1,7 @@
+Filters taken from the SALT2 website: http://supernovae.in2p3.fr/salt/doku.php?id=instruments
+
+"""
+Accurate measurements of the natural KeplerCam U-band are missing. We
+use measurements color corrected to the Landolt system, and call this
+band Us.
+"""
