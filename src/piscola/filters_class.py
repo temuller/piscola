@@ -9,27 +9,30 @@ import piscola
 class SingleFilter(object):
     """Single filter class."""
 
-    def __init__(self, band):
+    def __init__(self, band, mag_sys):
         """
         Parameters
         ----------
         band: str
             Name of the band.
+        mag_sys: str
+            Magnitude system.
         """
         self.name = band
-        self._add_filter(band)
+        self.mag_sys = mag_sys
+        self._add_filter(band, mag_sys)
 
     def __repr__(self):
         rep = (
             f"name: {self.name}, eff_wave: {self.eff_wave:.1f} Å,"
-            f" response_type: {self.response_type}"
+            f" response_type: {self.response_type}, mag_sys: {self.mag_sys}"
         )
         return rep
 
     def __getitem__(self, item):
         return getattr(self, item)
 
-    def _add_filter(self, filt_name):
+    def _add_filter(self, filt_name, mag_sys):
         """Adds a filter from the available filters
         in the PISCOLA library.
 
@@ -37,6 +40,8 @@ class SingleFilter(object):
         ----------
         filt_name: str
             Name of the filter.
+        mag_sys: str
+            Magnitude system.
         """
         pisco_path = piscola.__path__[0]
         filt_pattern = os.path.join(pisco_path, "filters", "*", f"{filt_name}.dat")
@@ -81,6 +86,8 @@ class SingleFilter(object):
                 self.comments = file.read()
         else:
             self.comments = ""
+
+        self.mag_sys = mag_sys
 
     def calc_eff_wave(self, sed_wave=None, sed_flux=None):
         """Calculates the effective wavelength.
@@ -133,7 +140,7 @@ class SingleFilter(object):
         """
         blue_edge_covered = sed_wave.min() <= self.wave.min()
         red_edge_covered = sed_wave.max() >= self.wave.max()
-        err_message = "The SED does not completely overlap with {self.band} filter."
+        err_message = f"The SED does not completely overlap with {self.name} filter."
         assert blue_edge_covered and red_edge_covered, err_message
 
         transmission = self.transmission.copy()
@@ -242,27 +249,31 @@ class SingleFilter(object):
 class MultiFilters(object):
     """Class representing multiple filters."""
 
-    def __init__(self, bands=None):
+    def __init__(self, bands, mag_systems):
         """
         Parameters
         ----------
         bands: list-like
             Bands to include. If ``None``, only include
             Bessell filters.
+        mag_systems: list-like
+            Magnitude systems. E.g. AB, Vega.
         """
         if bands is None:
             bands = []
+            mag_systems = []
         self.bands = list(bands).copy()
+        self.mag_systems = list(mag_systems).copy()
 
-        for band in bands:
-            single_filt = SingleFilter(band)
+        for band, mag_sys in zip(bands, mag_systems):
+            single_filt = SingleFilter(band, mag_sys)
             setattr(self, band, single_filt)
 
         # add Bessell filters
         filters = "UBVRI"
         for filt in filters:
             band = f"Bessell_{filt}"
-            self.add_filter(band)
+            self._add_filter(band, 'BD17')
 
     def __repr__(self):
         return str(self.bands)
@@ -270,7 +281,7 @@ class MultiFilters(object):
     def __getitem__(self, item):
         return getattr(self, item)
 
-    def add_filter(self, band):
+    def _add_filter(self, band, mag_sys):
         """Adds a band object with a single-filter class.
 
         Parameters
@@ -278,9 +289,11 @@ class MultiFilters(object):
         band: str
             Name of the band.
         """
-        single_filt = SingleFilter(band)
-        setattr(self, band, single_filt)
-        self.bands.append(band)
+        if band not in self.bands:
+            single_filt = SingleFilter(band, mag_sys)
+            setattr(self, band, single_filt)
+            self.bands.append(band)
+            self.mag_systems.append(mag_sys)
 
     def remove_filter(self, band):
         """Removes a band object.

@@ -299,17 +299,26 @@ class SEDTemplate(object):
             filt = filters[band]
             for phase in phases:
                 wave, flux, flux_err = self.get_phase_data(phase, include_err=True)
-                rest_flux = filt.integrate_filter(wave, flux)
+                try:
+                    rest_flux = filt.integrate_filter(wave, flux)
+                except:
+                    # The SED has no coverage for this filter
+                    continue
                 rest_flux_err = filt.integrate_filter(wave, flux_err)
                 photometry[band].append(rest_flux)
                 photometry[f"{band}_err"].append(rest_flux_err)
+
+            if len(photometry[band])==0:
+                photometry.pop(band)
+                photometry.pop(f"{band}_err")
 
         photometry["phase"] = phases
         photometry_df = pd.DataFrame(photometry)
 
         # GP fit for interpolation
-        fit_phot = {band: None for band in filters.bands}
-        for band in filters.bands:
+        bands = [band for band in filters.bands if band in photometry_df.columns]
+        fit_phot = {band: None for band in bands}
+        for band in bands:
             flux = photometry_df[band].values
             flux_err = photometry_df[f"{band}_err"].values
             # errors are underestimated as they are already correlated

@@ -114,7 +114,8 @@ class Supernova(object):
             self.init_lcs = Lightcurves(lcs_df)
             # these are the light curves that will be used
             self.lcs = Lightcurves(lcs_df)
-            self.filters = MultiFilters(self.lcs.bands)
+            mag_systems = [self.lcs[band].mag_sys for band in self.lcs.bands]
+            self.filters = MultiFilters(self.lcs.bands, mag_systems)
 
             # order bands by effective wavelength
             eff_waves = [self.filters[band]["eff_wave"] for band in self.filters.bands]
@@ -138,6 +139,23 @@ class Supernova(object):
 
     def __getitem__(self, item):
         return getattr(self, item)
+    
+    def add_filter(self, band, mag_sys):
+        """Adds a new filter.
+
+        Parameters
+        ----------
+        band : str
+            Name of the filter
+        mag_sys : str
+            Magnitude system.
+        """
+        self.filters._add_filter(band, mag_sys)
+        # order bands by effective wavelength
+        eff_waves = [self.filters[band]["eff_wave"] for band in self.filters.bands]
+        sorted_idx = sorted(range(len(eff_waves)), key=lambda k: eff_waves[k])
+        sorted_bands = [self.filters.bands[x] for x in sorted_idx]
+        self.filters.bands = sorted_bands
 
     def save_sn(self, path=None):
         """Saves a SN object into a pickle file
@@ -331,16 +349,17 @@ class Supernova(object):
                 self.lcs[band].masked_time,
                 sed_times,
                 sed_lcs[band].values,
-                #left=0.0,
-                #right=0.0,
             )
 
-            times.append(self.lcs[band].masked_time)
+            # prevents negative numbers
+            mask = sed_flux > 0  # not the best solution, but seems to work
+
+            times.append(self.lcs[band].masked_time[mask])
             waves.append(
-                [self.filters[band].eff_wave] * len(self.lcs[band].masked_time)
+                [self.filters[band].eff_wave] * len(self.lcs[band].masked_time[mask])
             )
-            flux_ratios.append(self.lcs[band].masked_flux / sed_flux)
-            flux_err.append(self.lcs[band].masked_flux_err / sed_flux)
+            flux_ratios.append(self.lcs[band].masked_flux[mask] / sed_flux[mask])
+            flux_err.append(self.lcs[band].masked_flux_err[mask] / sed_flux[mask])
 
         # prepare data for 2D fit
         self._stacked_times = np.hstack(times)
@@ -484,10 +503,10 @@ class Supernova(object):
         lcs_df_list = []
         fits_df_list = []
         for band in self.filters.bands:
-            if "Bessell" in band:
-                mag_sys = "BD17"
-            else:
-                mag_sys = self.lcs[band].mag_sys
+            if band not in self.sed.rest_lcs:
+                # the SED does not cover this band -> skip it
+                continue
+            mag_sys = self.filters[band].mag_sys
             zp = self.filters[band].calc_zp(mag_sys)
 
             lc = self.sed.rest_lcs

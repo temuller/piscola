@@ -30,7 +30,8 @@ class Lightcurve(object):
         self.mag_sys = data.mag_sys.unique()[0]
 
     def __repr__(self):
-        return f"band: {self.band}, zp: {self.zp:.5}, mag_sys: {self.mag_sys}"
+        return (f"band: {self.band}, zp: {self.zp:.5}, mag_sys: {self.mag_sys}"
+                "\nother attributes: time, flux, flux_err, mag, mag_err")
 
     def __getitem__(self, item):
         return getattr(self, item)
@@ -68,6 +69,7 @@ class Lightcurve(object):
         if len(peak_ids) == 0:
             self.mmax = self.mmax_err = np.nan
             self.tmax = np.nan
+            self.tmax_err = np.nan
         else:
             self.mmax = self.mag[peak_ids[0]]
             self.mmax_err = self.mag_err[peak_ids[0]]
