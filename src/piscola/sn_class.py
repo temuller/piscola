@@ -207,23 +207,33 @@ class Supernova(object):
             )
             self.lcs[band].zp = new_zp
 
-    def _stack_lcs(self):
+    def _stack_lcs(self, bands=None):
         """Stacks of light-curve properties
 
         Times, wavelengths, fluxes, magnitudes and errors are
         stacked for 2D fitting.
+
+        Parameters
+        ----------
+        bands: list-like
+            Bands used for the stacking.
         """
-        time = np.hstack([self.lcs[band].time for band in self.bands])
+        if bands is None:
+            stacking_bands = self.bands
+        else:
+            stacking_bands = bands
+
+        time = np.hstack([self.lcs[band].time for band in stacking_bands])
         wave = np.hstack(
             [
                 [self.filters[band].eff_wave] * len(self.lcs[band].time)
-                for band in self.bands
+                for band in stacking_bands
             ]
         )
-        flux = np.hstack([self.lcs[band].flux for band in self.bands])
-        flux_err = np.hstack([self.lcs[band].flux_err for band in self.bands])
+        flux = np.hstack([self.lcs[band].flux for band in stacking_bands])
+        flux_err = np.hstack([self.lcs[band].flux_err for band in stacking_bands])
         mag = np.hstack([self.lcs[band].mag for band in self.bands])
-        mag_err = np.hstack([self.lcs[band].mag_err for band in self.bands])
+        mag_err = np.hstack([self.lcs[band].mag_err for band in stacking_bands])
 
         self._stacked_time = time
         self._stacked_wave = wave
@@ -232,7 +242,7 @@ class Supernova(object):
         self._stacked_mag = mag
         self._stacked_mag_err = mag_err
 
-    def _fit_lcs(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean"):
+    def _fit_lcs(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean", bands=None):
         """Fits the multi-colour light-curve data with gaussian process.
 
         The time of rest-frame B-band peak luminosity is estimated by finding where the derivative is equal to zero.
@@ -247,8 +257,10 @@ class Supernova(object):
             ``matern52``, ``matern32``, ``squaredexp``.
         gp_mean : str, default ``mean``
             Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
+        bands : list-like, default ``None``
+            Bands used for fitting light curves. By default, use all the available bands.
         """
-        self._stack_lcs()
+        self._stack_lcs(bands)
         self._x2_ext = (1000, 2000)
         for i in range(5):
             self._x1_ext = (5*(i+1), 10)
@@ -317,7 +329,7 @@ class Supernova(object):
         self._init_lc_fits = Lightcurves(pd.concat(fits_df_list))
 
 
-    def fit(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean"):
+    def fit(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean", bands=None):
         """Fits and corrects the multi-colour light curves.
 
         The corrections include Milky-Way dust extinction and mangling of the SED.
@@ -333,15 +345,22 @@ class Supernova(object):
             ``matern52``, ``matern32``, ``squaredexp``.
         gp_mean : str, default ``mean``
             Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
+        bands : list-like, default ``None``
+            Bands used for fitting light curves. By default, use all the available bands.
         """
-        self._fit_lcs(kernel1, kernel2, gp_mean)  # to get initial tmax
+        self._fit_lcs(kernel1, kernel2, gp_mean, bands)  # to get initial tmax
 
         sed_lcs = self.sed.obs_lcs_fit  # interpolated light curves
         sed_times = sed_lcs.phase.values + self.init_tmax
 
+        if bands is None:
+            fitting_bands = self.bands
+        else:
+            fitting_bands = bands
+
         times, waves = [], []
         flux_ratios, flux_err = [], []
-        for band in self.bands:
+        for band in fitting_bands:
             # this mask avoids observations beyond the SED template limits
             mask = self.lcs[band].time <= sed_times.max()
             self.lcs[band].mask_lc(mask, copy=True)
