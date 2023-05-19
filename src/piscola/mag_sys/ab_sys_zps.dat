@@ -92,5 +92,16 @@ newh_nirc2  0.0
 F775W_ACS  0.0 
 F850LP_ACS  0.0 
 
+uvot_uvw2 0.0
+uvot_uvm2 0.0
+uvot_uvw1 0.0
+uvot_u 0.0
+uvot_b 0.0
+uvot_v 0.0
+
 ATLAS_c 0.0
 ATLAS_o 0.0
+
+ztf_g 0.0
+ztf_r 0.0
+ztf_i 0.0
