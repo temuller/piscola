@@ -186,7 +186,7 @@ class Supernova(object):
         template : str
             Template name. E.g., ``conley09f``, ``jla``, etc.
         """
-        self.sed.set_sed_template(template)
+        self.sed._set_sed_template(template)
         self.sed.calculate_obs_lightcurves(self.filters)
 
     def _normalize_lcs(self):
@@ -314,7 +314,12 @@ class Supernova(object):
         # inital light-curve fits
         times, waves = timeXwave.T
         fits_df_list = []
-        for band in self.bands:
+        if bands is None:
+            fitting_bands = self.bands
+        else:
+            fitting_bands = bands
+
+        for band in fitting_bands:
             wave_ind = np.argmin(np.abs(self.filters[band]["eff_wave"] - waves))
             eff_wave = waves[wave_ind]
             mask = waves == eff_wave
@@ -405,7 +410,7 @@ class Supernova(object):
 
         times, waves = timeXwave.T
         fits_df_list = []
-        for band in self.bands:
+        for band in fitting_bands:
             wave_ind = np.argmin(np.abs(self.filters[band]["eff_wave"] - waves))
             eff_wave = waves[wave_ind]
             mask = waves == eff_wave
@@ -737,7 +742,7 @@ class Supernova(object):
         fig = plt.figure(figsize=(15, 5 * v))
         gs = gridspec.GridSpec(v * 2, h, height_ratios=[3, 1] * v)
 
-        for i, band in enumerate(self.bands):
+        for i, band in enumerate(self.lc_fits.bands):
             j = math.ceil(i % h)
             k = i // h * 2
             ax = plt.subplot(gs[k, j])

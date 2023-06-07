@@ -8,6 +8,18 @@ import piscola
 from .extinction_correction import redden, deredden, calculate_ebv
 from .gaussian_process import gp_lc_fit
 
+def show_available_templates():
+    """Prints all the available SED templates in the
+    ``templates`` directory.
+    """
+    path = piscola.__path__[0]
+    template_path = os.path.join(path, "templates")
+    available_tamples = [
+        name
+        for name in os.listdir(template_path)
+        if os.path.isdir(os.path.join(template_path, name))
+    ]
+    print("List of available SED templates:", available_tamples)
 
 class SEDTemplate(object):
     """Spectral energy distribution (SED) class.
@@ -33,7 +45,7 @@ class SEDTemplate(object):
         self.ra = ra
         self.dec = dec
 
-        self.set_sed_template(template)
+        self._set_sed_template(template)
         self.redshifted = False
         self.extincted = False
 
@@ -43,20 +55,7 @@ class SEDTemplate(object):
     def __getitem__(self, item):
         return getattr(self, item)
 
-    def show_available_templates(self):
-        """Prints all the available SED templates in the
-        ``templates`` directory.
-        """
-        path = piscola.__path__[0]
-        template_path = os.path.join(path, "templates")
-        available_tamples = [
-            name
-            for name in os.listdir(template_path)
-            if os.path.isdir(os.path.join(template_path, name))
-        ]
-        print("List of available SED templates:", available_tamples)
-
-    def set_sed_template(self, template):
+    def _set_sed_template(self, template):
         """Sets the SED template to be used for the mangling function.
 
         Parameters
