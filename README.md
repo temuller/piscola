@@ -13,7 +13,7 @@ Although the main purpose of PISCOLA is to fit type Ia supernovae, it can be use
 [![PyPI](https://img.shields.io/pypi/v/piscola?label=PyPI&logo=pypi&logoColor=white)](https://pypi.org/project/piscola/)
 [![ADS -  2022MNRAS.512.3266M ](https://img.shields.io/badge/ADS-_2022MNRAS.512.3266M_-2ea44f)](https://ui.adsabs.harvard.edu/abs/2022MNRAS.512.3266M/abstract)
 
-Read the full documentation at: [piscola.readthedocs.io](http://piscola.readthedocs.io/). See below for a summary.
+Read the full documentation at: [piscola.readthedocs.io](http://piscola.readthedocs.io/). See below for a summary. Check [https://github.com/temuller/piscola_templates](https://github.com/temuller/piscola_templates) for spectral templates of different types of supernovae.
 
 ___
 ## Installation
