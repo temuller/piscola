@@ -277,13 +277,16 @@ class SEDTemplate(object):
         fit_phot_df = pd.DataFrame(fit_phot)
         self.obs_lcs_fit = fit_phot_df
 
-    def calculate_rest_lightcurves(self, filters):
+    def calculate_rest_lightcurves(self, filters, use_eff_wave=False):
         """Calculates rest-frame, corrected light curves of the SED.
 
         Parameters
         ----------
         filters: list-like
             Filters to use.
+        use_eff_wave: bool, default ``False``
+            If ``True``, the SED is not convolved with the filter
+            and the flux at the effective wavelength is used instead.
         """
         if self.extincted:
             self.correct_extinction()
@@ -299,11 +302,18 @@ class SEDTemplate(object):
             for phase in phases:
                 wave, flux, flux_err = self.get_phase_data(phase, include_err=True)
                 try:
-                    rest_flux = filt.integrate_filter(wave, flux)
+                    if use_eff_wave is True:
+                        iw = np.argmin(np.abs(wave-filt.eff_wave))
+                        mask = wave==wave[iw]
+                        rest_flux = flux[mask]
+                        rest_flux_err = flux_err[mask]
+                    else:
+                        rest_flux = filt.integrate_filter(wave, flux)
+                        rest_flux_err = filt.integrate_filter(wave, flux_err)
                 except:
                     # The SED has no coverage for this filter
                     continue
-                rest_flux_err = filt.integrate_filter(wave, flux_err)
+                
                 photometry[band].append(rest_flux)
                 photometry[f"{band}_err"].append(rest_flux_err)
 
@@ -330,3 +340,23 @@ class SEDTemplate(object):
 
         self.rest_lcs = photometry_df
         self.rest_lcs_fit = fit_phot_df
+
+    def set_template_from_fits(self, phase, wave, flux, flux_err):
+        """Sets the SED template from the light-curve fits.
+    
+        Parameters
+        ----------
+        
+        """
+        data_dict = {'phase':phase, 'wave':wave, 'flux':flux, 'flux_err':flux_err}
+        self.data = pd.DataFrame(data_dict)
+        
+        self.phase = self.data.phase.values
+        self.wave = self.data.wave.values
+        self.flux = self.data.flux.values
+        self.flux_err = self.data.flux_err.values
+        self.name = 'GP fit'
+        self.comments = "SED from light-curve fit"
+    
+        self.extincted = True
+        self.redshifted = True

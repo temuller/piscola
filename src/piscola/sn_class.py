@@ -242,7 +242,7 @@ class Supernova(object):
         self._stacked_mag = mag
         self._stacked_mag_err = mag_err
 
-    def _fit_lcs(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean", bands=None):
+    def _fit_lcs(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean", bands=None, scale_error=None, scale_time=None):
         """Fits the multi-colour light-curve data with gaussian process.
 
         The time of rest-frame B-band peak luminosity is estimated by finding where the derivative is equal to zero.
@@ -264,7 +264,7 @@ class Supernova(object):
         self._x2_ext = (1000, 2000)
         for i in range(5):
             self._x1_ext = (5*(i+1), 10)
-            timeXwave, lc_mean, lc_std, gp = gp_2d_fit(
+            timeXwave, lc_mean, lc_std, gp, cov = gp_2d_fit(
                 self._stacked_time,
                 self._stacked_wave,
                 self._stacked_flux,
@@ -274,12 +274,15 @@ class Supernova(object):
                 gp_mean,
                 self._x1_ext,
                 self._x2_ext,
+                scale_error,
+                scale_time,
             )
             self.init_gp = gp
             self._init_fits = {}
             self._init_fits["timeXwave"] = timeXwave
             self._init_fits["lc_mean"] = lc_mean
             self._init_fits["lc_std"] = lc_std
+            self._init_fits["cov"] = cov
 
             # Estimate B-band Peak
             sed_wave, sed_flux = self.sed.get_phase_data(0.0)
@@ -334,7 +337,7 @@ class Supernova(object):
         self._init_lc_fits = Lightcurves(pd.concat(fits_df_list))
 
 
-    def fit(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean", bands=None):
+    def fit(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean", bands=None, scale_error=None, scale_time=None):
         """Fits and corrects the multi-colour light curves.
 
         The corrections include Milky-Way dust extinction and mangling of the SED.
@@ -353,7 +356,9 @@ class Supernova(object):
         bands : list-like, default ``None``
             Bands used for fitting light curves. By default, use all the available bands.
         """
-        self._fit_lcs(kernel1, kernel2, gp_mean, bands)  # to get initial tmax
+        self.scale_error = scale_error
+        self.scale_time = scale_time
+        self._fit_lcs(kernel1, kernel2, gp_mean, bands, scale_error, scale_time)  # to get initial tmax
 
         sed_lcs = self.sed.obs_lcs_fit  # interpolated light curves
         sed_times = sed_lcs.phase.values + self.init_tmax
@@ -391,8 +396,8 @@ class Supernova(object):
         self._stacked_ratios = np.hstack(flux_ratios)
         self._stacked_err = np.hstack(flux_err)
 
-        timeXwave, mf_mean, mf_std, gp = gp_2d_fit(
-            self._stacked_times,
+        timeXwave, mf_mean, mf_std, gp, cov = gp_2d_fit(
+            self._stacked_times - self.init_tmax,
             self._stacked_waves,
             self._stacked_ratios,
             self._stacked_err,
@@ -401,12 +406,15 @@ class Supernova(object):
             gp_mean,
             self._x1_ext,
             self._x2_ext,
+            scale_error,
         )
+        timeXwave.T[0] += self.init_tmax
         self.gp = gp
         self._fit_results = {}
         self._fit_results["timeXwave"] = timeXwave
         self._fit_results["mf_mean"] = mf_mean
         self._fit_results["mf_std"] = mf_std
+        self._fit_results["cov"] = cov
 
         times, waves = timeXwave.T
         fits_df_list = []
@@ -433,6 +441,81 @@ class Supernova(object):
         self._get_rest_lightcurves()
         self._extract_lc_params()
 
+    def fit2(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean", bands=None, scale_error=None, scale_time=None, use_eff_wave=False):
+        """Fits and corrects the multi-colour light curves.
+
+        The corrections include Milky-Way dust extinction and mangling of the SED.
+        Rest-frame light curves and parameters are calculated as end products.
+
+        Parameters
+        ----------
+        kernel : str, default ``matern52``
+            Kernel to be used in the **time**-axis when fitting the light curves with gaussian process. E.g.,
+            ``matern52``, ``matern32``, ``squaredexp``.
+        kernel2 : str, default ``matern52``
+            Kernel to be used in the **wavelengt**-axis when fitting the light curves with gaussian process. E.g.,
+            ``matern52``, ``matern32``, ``squaredexp``.
+        gp_mean : str, default ``mean``
+            Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
+        bands : list-like, default ``None``
+            Bands used for fitting light curves. By default, use all the available bands.
+        scale_error: float, default ``None``
+            If given, scales the flux errors.
+        scale_time: float, default ``None``
+            If given, the time reference is shifted by this value.
+        use_eff_wave: bool, default ``False``
+            If ``True``, the SED is not convolved with the filter
+            and the flux at the effective wavelength is used instead.
+        """
+        self.scale_error = scale_error
+        self.scale_time = scale_time
+        self._fit_lcs(kernel1, kernel2, gp_mean, bands, scale_error, scale_time)
+        if bands is None:
+            bands = self.bands
+
+        self._stack_lcs(bands)
+        self._x2_ext = (1000, 2000)
+        for i in range(5):
+            self._x1_ext = (5*(i+1), 10)
+            timeXwave, lc_mean, lc_std, gp, cov = gp_2d_fit(
+                self._stacked_time - self.init_tmax,
+                self._stacked_wave,
+                self._stacked_flux,
+                self._stacked_flux_err,
+                kernel1,
+                kernel2,
+                gp_mean,
+                self._x1_ext,
+                self._x2_ext,
+                scale_error,
+                scale_time
+                )
+        timeXwave.T[0] += self.init_tmax
+        self._fit_results = {}
+        self._fit_results["timeXwave"] = timeXwave
+        self._fit_results["lc_mean"] = lc_mean
+        self._fit_results["lc_std"] = lc_std
+        self._fit_results["gp"] = gp
+        self._fit_results["cov"] = cov
+        self.gp = gp
+
+        times, waves = timeXwave.T
+        fits_df_list = []
+        for band in bands:
+            wave_ind = np.argmin(np.abs(self.filters[band]["eff_wave"] - waves))
+            eff_wave = waves[wave_ind]
+            mask = waves == eff_wave
+            time, lc_fit, lc_fit_std = times[mask], lc_mean[mask], lc_std[mask]
+
+            fit_df = pd.DataFrame({"time": time, "flux": lc_fit, "flux_err": lc_fit_std})
+            fit_df["zp"] = self.lcs[band].zp
+            fit_df["band"] = band
+            fit_df["mag_sys"] = self.lcs[band].mag_sys
+            fits_df_list.append(fit_df)
+
+        self.lc_fits = Lightcurves(pd.concat(fits_df_list))
+        self._extract_snii_parameters(use_eff_wave)
+
 
     def _calc_fits_results(self, lc):
 
@@ -442,7 +525,7 @@ class Supernova(object):
             gp = self.init_gp
         else:
             y = self._stacked_ratios
-            x1, x2 = self._stacked_times, self._stacked_waves
+            x1, x2 = self._stacked_times - self.init_tmax, self._stacked_waves
             gp = self.gp
 
         y_norm = y.max()
@@ -455,6 +538,8 @@ class Supernova(object):
         step1 = 0.1  # in days
         step2 = 10  # in angstroms
         x1_pred = np.arange(x1_min, x1_max + step1, step1)
+        if self.scale_time is not None:
+            x1_pred = np.arcsinh(x1_pred - self.scale_time)
         x2_pred = np.arange(x2_min, x2_max + step2, step2)
         X_predict = np.array(np.meshgrid(x1_pred, x2_pred))
         X_predict = X_predict.reshape(2, -1).T
@@ -462,6 +547,8 @@ class Supernova(object):
         mean, std = gp.predict(y, X_predict, return_var=True)
         y_pred = mean * y_norm
         yerr_pred = std * y_norm
+        if scale_time is not None:
+            X_predict.T[0] = np.sinh(X_predict.T[0]) + scale_time + self.init_tmax
 
         if lc:
             results = {"timeXwave": X_predict,
@@ -521,9 +608,9 @@ class Supernova(object):
         self.sed.flux = np.array(mangled_sed["flux"])
         self.sed.flux_err = np.array(mangled_sed["flux_err"])
 
-    def _get_rest_lightcurves(self):
+    def _get_rest_lightcurves(self, use_eff_wave=False):
         """Calculates the rest-frame light curves after corrections."""
-        self.sed.calculate_rest_lightcurves(self.filters)
+        self.sed.calculate_rest_lightcurves(self.filters, use_eff_wave)
         lcs_df_list = []
         fits_df_list = []
         for band in self.filters.bands:
@@ -596,6 +683,26 @@ class Supernova(object):
             "sBV": np.round(self.stretch, 3),
             "sBV_err": np.round(self.stretch_err, 3),
         }
+
+    def _extract_snii_parameters(self, use_eff_wave=False):
+        """Extract light-curve parameters from SN II.
+        """
+        timeXwave = self.fit_results['timeXwave']
+        phase = timeXwave.T[0]-self.init_tmax
+        mask = phase > -10
+        phase = phase[mask][::2]
+
+        wave = timeXwave.T[1][mask][::2]
+        
+        lc_mean = self.fit_results['lc_mean'][mask][::2]
+        lc_std = self.fit_results['lc_std']  [mask][::2] 
+
+        # set SED and extract rest-frame light curves
+        self.sed.set_template_from_fits(phase, wave, lc_mean, lc_std)
+        self._get_rest_lightcurves(use_eff_wave)
+
+        # get parameters
+        self._extract_lc_params()
 
     # Extra Functions
     # this are not essential but help assessing the fits
@@ -913,3 +1020,5 @@ class Supernova(object):
 
         df_fits = pd.concat(df_list)
         df_fits.to_csv(output_file, sep="\t", index=False)
+
+    

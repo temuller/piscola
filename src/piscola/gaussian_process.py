@@ -99,6 +99,8 @@ def gp_2d_fit(
     gp_mean="mean",
     x1_ext=(5, 10),
     x2_ext=(1000, 2000),
+    scale_error=None,
+    scale_time=None
 ):
     r"""Fits multi-colour light curves in 2D with Gaussian Process.
 
@@ -152,6 +154,14 @@ def gp_2d_fit(
 
     x1, x2 = np.copy(x1_data), np.copy(x2_data)
     y, yerr = np.copy(y_data), np.copy(yerr_data)
+    # extrapolation edges
+    x1_min, x1_max = x1.min() - x1_ext[0], x1.max() + x1_ext[1]
+    x2_min, x2_max = x2.min() - x2_ext[0], x2.max() + x2_ext[1]
+
+    if scale_error is not None:
+        yerr *= scale_error
+    if scale_time is not None:
+        x1 = np.arcsinh(x1 - scale_time)
 
     # normalize data
     y_norm = y.max()
@@ -201,22 +211,25 @@ def gp_2d_fit(
         )
     gp.set_parameter_vector(results.x)
 
-    # extrapolation edges
-    x1_min, x1_max = x1.min() - x1_ext[0], x1.max() + x1_ext[1]
-    x2_min, x2_max = x2.min() - x2_ext[0], x2.max() + x2_ext[1]
-
     # x-axis prediction array
     step1 = 0.1  # in days
     step2 = 10  # in angstroms
     x1_pred = np.arange(x1_min, x1_max + step1, step1)
+    if scale_time is not None:
+        x1_pred = np.arcsinh(x1_pred - scale_time)
     x2_pred = np.arange(x2_min, x2_max + step2, step2)
     X_predict = np.array(np.meshgrid(x1_pred, x2_pred))
     X_predict = X_predict.reshape(2, -1).T
 
     mean, var = gp.predict(y, X_predict, return_var=True)
+    #var = np.diad(cov)
+    cov = 0
     std = np.sqrt(var)
+
+    if scale_time is not None:
+        X_predict.T[0] = np.sinh(X_predict.T[0]) + scale_time
     # de-normalize results
     y_pred = mean * y_norm
     yerr_pred = std * y_norm
 
-    return X_predict, y_pred, yerr_pred, gp
+    return X_predict, y_pred, yerr_pred, gp, cov
