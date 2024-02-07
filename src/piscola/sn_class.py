@@ -21,6 +21,7 @@ from .sed_class import SEDTemplate
 from .filters_class import MultiFilters
 from .lightcurves_class import Lightcurves
 from .gaussian_process import gp_2d_fit
+from .extinction_correction import deredden
 
 
 def call_sn(lc_file):
@@ -128,7 +129,7 @@ class Supernova(object):
 
         # add SED template
         self.sed = SEDTemplate(z, ra, dec, template)
-        self.sed.calculate_obs_lightcurves(self.filters)
+        #self.sed.calculate_obs_lightcurves(self.filters)
 
     def __repr__(self):
         rep = (
@@ -187,7 +188,6 @@ class Supernova(object):
             Template name. E.g., ``conley09f``, ``jla``, etc.
         """
         self.sed._set_sed_template(template)
-        self.sed.calculate_obs_lightcurves(self.filters)
 
     def _normalize_lcs(self):
         """Normalizes the fluxes and zero-points (ZPs).
@@ -242,7 +242,7 @@ class Supernova(object):
         self._stacked_mag = mag
         self._stacked_mag_err = mag_err
 
-    def _fit_lcs(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean", bands=None):
+    def _fit_lcs(self, kernel1="matern52", kernel2="squaredexp", gp_mean="zero", bands=None):
         """Fits the multi-colour light-curve data with gaussian process.
 
         The time of rest-frame B-band peak luminosity is estimated by finding where the derivative is equal to zero.
@@ -255,16 +255,33 @@ class Supernova(object):
         kernel2 : str, default ``matern52``
             Kernel to be used in the **wavelengt**-axis when fitting the light curves with gaussian process. E.g.,
             ``matern52``, ``matern32``, ``squaredexp``.
-        gp_mean : str, default ``mean``
-            Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
+        gp_mean : str, default ``zero``
+            Gaussian process mean function. Either ``mean``, ``max``, ``min`` or ``zero``.
         bands : list-like, default ``None``
             Bands used for fitting light curves. By default, use all the available bands.
         """
         self._stack_lcs(bands)
-        self._x2_ext = (1000, 2000)
+
+        # extend the gaussian process prediction a bit beyond the filters coverage
+        min_wave = np.min([self.filters[filt].wave.min() for filt in self.bands])
+        max_wave = np.max([self.filters[filt].wave.max() for filt in self.bands])
+        self._x2_ext = (self._stacked_wave.min() - (min_wave-500), 
+                        (max_wave+2000) - self._stacked_wave.max())
+        # smallest step-size in the wavelength axis for the observed filters
+        wave_step_filters = np.min([np.diff(self.filters[filt].wave).min() for filt in self.bands])
+        # step-size in the wavelength axis for the SED template
+        sed_wave, _ = self.sed.get_phase_data(0)
+        wave_step_sed = np.diff(sed_wave).min()
+        # step size in the wavelength axis
+        wave_step = np.max([wave_step_filters, wave_step_sed, 10])  # minimum step of 10 angstroms
+        self._step2 = wave_step * (1 + self.z)  # in angstroms
+
+        # step size in time axis
+        self._step1 = 0.25 * (1 + self.z)  # in days
+
         for i in range(5):
             self._x1_ext = (5*(i+1), 10)
-            timeXwave, lc_mean, lc_std, gp = gp_2d_fit(
+            time_X_log10wave, lc_mean, lc_std, gp = gp_2d_fit(
                 self._stacked_time,
                 self._stacked_wave,
                 self._stacked_flux,
@@ -272,20 +289,26 @@ class Supernova(object):
                 kernel1,
                 kernel2,
                 gp_mean,
+                self._step1, 
+                self._step2,
                 self._x1_ext,
                 self._x2_ext,
             )
+
+            times, log10waves = time_X_log10wave.T
+            waves = 10**log10waves
+            #waves = log10waves
+            timeXwave = np.array([times, waves]).T
             self.init_gp = gp
-            self._init_fits = {}
-            self._init_fits["timeXwave"] = timeXwave
-            self._init_fits["lc_mean"] = lc_mean
-            self._init_fits["lc_std"] = lc_std
+            self._init_fit_results = {}
+            self._init_fit_results["timeXwave"] = timeXwave
+            self._init_fit_results["lc_mean"] = lc_mean
+            self._init_fit_results["lc_std"] = lc_std
 
             # Estimate B-band Peak
             sed_wave, sed_flux = self.sed.get_phase_data(0.0)
             B_eff_wave = self.filters.Bessell_B.calc_eff_wave(sed_wave, sed_flux)
 
-            times, waves = timeXwave.T[0], timeXwave.T[1]
             wave_ind = np.argmin(np.abs(B_eff_wave * (1 + self.z) - waves))
             eff_wave = waves[wave_ind]
             Bmask = waves == eff_wave
@@ -311,30 +334,58 @@ class Supernova(object):
         id_err = np.argmin(np.abs(brightest_flux - Bflux))
         self.tmax_err = np.abs(Btime[id_err] - self.init_tmax)
 
-        # inital light-curve fits
-        times, waves = timeXwave.T
+        # inital rest-frame light-curves and fits
+        rest_lc_df_list = []
         fits_df_list = []
         if bands is None:
             fitting_bands = self.bands
         else:
             fitting_bands = bands
 
-        for band in fitting_bands:
-            wave_ind = np.argmin(np.abs(self.filters[band]["eff_wave"] - waves))
-            eff_wave = waves[wave_ind]
-            mask = waves == eff_wave
+        # extract light-curve fits
+        for band in self.filters.bands:
+            if band not in fitting_bands:
+                mag_sys = self.filters[band].mag_sys
+                zp = self.filters[band].calc_zp(mag_sys)
+            else:
+                mag_sys = self.lcs[band].mag_sys
+                zp = self.lcs[band].zp
+
+            eff_wave = self.filters[band]["eff_wave"]
+            # light-curve fits
+            wave_ind = np.argmin(np.abs(eff_wave - waves))
+            mask = waves == waves[wave_ind]
             time, mean, std = times[mask], lc_mean[mask], lc_std[mask]
 
             fit_df = pd.DataFrame({"time": time, "flux": mean, "flux_err": std})
-            fit_df["zp"] = self.lcs[band].zp
+            fit_df["zp"] = zp
             fit_df["band"] = band
-            fit_df["mag_sys"] = self.lcs[band].mag_sys
+            fit_df["mag_sys"] = mag_sys
             fits_df_list.append(fit_df)
 
+            # rest-frame light curves
+            rest_eff_wave = eff_wave / (1 + self.z)
+            wave_id = np.argmin(np.abs(waves - rest_eff_wave))
+            mask = waves == waves[wave_id]
+            time, mean, std = times[mask], lc_mean[mask], lc_std[mask]
+
+            # correct for extinction and dilation (flux*(1+z))
+            wave_array = np.array([rest_eff_wave]*len(time))
+            mean = deredden(wave_array, mean, self.ra, self.dec)
+            phase = (time - self.init_tmax) / (1 + self.z)
+            mean *= (1 + self.z)
+
+            rest_lc_df = pd.DataFrame({"time": phase, "flux": mean, "flux_err": std})
+            rest_lc_df["zp"] = zp
+            rest_lc_df["band"] = band
+            rest_lc_df["mag_sys"] = mag_sys
+            rest_lc_df_list.append(rest_lc_df)
+
         self._init_lc_fits = Lightcurves(pd.concat(fits_df_list))
+        self._restframe_lcs = Lightcurves(pd.concat(rest_lc_df_list))
 
 
-    def fit(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean", bands=None):
+    def fit(self, kernel1="matern52", kernel2="squaredexp", bands=None):
         """Fits and corrects the multi-colour light curves.
 
         The corrections include Milky-Way dust extinction and mangling of the SED.
@@ -353,7 +404,18 @@ class Supernova(object):
         bands : list-like, default ``None``
             Bands used for fitting light curves. By default, use all the available bands.
         """
-        self._fit_lcs(kernel1, kernel2, gp_mean, bands)  # to get initial tmax
+        self._fit_lcs(kernel1, kernel2, "zero", bands)  # to get initial tmax
+
+        # get rest-frame phase and wavelength coverage to mask the SED
+        times, wavelengths = self._init_fit_results["timeXwave"].T
+        rest_phases = (times - self.init_tmax) / (1 + self.z)
+        min_phase, max_phase = np.min(rest_phases), np.max(rest_phases)
+        rest_wavelengths = np.array(wavelengths) / (1 + self.z)
+        min_wave, max_wave = np.min(rest_wavelengths), np.max(rest_wavelengths)
+        self.sed.mask_sed(min_phase, max_phase, min_wave, max_wave)
+
+        # SED observer-frame light curves
+        self.sed.calculate_obs_lightcurves(self.filters)
 
         sed_lcs = self.sed.obs_lcs_fit  # interpolated light curves
         sed_times = sed_lcs.phase.values + self.init_tmax
@@ -391,24 +453,28 @@ class Supernova(object):
         self._stacked_ratios = np.hstack(flux_ratios)
         self._stacked_err = np.hstack(flux_err)
 
-        timeXwave, mf_mean, mf_std, gp = gp_2d_fit(
+        time_X_log10wave, mf_mean, mf_std, gp = gp_2d_fit(
             self._stacked_times,
             self._stacked_waves,
             self._stacked_ratios,
             self._stacked_err,
             kernel1,
             kernel2,
-            gp_mean,
+            "mean",
+            self._step1, 
+            self._step2,
             self._x1_ext,
             self._x2_ext,
         )
+        times, log10waves = time_X_log10wave.T
+        waves = 10**log10waves
+        timeXwave = np.array([times, waves]).T
         self.gp = gp
         self._fit_results = {}
         self._fit_results["timeXwave"] = timeXwave
         self._fit_results["mf_mean"] = mf_mean
         self._fit_results["mf_std"] = mf_std
 
-        times, waves = timeXwave.T
         fits_df_list = []
         for band in fitting_bands:
             wave_ind = np.argmin(np.abs(self.filters[band]["eff_wave"] - waves))
@@ -430,63 +496,142 @@ class Supernova(object):
 
         self.lc_fits = Lightcurves(pd.concat(fits_df_list))
         self._mangle_sed()
-        self._get_rest_lightcurves()
-        self._extract_lc_params()
+        self._get_restframe_lightcurves()
+        self._extract_lightcurve_parameters()
 
+    def _prepare_gp_prediction(self, x1, x2, extrapolate):
+        """This prepares the 2D x-axis array for the Gaussian Process prediction. 
 
-    def _calc_fits_results(self, lc):
+        Parameters
+        ----------
+        x1: array
+            Time-axis array.
+        x2: array
+            Wavelength-axis array.
+        extrapolate: bool
+            Whether to use the extrapolation with the saved parameters (``True``) 
+            or simply use the provided arrays (``False``).
 
-        if lc:
-            y = self._stacked_flux
+        Returns
+        -------
+        X_predict: ndarray
+            X-axis prediction grid.
+        """
+        if extrapolate is True:
+            x1_min, x1_max = x1.min() - self._x1_ext[0], x1.max() + self._x1_ext[1]
+            x2_min, x2_max = x2.min() - self._x2_ext[0], x2.max() + self._x2_ext[1]
+
+            # x-axis prediction array
+            x1_pred = np.arange(x1_min, x1_max + self._step1, self._step1)
+            x2_pred = np.arange(x2_min, x2_max + self._step2, self._step2)
+            X_predict = np.array(np.meshgrid(x1_pred, np.log10(x2_pred)))
+        else:
+            # use only the provided arrays
+            X_predict = np.array(np.meshgrid(x1, np.log10(x2)))
+
+        X_predict = X_predict.reshape(2, -1).T
+
+        return X_predict
+
+    def _calc_fit_results(self, use_lc):
+        """This calculates the Gaussian Process fit with a saved model
+        to save up some space in the output.
+
+        Parameters
+        ---------- 
+        use_lc: bool,
+            Whether to use the light-curve fit (``True``) or the mangling
+            function fit (``False``).
+
+        Returns
+        -------
+        results: dict
+            Gaussian Process fit results.
+        """
+        if use_lc is True:
+            # lc fits
+            y = np.copy(self._stacked_flux)
             x1, x2 = self._stacked_time, self._stacked_wave
             gp = self.init_gp
         else:
-            y = self._stacked_ratios
+            # mangling function fit
+            y = np.copy(self._stacked_ratios)
             x1, x2 = self._stacked_times, self._stacked_waves
             gp = self.gp
 
         y_norm = y.max()
         y /=  y_norm
 
-        x1_min, x1_max = x1.min() - self._x1_ext[0], x1.max() + self._x1_ext[1]
-        x2_min, x2_max = x2.min() - self._x2_ext[0], x2.max() + self._x2_ext[1]
+        X_predict = self._prepare_gp_prediction(x1, x2, True)
 
-        # x-axis prediction array
-        step1 = 0.1  # in days
-        step2 = 10  # in angstroms
-        x1_pred = np.arange(x1_min, x1_max + step1, step1)
-        x2_pred = np.arange(x2_min, x2_max + step2, step2)
-        X_predict = np.array(np.meshgrid(x1_pred, x2_pred))
-        X_predict = X_predict.reshape(2, -1).T
-
-        mean, std = gp.predict(y, X_predict, return_var=True)
+        mean, var = gp.predict(y, X_predict, return_var=True)
+        std = np.sqrt(var)
         y_pred = mean * y_norm
         yerr_pred = std * y_norm
 
-        if lc:
+        if use_lc is True:
+            # lc fit
             results = {"timeXwave": X_predict,
                        "lc_mean": y_pred,
                        "lc_std": yerr_pred}
         else:
+            # mangling function fit
             results = {"timeXwave": X_predict,
                        "mf_mean": y_pred,
                        "mf_std": yerr_pred}
 
         return results
+    
+    def _calc_fit_covariance(self, x1, x2, use_lc):
+        """This calculates the covariance from the Gaussian Process fit.
+
+        Parameters
+        ---------- 
+        x1: array
+            Time-axis array.
+        x2: array
+            Wavelength-axis array.
+        use_lc: bool,
+            Whether to use the light-curve fit (``True``) or the mangling
+            function fit (``False``).
+
+        Returns
+        -------
+        covar: ndarray
+            Covariance matrix from the Gaussian Process fit.
+        """
+        if use_lc is True:
+            # lc fits
+            y = np.copy(self._stacked_flux)
+            gp = self.init_gp
+        else:
+            # mangling function fit
+            y = np.copy(self._stacked_ratios)
+            gp = self.gp
+
+        y_norm = y.max()
+        y /=  y_norm
+
+        X_predict = self._prepare_gp_prediction(x1, x2, False)
+
+        _, gp_covar = gp.predict(y, X_predict, return_cov=True)
+        covar = gp_covar * y_norm**2
+
+        return covar
 
     @property
     def fit_results(self):
         if self._fit_results is None:
-            self._fit_results = self._calc_fits_results(lc=False)
+            self._fit_results = self._calc_fit_results(use_lc=False)
 
         return self._fit_results
 
     @property
     def init_fits(self):
-        if self._init_fits is None:
-            self._init_fits = self._calc_fits_results(lc=True)
+        if self._init_fit_results is None:
+            self._init_fit_results = self._calc_fit_results(use_lc=True)
 
-        return self._init_fits
+        return self._init_fit_results
 
     def _mangle_sed(self):
         """Mangles the supernova SED."""
@@ -521,7 +666,7 @@ class Supernova(object):
         self.sed.flux = np.array(mangled_sed["flux"])
         self.sed.flux_err = np.array(mangled_sed["flux_err"])
 
-    def _get_rest_lightcurves(self):
+    def _get_restframe_lightcurves(self):
         """Calculates the rest-frame light curves after corrections."""
         self.sed.calculate_rest_lightcurves(self.filters)
         lcs_df_list = []
@@ -546,7 +691,7 @@ class Supernova(object):
             lc_df["mag_sys"] = mag_sys
             lcs_df_list.append(lc_df)
 
-            fit = self.sed.rest_lcs_fit
+            fit = self.sed.restframe_lcs_fits
             fit_df = pd.DataFrame(
                 {
                     "time": fit.phase.values,
@@ -559,30 +704,30 @@ class Supernova(object):
             fit_df["mag_sys"] = mag_sys
             fits_df_list.append(fit_df)
 
-        self.rest_lcs = Lightcurves(pd.concat(lcs_df_list))
-        self.rest_lcs_fits = Lightcurves(pd.concat(fits_df_list))
+        self.restframe_lcs = Lightcurves(pd.concat(lcs_df_list))
+        self.restframe_lcs_fits = Lightcurves(pd.concat(fits_df_list))
 
-    def _extract_lc_params(self):
+    def _extract_lightcurve_parameters(self):
         """Calculates the light-curves parameters.
 
         Estimation of B-band peak apparent magnitude, stretch, colour and colour-stretch parameters.
         An interpolation of the corrected light curves is done as well as part of this process.
         """
-        self.rest_lcs.get_lc_params()
+        self.restframe_lcs.get_lc_params()
         band1 = "Bessell_B"
         band2 = "Bessell_V"
         self.tmax = self.init_tmax
-        self.rest_lcs_fits[band1].get_max()
-        delta_tmax = self.rest_lcs_fits[band1].tmax
-        tmax_err = self.rest_lcs_fits[band1].tmax_err
+        self.restframe_lcs_fits[band1].get_max()
+        delta_tmax = self.restframe_lcs_fits[band1].tmax
+        tmax_err = self.restframe_lcs_fits[band1].tmax_err
         self.tmax_err = np.sqrt(delta_tmax**2 + tmax_err**2)
 
-        self.mmax = self.rest_lcs[band1].mmax
-        self.mmax_err = self.rest_lcs[band1].mmax_err
-        self.dm15 = self.rest_lcs[band1].dm15
-        self.dm15_err = self.rest_lcs[band1].dm15_err
-        self.colour, self.colour_err = self.rest_lcs.get_max_colour(band1, band2)
-        self.stretch, self.stretch_err = self.rest_lcs.get_colour_stretch(band1, band2)
+        self.mmax = self.restframe_lcs[band1].mmax
+        self.mmax_err = self.restframe_lcs[band1].mmax_err
+        self.dm15 = self.restframe_lcs[band1].dm15
+        self.dm15_err = self.restframe_lcs[band1].dm15_err
+        self.colour, self.colour_err = self.restframe_lcs.get_max_colour(band1, band2)
+        self.stretch, self.stretch_err = self.restframe_lcs.get_colour_stretch(band1, band2)
 
         self.lc_parameters = {
             "tmax": np.round(self.tmax, 3),
@@ -903,7 +1048,7 @@ class Supernova(object):
         columns = ["time", "flux", "flux_err", "mag", "mag_err", "zp", "band"]
 
         for band in self.bands:
-            band_info = self.rest_lcs[band]
+            band_info = self.restframe_lcs[band]
             band_dict = {key: band_info[key] for key in columns}
             band_df = pd.DataFrame(band_dict)
 

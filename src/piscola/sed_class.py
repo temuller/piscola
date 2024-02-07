@@ -84,6 +84,34 @@ class SEDTemplate(object):
         else:
             self.comments = ""
 
+    def mask_sed(self, min_phase, max_phase, min_wave, max_wave):
+        """Mask the SED phase and wavelength ranges.
+
+        Parameters
+        ----------
+        min_phase : float
+            Minimum phase to include.
+        max_phase : float
+            Maximum phase to include.
+        min_wave : float
+            Minimum wavelength to include.
+        max_wave : float
+            Maximum wavelength to include.
+        """
+        # mask phase
+        phase_mask = (self.phase >= min_phase) & (self.phase <= max_phase)
+        self.phase = self.phase[phase_mask]
+        self.wave = self.wave[phase_mask]
+        self.flux = self.flux[phase_mask]
+        self.flux_err = self.flux_err[phase_mask]
+
+        # mask wavelength
+        wave_mask = (self.wave >= min_wave) & (self.wave <= max_wave)
+        self.phase = self.phase[wave_mask]
+        self.wave = self.wave[wave_mask]
+        self.flux = self.flux[wave_mask]
+        self.flux_err = self.flux_err[wave_mask]
+
     def redshift(self):
         """Redshifts the SED template if not already redshifted."""
         message = "The SED template is already redshifted."
@@ -256,6 +284,12 @@ class SEDTemplate(object):
         photometry = {band: [] for band in filters.bands}
         phases = np.unique(self.phase)
         for band in filters.bands:
+            # check filter coverage and skip it if outside the SED coverage
+            filt_waves = filters[band].wave
+            wave0, _ = self.get_phase_data(0.0)
+            if (filt_waves.min() < wave0.min()) or (filt_waves.max() > wave0.max()):
+                photometry.pop(band)
+                continue
             for phase in phases:
                 wave, flux = self.get_phase_data(phase)
                 obs_flux = filters[band].integrate_filter(wave, flux)
@@ -268,6 +302,9 @@ class SEDTemplate(object):
         # GP fit for interpolation
         fit_phot = {band: None for band in filters.bands}
         for band in filters.bands:
+            if band not in photometry_df.columns.values:
+                fit_phot.pop(band)
+                continue
             flux = photometry_df[band].values
             # assuming no errors in the observations or in the fit
             phases_pred, flux_pred, _ = gp_lc_fit(phases, flux)

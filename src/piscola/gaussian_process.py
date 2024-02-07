@@ -96,9 +96,11 @@ def gp_2d_fit(
     yerr_data=0.0,
     kernel1="matern52",
     kernel2="squaredexp",
-    gp_mean="mean",
+    gp_mean="zero",
+    step1=0.5,
+    step2=20,
     x1_ext=(5, 10),
-    x2_ext=(1000, 2000),
+    x2_ext=(500, 1000),
 ):
     r"""Fits multi-colour light curves in 2D with Gaussian Process.
 
@@ -121,11 +123,15 @@ def gp_2d_fit(
         Kernel for the time axis.
     kernel2: str, default ``squaredexp``
         Kernel for the wavelength acis.
-    gp_mean: str, default ``mean``
-        Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
+    gp_mean: str, default ``zero``
+        Gaussian process mean function. Either ``mean``, ``max``, ``min`` or ``zero``.
+    step1: float, default ``0.5``
+        Step says in days for the predicting time array.
+    step2: float, default ``20``
+        Step says in angstroms for the predicting wavelength array.
     x1_ext: str, default ``(5, 10)``
         Extrapolation "leftward" and "rightward" for the time axis.
-    x2_ext: str, default ``(1000, 2000)``
+    x2_ext: str, default ``(500, 1000)``
         Extrapolation "leftward" and "rightward" for the wavelength axis.
 
     Returns
@@ -158,7 +164,8 @@ def gp_2d_fit(
     y /= y_norm
     yerr /= y_norm
     # reshape x-axis for george
-    X = np.array([x1, x2]).reshape(2, -1).T
+    X = np.vstack([x1, np.log10(x2)]).T
+    #X = np.vstack([x1, x2]).T
 
     # GP kernels
     kernels_dict = {
@@ -173,27 +180,35 @@ def gp_2d_fit(
     assert kernel2 in valid_kernels, err_message
 
     # GP hyperparameters
-    var = np.var(y)
-    length1 = np.diff(x1).max()
-    length2 = np.diff(x2).max()
+    scale = np.max(y)
+    length1 = 20  # days
+    length2 = np.log10(1000)  # log10(angstroms)
+    #length2 = 1000
 
     ker1 = kernels_dict[kernel1](length1**2, ndim=2, axes=0)
     ker2 = kernels_dict[kernel2](length2**2, ndim=2, axes=1)
-    ker = var * ker1 * ker2
+    ker = (0.5*scale)**2 * ker1 * ker2
 
     # GP mean function
-    mean_dict = {"mean": y.mean(), "min": y.min(), "max": y.max()}
+    mean_dict = {"mean": y.mean(), "min": y.min(), "max": y.max(), "zero": 0.0}
     mean_func = mean_dict[gp_mean]
 
     gp = george.GP(kernel=ker, mean=mean_func, fit_mean=True)
+    #gp.freeze_parameter('kernel:k1:k2:metric:log_M_0_0')
+    #gp.freeze_parameter('kernel:k2:metric:log_M_0_0')
     # initial guess
     gp.compute(X, yerr)
 
     # optimization routine for hyperparameters
     p0 = gp.get_parameter_vector()
+
+    bounds = [(0, 1), 
+              (np.log(10**2), np.log(100**2)),  # [0, 100] days length scale 
+              (0, np.log(np.log10(10000)**2))
+              ]
     try:
         results = scipy.optimize.minimize(
-            neg_ln_like, p0, jac=grad_neg_ln_like, method="BFGS"
+            neg_ln_like, p0, jac=grad_neg_ln_like#, bounds=bounds#, method="BFGS"
         )
     except:
         results = scipy.optimize.minimize(
@@ -206,15 +221,13 @@ def gp_2d_fit(
     x2_min, x2_max = x2.min() - x2_ext[0], x2.max() + x2_ext[1]
 
     # x-axis prediction array
-    step1 = 0.1  # in days
-    step2 = 10  # in angstroms
     x1_pred = np.arange(x1_min, x1_max + step1, step1)
     x2_pred = np.arange(x2_min, x2_max + step2, step2)
-    X_predict = np.array(np.meshgrid(x1_pred, x2_pred))
-    X_predict = X_predict.reshape(2, -1).T
-
+    X_predict = np.array(np.meshgrid(x1_pred, np.log10(x2_pred))).reshape(2, -1).T
+    
     mean, var = gp.predict(y, X_predict, return_var=True)
     std = np.sqrt(var)
+
     # de-normalize results
     y_pred = mean * y_norm
     yerr_pred = std * y_norm
