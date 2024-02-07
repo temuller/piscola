@@ -668,17 +668,17 @@ class Supernova(object):
 
     def _get_restframe_lightcurves(self):
         """Calculates the rest-frame light curves after corrections."""
-        self.sed.calculate_rest_lightcurves(self.filters)
+        self.sed.calculate_restframe_lightcurves(self.filters)
         lcs_df_list = []
         fits_df_list = []
         for band in self.filters.bands:
-            if band not in self.sed.rest_lcs:
+            if band not in self.sed.restframe_lcs:
                 # the SED does not cover this band -> skip it
                 continue
             mag_sys = self.filters[band].mag_sys
             zp = self.filters[band].calc_zp(mag_sys)
 
-            lc = self.sed.rest_lcs
+            lc = self.sed.restframe_lcs
             lc_df = pd.DataFrame(
                 {
                     "time": lc.phase.values,
@@ -1048,6 +1048,9 @@ class Supernova(object):
         columns = ["time", "flux", "flux_err", "mag", "mag_err", "zp", "band"]
 
         for band in self.bands:
+            if band not in self.restframe_lcs.bands:
+                # no restframe coverage of this band
+                continue
             band_info = self.restframe_lcs[band]
             band_dict = {key: band_info[key] for key in columns}
             band_df = pd.DataFrame(band_dict)

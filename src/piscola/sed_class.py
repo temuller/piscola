@@ -314,7 +314,7 @@ class SEDTemplate(object):
         fit_phot_df = pd.DataFrame(fit_phot)
         self.obs_lcs_fit = fit_phot_df
 
-    def calculate_rest_lightcurves(self, filters):
+    def calculate_restframe_lightcurves(self, filters):
         """Calculates rest-frame, corrected light curves of the SED.
 
         Parameters
@@ -365,5 +365,5 @@ class SEDTemplate(object):
         fit_phot["phase"] = phases_pred
         fit_phot_df = pd.DataFrame(fit_phot)
 
-        self.rest_lcs = photometry_df
-        self.rest_lcs_fit = fit_phot_df
+        self.restframe_lcs = photometry_df
+        self.restframe_lcs_fits = fit_phot_df
