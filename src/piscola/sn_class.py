@@ -20,7 +20,7 @@ from .utils import change_zp
 from .sed_class import SEDTemplate
 from .filters_class import MultiFilters
 from .lightcurves_class import Lightcurves
-from .gaussian_process import gp_2d_fit
+from .gaussian_process import prepare_gp_inputs, fit_gp_model
 
 
 def call_sn(lc_file):
@@ -128,7 +128,6 @@ class Supernova(object):
 
         # add SED template
         self.sed = SEDTemplate(z, ra, dec, template)
-        self.sed.calculate_obs_lightcurves(self.filters)
 
     def __repr__(self):
         rep = (
@@ -201,9 +200,9 @@ class Supernova(object):
 
             new_zp = self.filters[band].calc_zp(mag_sys)
 
-            self.lcs[band].flux = change_zp(self.lcs[band]["flux"], current_zp, new_zp)
-            self.lcs[band].flux_err = change_zp(
-                self.lcs[band]["flux_err"], current_zp, new_zp
+            self.lcs[band].fluxes = change_zp(self.lcs[band].fluxes, current_zp, new_zp)
+            self.lcs[band].flux_errors = change_zp(
+                self.lcs[band].flux_errors, current_zp, new_zp
             )
             self.lcs[band].zp = new_zp
 
@@ -223,116 +222,113 @@ class Supernova(object):
         else:
             stacking_bands = bands
 
-        time = np.hstack([self.lcs[band].time for band in stacking_bands])
-        wave = np.hstack(
+        # convert the data from multiple light curves into single arrays
+        times = np.hstack([self.lcs[band].times for band in stacking_bands])
+        wavelengths = np.hstack(
             [
-                [self.filters[band].eff_wave] * len(self.lcs[band].time)
+                [self.filters[band].eff_wave] * len(self.lcs[band].times)
                 for band in stacking_bands
             ]
         )
-        flux = np.hstack([self.lcs[band].flux for band in stacking_bands])
-        flux_err = np.hstack([self.lcs[band].flux_err for band in stacking_bands])
-        mag = np.hstack([self.lcs[band].mag for band in self.bands])
-        mag_err = np.hstack([self.lcs[band].mag_err for band in stacking_bands])
+        fluxes = np.hstack([self.lcs[band].fluxes for band in stacking_bands])
+        flux_errors = np.hstack([self.lcs[band].flux_errors for band in stacking_bands])
+        magnitudes = np.hstack([self.lcs[band].magnitudes for band in self.bands])
+        mag_errors = np.hstack([self.lcs[band].mag_errors for band in stacking_bands])
 
-        self._stacked_time = time
-        self._stacked_wave = wave
-        self._stacked_flux = flux
-        self._stacked_flux_err = flux_err
-        self._stacked_mag = mag
-        self._stacked_mag_err = mag_err
+        # store in hidden variables for GP fitting
+        self._stacked_times = times
+        self._stacked_wavelengths = wavelengths
+        self._stacked_fluxes = fluxes
+        self._stacked_flux_errors = flux_errors
+        self._stacked_magnitudes = magnitudes
+        self._stacked_mag_errors = mag_errors
 
-    def _fit_lcs(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean", bands=None):
-        """Fits the multi-colour light-curve data with gaussian process.
+    def fit_lcs(self, bands=None, use_log=True):
+        """Fits the multi-colour observed light-curve data with Gaussian Process.
 
         The time of rest-frame B-band peak luminosity is estimated by finding where the derivative is equal to zero.
 
         Parameters
         ----------
-        kernel : str, default ``matern52``
-            Kernel to be used in the **time**-axis when fitting the light curves with gaussian process. E.g.,
-            ``matern52``, ``matern32``, ``squaredexp``.
-        kernel2 : str, default ``matern52``
-            Kernel to be used in the **wavelengt**-axis when fitting the light curves with gaussian process. E.g.,
-            ``matern52``, ``matern32``, ``squaredexp``.
-        gp_mean : str, default ``mean``
-            Gaussian process mean function. Either ``mean``, ``max`` or ``min``.
         bands : list-like, default ``None``
             Bands used for fitting light curves. By default, use all the available bands.
+        use_log: bool, default ``True``.
+            Whether to use logarithmic (base 10) scale for the 
+            wavelength axis.
         """
+        ##########
+        # GP fit #
+        ##########
         self._stack_lcs(bands)
-        self._x2_ext = (1000, 2000)
-        for i in range(5):
-            self._x1_ext = (5*(i+1), 10)
-            timeXwave, lc_mean, lc_std, gp = gp_2d_fit(
-                self._stacked_time,
-                self._stacked_wave,
-                self._stacked_flux,
-                self._stacked_flux_err,
-                kernel1,
-                kernel2,
-                gp_mean,
-                self._x1_ext,
-                self._x2_ext,
-            )
-            self.init_gp = gp
-            self._init_fits = {}
-            self._init_fits["timeXwave"] = timeXwave
-            self._init_fits["lc_mean"] = lc_mean
-            self._init_fits["lc_std"] = lc_std
+        gp_model = fit_gp_model(self._stacked_times, self._stacked_wavelengths, 
+                                self._stacked_fluxes, self._stacked_flux_errors, use_log=use_log)
+        self.init_gp_model = gp_model
+        self.init_y_norm = self._stacked_fluxes.max()
 
-            # Estimate B-band Peak
-            sed_wave, sed_flux = self.sed.get_phase_data(0.0)
-            B_eff_wave = self.filters.Bessell_B.calc_eff_wave(sed_wave, sed_flux)
+        ########################
+        # Estimate B-band Peak #
+        ########################
+        rest_eff_wave = self.filters.Bessell_B.eff_wave * (1 + self.z)
+        dt = 0.1 * (1 + self.z)  # 0.1 days in rest-frame, moved to observer frame
+        times_pred = np.arange(self._stacked_times.min() - 5, 
+                               self._stacked_times.max() + 10,
+                               dt
+                               )
+        wavelengths_pred = np.zeros_like(times_pred) + rest_eff_wave
+        # arrays for GP predictions
+        X_test, y, _ = prepare_gp_inputs(times_pred, wavelengths_pred, 
+                                         self._stacked_fluxes, self._stacked_flux_errors, 
+                                         self.init_y_norm,
+                                         use_log=use_log)
+        # GP prediction
+        mu, cov = gp_model.predict(y, X_test=X_test, return_cov=True)
 
-            times, waves = timeXwave.T[0], timeXwave.T[1]
-            wave_ind = np.argmin(np.abs(B_eff_wave * (1 + self.z) - waves))
-            eff_wave = waves[wave_ind]
-            Bmask = waves == eff_wave
+        # monte-carlo sampling
+        mc_lcs = np.random.multivariate_normal(mu, cov, size=1000)
+        tmax_list = []
+        for lc in mc_lcs:
+            peak_ids = peak.indexes(lc, thres=0.3, min_dist=len(times_pred) // 2)
+            if len(peak_ids) == 0:
+                # if no peak is found, just use the maximum
+                max_id = np.argmax(lc)
+            else:
+                max_id = peak_ids[0]
+            tmax_list.append(times_pred[max_id])
+        # save time of maximum
+        self.init_tmax = np.nanmean(tmax_list)
+        self.init_tmax_err = np.nanstd(tmax_list)
 
-            Btime, Bflux, Bflux_err = times[Bmask], lc_mean[Bmask], lc_std[Bmask]
-            peak_ids = peak.indexes(Bflux, thres=0.3, min_dist=len(Btime) // 2)
-
-            if len(peak_ids) != 0:
-                peak_id = peak_ids[0]
-                break
-
-        if len(peak_ids) == 0:
-            # if still no peak is found, use the maximum
-            peak_id = np.argmax(Bflux)
-        self.init_tmax = np.round(Btime[peak_id], 3)
-
-        # get tmax_err
-        Bflux = Bflux[peak_id]
-        # use only data around peak
-        mask = (Btime > self.init_tmax - 5) & (Btime < self.init_tmax + 5)
-        Btime = Btime[mask]
-        brightest_flux = (Bflux + Bflux_err)[mask]
-        id_err = np.argmin(np.abs(brightest_flux - Bflux))
-        self.tmax_err = np.abs(Btime[id_err] - self.init_tmax)
-
-        # inital light-curve fits
-        times, waves = timeXwave.T
-        fits_df_list = []
+        ###########################
+        # Inital light-curve fits #
+        ###########################
         if bands is None:
             fitting_bands = self.bands
         else:
             fitting_bands = bands
-
+        fits_df_list = []
         for band in fitting_bands:
-            wave_ind = np.argmin(np.abs(self.filters[band]["eff_wave"] - waves))
-            eff_wave = waves[wave_ind]
-            mask = waves == eff_wave
-            time, mean, std = times[mask], lc_mean[mask], lc_std[mask]
+            eff_wave = self.filters[band]["eff_wave"]
+            wavelengths_pred = np.zeros_like(times_pred) + eff_wave
+            # arrays for GP predictions
+            X_test, y, _ = prepare_gp_inputs(times_pred, wavelengths_pred, 
+                                             self._stacked_fluxes, self._stacked_flux_errors, 
+                                             self.init_y_norm,
+                                             use_log=use_log)
+            # GP prediction
+            mu, var = gp_model.predict(y, X_test=X_test, return_var=True)
+            std = np.sqrt(var)
+            # renormalise outputs
+            mu *= self.init_y_norm
+            std *= self.init_y_norm
 
-            fit_df = pd.DataFrame({"time": time, "flux": mean, "flux_err": std})
+            # store light-curve fits
+            fit_df = pd.DataFrame({"time": times_pred, "flux": mu, "flux_err": std})
             fit_df["zp"] = self.lcs[band].zp
             fit_df["band"] = band
             fit_df["mag_sys"] = self.lcs[band].mag_sys
             fits_df_list.append(fit_df)
 
-        self._init_lc_fits = Lightcurves(pd.concat(fits_df_list))
-
+        self.init_lc_fits = Lightcurves(pd.concat(fits_df_list))
 
     def fit(self, kernel1="matern52", kernel2="squaredexp", gp_mean="mean", bands=None):
         """Fits and corrects the multi-colour light curves.
@@ -355,7 +351,18 @@ class Supernova(object):
         """
         self._fit_lcs(kernel1, kernel2, gp_mean, bands)  # to get initial tmax
 
-        sed_lcs = self.sed.obs_lcs_fit  # interpolated light curves
+        # get rest-frame phase and wavelength coverage to mask the SED
+        times, wavelengths = self._init_fit_results["timeXwave"].T
+        rest_phases = (times - self.init_tmax) / (1 + self.z)
+        min_phase, max_phase = np.min(rest_phases), np.max(rest_phases)
+        rest_wavelengths = np.array(wavelengths) / (1 + self.z)
+        min_wave, max_wave = np.min(rest_wavelengths), np.max(rest_wavelengths)
+        self.sed.mask_sed(min_phase, max_phase, min_wave, max_wave)
+
+        # SED observer-frame light curves
+        self.sed.calculate_obs_lightcurves(self.filters)
+        # interpolated SED light curves
+        sed_lcs = self.sed.obs_lcs_fit  
         sed_times = sed_lcs.phase.values + self.init_tmax
 
         if bands is None:
@@ -613,10 +620,10 @@ class Supernova(object):
         palette1 = [plt.get_cmap("Dark2")(i) for i in np.arange(8)]
         palette2 = [plt.get_cmap("Set1")(i) for i in np.arange(9)]
         palette3 = [plt.get_cmap("Pastel2")(i) for i in np.arange(8)]
-        colours = palette1 + palette2 + palette3
+        colours = palette1 + palette2 + palette3 + palette1 + palette2
 
         # shift in time for visualization purposes
-        min_time = self.lcs[self.bands[1]].time.min()
+        min_time = self.lcs[self.bands[1]].times.min()
         tmax_str = str(min_time.astype(int))
         zeros = "0" * len(tmax_str[2:])
         t_offset = int(tmax_str[:2] + zeros)
@@ -634,14 +641,14 @@ class Supernova(object):
             k = i // h
             ax = plt.subplot(gs[k, j])
 
-            x = self.lcs[band].time - t_offset
-            if not plot_mag:
-                y_norm = change_zp(1.0, self.lcs[band]["zp"], ZP)
-                y = self.lcs[band].flux * y_norm
-                yerr = self.lcs[band].flux_err * y_norm
+            x = self.lcs[band].times - t_offset
+            if plot_mag is False:
+                y_norm = change_zp(1.0, self.lcs[band].zp, ZP)
+                y = self.lcs[band].fluxes * y_norm
+                yerr = self.lcs[band].flux_errors * y_norm
             else:
-                y = self.lcs[band].mag
-                yerr = self.lcs[band].mag_err
+                y = self.lcs[band].magnitudes
+                yerr = self.lcs[band].mag_errors
                 ax.invert_yaxis()
 
             colour = colours[i]
@@ -727,40 +734,51 @@ class Supernova(object):
         palette1 = [plt.get_cmap("Dark2")(i) for i in np.arange(8)]
         palette2 = [plt.get_cmap("Set1")(i) for i in np.arange(9)]
         palette3 = [plt.get_cmap("Pastel2")(i) for i in np.arange(8)]
-        colours = palette1 + palette2 + palette3
+        colours = palette1 + palette2 + palette3 + palette1 + palette2
 
         # shift in time for visualization purposes
-        tmax_str = str(self.init_tmax.astype(int))
+        try:
+            tmax_str = str(self.tmax.astype(int))
+        except:
+            tmax_str = str(self.init_tmax.astype(int))
         zeros = "0" * len(tmax_str[2:])
         t_offset = int(tmax_str[:2] + zeros)
+
+        # data and fits
+        data = self.lcs
+        try:
+            fits = self.lc_fits
+        except:
+            fits = self.init_lc_fits
 
         ZP = 27.5  # global zero-point for visualization
 
         h = 3  # columns
-        v = math.ceil(len(self.bands) / h)  # rows
+        v = math.ceil(len(fits.bands) / h)  # rows
 
         fig = plt.figure(figsize=(15, 5 * v))
         gs = gridspec.GridSpec(v * 2, h, height_ratios=[3, 1] * v)
 
-        for i, band in enumerate(self.lc_fits.bands):
+        for i, band in enumerate(fits.bands):
             j = math.ceil(i % h)
             k = i // h * 2
             ax = plt.subplot(gs[k, j])
             ax2 = plt.subplot(gs[k + 1, j])
 
-            x = self.lcs[band].time - t_offset
-            x_fit = self.lc_fits[band].time - t_offset
-            if not plot_mag:
-                y_norm = change_zp(1.0, self.lcs[band]["zp"], ZP)
-                y = self.lcs[band].flux * y_norm
-                yerr = self.lcs[band].flux_err * y_norm
-                y_fit = self.lc_fits[band].flux * y_norm
-                yerr_fit = self.lc_fits[band].flux_err * y_norm
+            x = data[band].times - t_offset
+            x_fit = fits[band].times - t_offset
+
+            if plot_mag is False:
+                y_norm = change_zp(1.0, data[band].zp, ZP)
+                y = data[band].fluxes * y_norm
+                yerr = data[band].flux_errors * y_norm
+                y_fit = fits[band].fluxes * y_norm
+                yerr_fit = fits[band].flux_errors * y_norm
             else:
-                y = self.lcs[band].mag
-                yerr = self.lcs[band].mag_err
-                y_fit = self.lc_fits[band].mag
-                yerr_fit = self.lc_fits[band].mag_err
+                y = data[band].magnitudes
+                yerr = data[band].mag_errors
+                y_fit = fits[band].magnitudes
+                yerr_fit = fits[band].mag_errors
                 ax.invert_yaxis()
                 ax2.invert_yaxis()
 
