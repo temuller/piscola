@@ -22,11 +22,11 @@ class Lightcurve(object):
         self.band = band
 
         data = lcs_df[lcs_df.band == band]
-        self.time = data.time.values
-        self.flux = data.flux.values
-        self.flux_err = data.flux_err.values
+        self.times = data.time.values
+        self.fluxes = data.flux.values
+        self.flux_errors = data.flux_err.values
         self.zp = float(data.zp.unique()[0])
-        self.mag, self.mag_err = flux2mag(self.flux, self.zp, self.flux_err)
+        self.magnitudes, self.mag_errors = flux2mag(self.fluxes, self.zp, self.flux_errors)
         self.mag_sys = data.mag_sys.unique()[0]
 
     def __repr__(self):
@@ -48,40 +48,40 @@ class Lightcurve(object):
             separate arrays.
         """
         if not copy:
-            self.time = self.time[mask]
-            self.flux = self.flux[mask]
-            self.flux_err = self.flux_err[mask]
-            self.mag = self.mag[mask]
-            self.mag_err = self.mag_err[mask]
+            self.times = self.times[mask]
+            self.fluxes = self.fluxes[mask]
+            self.flux_errors = self.flux_errors[mask]
+            self.magnitudes = self.magnitudes[mask]
+            self.mag_errors = self.mag_errors[mask]
         else:
-            self.masked_time = self.time[mask]
-            self.masked_flux = self.flux[mask]
-            self.masked_flux_err = self.flux_err[mask]
-            self.masked_mag = self.mag[mask]
-            self.masked_mag_err = self.mag_err[mask]
+            self.masked_times = self.times[mask]
+            self.masked_fluxes = self.fluxes[mask]
+            self.masked_flux_errors = self.flux_errors[mask]
+            self.masked_magnitudes = self.magnitudes[mask]
+            self.masked_mag_errors = self.mag_errors[mask]
 
     def get_max(self):
         """Calculates the peak magnitude (:math:`m_{max}`) and
         its epoch (:math:`t_{max}`).
         """
-        mag = np.nan_to_num(self.mag, nan=np.nanmean(self.mag))
-        peak_ids = peak.indexes(-mag, thres=0.3, min_dist=len(self.time) // 3)
+        magnitudes = np.nan_to_num(self.mag, nan=np.nanmean(self.magnitudes))
+        peak_ids = peak.indexes(-magnitudes, thres=0.3, min_dist=len(self.times) // 3)
         if len(peak_ids) == 0:
             self.mmax = self.mmax_err = np.nan
             self.tmax = np.nan
             self.tmax_err = np.nan
         else:
-            self.mmax = self.mag[peak_ids[0]]
-            self.mmax_err = self.mag_err[peak_ids[0]]
-            self.tmax = self.time[peak_ids[0]]
+            self.mmax = self.magnitudes[peak_ids[0]]
+            self.mmax_err = self.mag_errors[peak_ids[0]]
+            self.tmax = self.times[peak_ids[0]]
 
             # get tmax_err
             # use only data around peak
-            mask = (self.time > self.tmax - 5) & (self.time < self.tmax + 5)
-            time = self.time[mask]
-            brightest_mag = (self.mag - self.mag_err)[mask]
+            mask = (self.times > self.tmax - 5) & (self.times < self.tmax + 5)
+            times = self.times[mask]
+            brightest_mag = (self.magnitudes - self.mag_err)[mask]
             id_err = np.argmin(np.abs(brightest_mag - self.mmax))
-            self.tmax_err = np.abs(time[id_err] - self.tmax)
+            self.tmax_err = np.abs(times[id_err] - self.tmax)
 
     def get_dm15(self):
         r"""Calculates the classic parameter :math:`\Delta m_{15}`
@@ -93,9 +93,9 @@ class Lightcurve(object):
         if np.isnan(self.tmax):
             self.dm15 = self.dm15_err = np.nan
         else:
-            phase = self.time - self.tmax
+            phases = self.times - self.tmax
             if any(np.abs(phase - 15) < 0.5):
-                dm15_id = np.argmin(np.abs(phase - 15))
+                dm15_id = np.argmin(np.abs(phases - 15))
                 self.dm15 = self.mag[dm15_id] - self.mmax
                 self.dm15_err = np.sqrt(self.mag_err[dm15_id] ** 2 + self.mmax_err**2)
             else:
@@ -151,11 +151,11 @@ class Lightcurves(object):
             warnings.warn(f"cannot estimate time of peak for {band1}")
             colour = colour_err = np.nan
         else:
-            rel_phase = self[band2].time - tmax
-            if any(np.abs(rel_phase) < 0.5):
-                band2_id = np.argmin(np.abs(rel_phase))
-                mag2 = self[band2].mag[band2_id]
-                mag2_err = self[band2].mag_err[band2_id]
+            rel_phases = self[band2].times - tmax
+            if any(np.abs(rel_phases) < 0.5):
+                band2_id = np.argmin(np.abs(rel_phases))
+                mag2 = self[band2].magnitudes[band2_id]
+                mag2_err = self[band2].mag_errors[band2_id]
                 colour = mmax - mag2
                 colour_err = np.sqrt(mmax_err**2 + mag2_err**2)
             else:
@@ -190,28 +190,24 @@ class Lightcurves(object):
         cond2 = band2 in self.bands
         assert cond1 and cond2, f"band(s) not in {self.bands}"
 
-        mag1 = self[band1].mag
-        mag1_err = self[band1].mag_err
-        mag2 = self[band2].mag
-        mag2_err = self[band2].mag_err
-        colour_curve = mag1 - mag2
-        colour_curve_err = mag2 = np.sqrt(mag1_err**2 + mag2_err**2)
+        colour_curve = self[band1].magnitudes - self[band2].magnitudes
+        colour_curve_err = np.sqrt(self[band1].mag_errors ** 2 + self[band2].mag_errors ** 2)
 
         self[band1].get_max()
         tmax = self[band1].tmax
         tmax_err = self[band1].tmax_err
-        time = self[band1].time
+        times = self[band1].times
 
         if np.isnan(tmax):
             warnings.warn(f"cannot estimate time of peak for {band1}")
             stretch = stretch_err = np.nan
         else:
-            mask = time > tmax
+            mask = times > tmax
             colour_curve = np.copy(colour_curve[mask])
-            time = np.copy(time[mask])
-            peak_ids = peak.indexes(colour_curve, thres=0.3, min_dist=len(time) // 3)
+            times = np.copy(times[mask])
+            peak_ids = peak.indexes(colour_curve, thres=0.3, min_dist=len(times) // 3)
             if len(peak_ids) > 0:
-                colour_tmax = time[peak_ids[0]]
+                colour_tmax = times[peak_ids[0]]
                 stretch = (colour_tmax - tmax) / 30
                 stretch_err = tmax_err / 30  # inaccurate error propagation
             else:
