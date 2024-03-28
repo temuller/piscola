@@ -56,10 +56,10 @@ class SingleFilter(object):
         filt_file = filt_file[0]
         self.filt_file = filt_file
 
-        wave, transmission = np.loadtxt(filt_file).T
+        wavelength, transmission = np.loadtxt(filt_file).T
         # remove long tails of zero values on both edges
         imin, imax = trim_filters(transmission)
-        self.wave = wave[imin:imax]
+        self.wavelength = wavelength[imin:imax]
         self.transmission = transmission[imin:imax]
 
         # retrieve response type; if none, assumed to be photon type
@@ -108,15 +108,15 @@ class SingleFilter(object):
             Effective wavelength.
         """
         if sed_wave is None or sed_flux is None:
-            sed_wave = self.wave.copy()
+            sed_wave = self.wavelength.copy()
             sed_flux = 100 * np.ones_like(sed_wave)
 
         transmission = self.transmission.copy()
         # check filter response type
         if self.response_type == "energy":
-            transmission /= self.wave
+            transmission /= self.wavelength
 
-        transmission = np.interp(sed_wave, self.wave, transmission, left=0.0, right=0.0)
+        transmission = np.interp(sed_wave, self.wavelength, transmission, left=0.0, right=0.0)
         I1 = np.trapz((sed_wave**2) * transmission * sed_flux, sed_wave)
         I2 = np.trapz(sed_wave * transmission * sed_flux, sed_wave)
         eff_wave = I1 / I2
@@ -138,19 +138,19 @@ class SingleFilter(object):
         flux_filter : float
             Flux density.
         """
-        blue_edge_covered = sed_wave.min() <= self.wave.min()
-        red_edge_covered = sed_wave.max() >= self.wave.max()
+        blue_edge_covered = sed_wave.min() <= self.wavelength.min()
+        red_edge_covered = sed_wave.max() >= self.wavelength.max()
         err_message = f"The SED does not completely overlap with {self.name} filter."
         assert blue_edge_covered and red_edge_covered, err_message
 
         transmission = self.transmission.copy()
         # check filter response type
         if self.response_type == "energy":
-            transmission /= self.wave
+            transmission /= self.wavelength
 
-        transmission = np.interp(sed_wave, self.wave, transmission, left=0.0, right=0.0)
+        transmission = np.interp(sed_wave, self.wavelength, transmission, left=0.0, right=0.0)
         I1 = np.trapz(sed_flux * transmission * sed_wave, sed_wave)
-        I2 = np.trapz(self.transmission * self.wave, self.wave)
+        I2 = np.trapz(self.transmission * self.wavelength, self.wavelength)
         flux_filter = I1 / I2
 
         return flux_filter
@@ -359,7 +359,7 @@ class MultiFilters(object):
         fig, ax = plt.subplots(figsize=(8, 6))
         for band in bands:
             norm = self[band]["transmission"].max()
-            ax.plot(self[band]["wave"], self[band]["transmission"] / norm, label=band)
+            ax.plot(self[band]["wavelength"], self[band]["transmission"] / norm, label=band)
 
         ax.set_xlabel(r"Wavelength ($\AA$)", fontsize=18, family="serif")
         ax.set_ylabel("Normalised Transmission Function", fontsize=18, family="serif")

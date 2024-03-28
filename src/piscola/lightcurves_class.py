@@ -64,7 +64,7 @@ class Lightcurve(object):
         """Calculates the peak magnitude (:math:`m_{max}`) and
         its epoch (:math:`t_{max}`).
         """
-        magnitudes = np.nan_to_num(self.mag, nan=np.nanmean(self.magnitudes))
+        magnitudes = np.nan_to_num(self.magnitudes, nan=np.nanmean(self.magnitudes))
         peak_ids = peak.indexes(-magnitudes, thres=0.3, min_dist=len(self.times) // 3)
         if len(peak_ids) == 0:
             self.mmax = self.mmax_err = np.nan
@@ -79,7 +79,7 @@ class Lightcurve(object):
             # use only data around peak
             mask = (self.times > self.tmax - 5) & (self.times < self.tmax + 5)
             times = self.times[mask]
-            brightest_mag = (self.magnitudes - self.mag_err)[mask]
+            brightest_mag = (self.magnitudes - self.mag_errors)[mask]
             id_err = np.argmin(np.abs(brightest_mag - self.mmax))
             self.tmax_err = np.abs(times[id_err] - self.tmax)
 
@@ -94,10 +94,10 @@ class Lightcurve(object):
             self.dm15 = self.dm15_err = np.nan
         else:
             phases = self.times - self.tmax
-            if any(np.abs(phase - 15) < 0.5):
+            if any(np.abs(phases - 15) < 0.5):
                 dm15_id = np.argmin(np.abs(phases - 15))
-                self.dm15 = self.mag[dm15_id] - self.mmax
-                self.dm15_err = np.sqrt(self.mag_err[dm15_id] ** 2 + self.mmax_err**2)
+                self.dm15 = self.magnitudes[dm15_id] - self.mmax
+                self.dm15_err = np.sqrt(self.mag_errors[dm15_id] ** 2 + self.mmax_err**2)
             else:
                 self.dm15 = self.dm15_err = np.nan
 

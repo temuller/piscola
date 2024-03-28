@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 import piscola
 from .extinction_correction import redden, deredden, calculate_ebv
-from .gaussian_process import prepare_gp_inputs, fit_gp_model
+from .gaussian_process import fit_single_lightcurve
 
 def show_available_templates():
     """Prints all the available SED templates in the
@@ -281,7 +281,7 @@ class SEDTemplate(object):
         if not self.extincted:
             self.apply_extinction(scaling, reddening_law, r_v, ebv)
 
-        # obs. light curves
+        # observed light curves
         photometry = {band: [] for band in filters.bands}
         phases = np.unique(self.phase)
         for band in filters.bands:
@@ -294,26 +294,17 @@ class SEDTemplate(object):
         photometry_df = pd.DataFrame(photometry)
         self.obs_lcs = photometry_df
 
-        # GP fit for interpolation
-        dt = 0.1  # 0.1 days in rest-frame
+        # GP fit for interpolating the light curves
+        dt = 0.05 * (1 + self.z)  # 0.05 days in rest-frame, moved to observer frame
         phases_pred = np.arange(phases.min(), phases.max() + dt, dt)
         fit_phot = {band: None for band in filters.bands}
         for band in filters.bands:
             fluxes = photometry_df[band].values
-            # wavelength value does not matter in this fit
-            wavelengths = np.zeros_like(fluxes) + filters[band].eff_wave
             # assuming no errors in the observations or in the fit
-            gp_model = fit_gp_model(phases, wavelengths, 
-                                    fluxes, np.zeros_like(fluxes), 
-                                    k1='Matern52', use_log=True)
+            gp_model = fit_single_lightcurve(phases, fluxes, np.array([0.0]))
+            y = fluxes.copy() / fluxes.max()
             # prediction
-            wavelengths_pred = np.zeros_like(phases_pred) + filters[band].eff_wave
-            X_test, y, _ = prepare_gp_inputs(phases_pred, wavelengths_pred, 
-                                             fluxes, np.zeros_like(fluxes), 
-                                             fluxes.max(),
-                                             use_log=True)
-            # GP prediction
-            mu, _ = gp_model.predict(y, X_test=X_test, return_var=True)
+            mu, _ = gp_model.predict(y, X_test=phases_pred, return_var=True)
             # renormalise output
             mu *= fluxes.max()
             fit_phot[band] = mu
@@ -362,13 +353,23 @@ class SEDTemplate(object):
         # GP fit for interpolation
         bands = [band for band in filters.bands if band in photometry_df.columns]
         fit_phot = {band: None for band in bands}
+        dt = 0.05  # 0.05 days in rest-frame
+        phases_pred = np.arange(phases.min(), phases.max() + dt, dt)
         for band in bands:
-            flux = photometry_df[band].values
-            flux_err = photometry_df[f"{band}_err"].values
+            fluxes = photometry_df[band].values
+            flux_errors = photometry_df[f"{band}_err"].values
             # errors are underestimated as they are already correlated
-            phases_pred, flux_pred, flux_pred_err = gp_lc_fit(phases, flux, flux_err)
-            fit_phot[band] = flux_pred
-            fit_phot[f"{band}_err"] = flux_pred_err
+            gp_model = fit_single_lightcurve(phases, fluxes, flux_errors)
+            y = fluxes.copy() / fluxes.max()
+            # prediction
+            mu, var = gp_model.predict(y, X_test=phases_pred, return_var=True)
+            std = np.sqrt(var)
+            # renormalise outputs
+            mu *= fluxes.max()
+            std *= fluxes.max()
+
+            fit_phot[band] = mu
+            fit_phot[f"{band}_err"] = std
 
         fit_phot["phase"] = phases_pred
         fit_phot_df = pd.DataFrame(fit_phot)
