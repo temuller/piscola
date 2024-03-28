@@ -42,7 +42,7 @@ def prepare_gp_inputs(times, wavelengths, fluxes, flux_errors, y_norm, use_log=T
 
     return X, y, yerr
 
-def fit_gp_model(times, wavelengths, fluxes, flux_errors, use_log=True):
+def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', use_log=True):
     """Fits a Gaussian Process model to a SN multi-colour light curve.
     
     All input arrays MUST have the same length.
@@ -57,6 +57,9 @@ def fit_gp_model(times, wavelengths, fluxes, flux_errors, use_log=True):
         Light-curve fluxes.
     flux_errors: ndarray 
         Light-curve flux errors.
+    k1: str
+        Kernel to be used for the time axis. Either ``Matern52``,
+        ``Matern32`` or ``ExpSquared``.
     use_log: bool, default ``True``.
         Whether to use logarithmic (base 10) scale for the 
         wavelength axis.
@@ -66,10 +69,18 @@ def fit_gp_model(times, wavelengths, fluxes, flux_errors, use_log=True):
     gp_model: ~tinygp.gp.GaussianProcess
         Gaussian Process light-curve model.
     """
+    assert k1 in ['Matern52', 'Matern32', 'ExpSquared'], "Not a valid kernel"
     def build_gp(params):
         """Creates a Gaussian Process model.
         """
-        kernel1 = transforms.Subspace(0, kernels.Matern52(scale=jnp.exp(params["log_scale"][0])))
+        # select time-axis kernel
+        if k1 == 'Matern52':
+            kernel1 = transforms.Subspace(0, kernels.Matern52(scale=jnp.exp(params["log_scale"][0])))
+        elif k1 == 'Matern32':
+            kernel1 = transforms.Subspace(0, kernels.Matern32(scale=jnp.exp(params["log_scale"][0])))
+        else:
+            kernel1 = transforms.Subspace(0, kernels.ExpSquared(scale=jnp.exp(params["log_scale"][0])))
+        # wavelength-axis kernel
         kernel2 = transforms.Subspace(1, kernels.ExpSquared(scale=jnp.exp(params["log_scale"][1])))
         kernel = jnp.exp(params["log_amp"]) * kernel1 * kernel2
         diag = yerr ** 2 

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 import piscola
 from .extinction_correction import redden, deredden, calculate_ebv
-from .gaussian_process import gp_lc_fit
+from .gaussian_process import prepare_gp_inputs, fit_gp_model
 
 def show_available_templates():
     """Prints all the available SED templates in the
@@ -83,6 +83,39 @@ class SEDTemplate(object):
                 self.comments = file.read()
         else:
             self.comments = ""
+
+    def mask_sed(self, min_phase=None, max_phase=None, min_wave=None, max_wave=None):
+        """Masks the SED phase and wavelength coverage.
+
+        Both the minimum and maximum in time or wavenlength need
+        to be given to mask the SED.
+
+        Parameters
+        ----------
+        min_phase : float, default ``None``
+            Minimum phase to include.
+        max_phase : float, default ``None``
+            Maximum phase to include.
+        min_wave : float, default ``None``
+            Minimum wavelength to include.
+        max_wave : float, default ``None``
+            Maximum wavelength to include.
+        """
+        if min_phase is not None and max_phase is not None:
+            # mask phase
+            phase_mask = (self.phase >= min_phase) & (self.phase <= max_phase)
+            self.phase = self.phase[phase_mask]
+            self.wave = self.wave[phase_mask]
+            self.flux = self.flux[phase_mask]
+            self.flux_err = self.flux_err[phase_mask]
+
+        if min_wave is not None and max_wave is not None:
+            # mask wavelength
+            wave_mask = (self.wave >= min_wave) & (self.wave <= max_wave)
+            self.phase = self.phase[wave_mask]
+            self.wave = self.wave[wave_mask]
+            self.flux = self.flux[wave_mask]
+            self.flux_err = self.flux_err[wave_mask]
 
     def redshift(self):
         """Redshifts the SED template if not already redshifted."""
@@ -242,10 +275,6 @@ class SEDTemplate(object):
             Total-to-selective extinction ratio (:math:`R_V`)
         ebv : float, default ``None``
             Colour excess (:math:`E(B-V)`). If given, this is used instead of the dust map value.
-
-        Returns
-        -------
-
         """
         if not self.redshifted:
             self.redshift()
@@ -266,12 +295,28 @@ class SEDTemplate(object):
         self.obs_lcs = photometry_df
 
         # GP fit for interpolation
+        dt = 0.1  # 0.1 days in rest-frame
+        phases_pred = np.arange(phases.min(), phases.max() + dt, dt)
         fit_phot = {band: None for band in filters.bands}
         for band in filters.bands:
-            flux = photometry_df[band].values
+            fluxes = photometry_df[band].values
+            # wavelength value does not matter in this fit
+            wavelengths = np.zeros_like(fluxes) + filters[band].eff_wave
             # assuming no errors in the observations or in the fit
-            phases_pred, flux_pred, _ = gp_lc_fit(phases, flux)
-            fit_phot[band] = flux_pred
+            gp_model = fit_gp_model(phases, wavelengths, 
+                                    fluxes, np.zeros_like(fluxes), 
+                                    k1='Matern52', use_log=True)
+            # prediction
+            wavelengths_pred = np.zeros_like(phases_pred) + filters[band].eff_wave
+            X_test, y, _ = prepare_gp_inputs(phases_pred, wavelengths_pred, 
+                                             fluxes, np.zeros_like(fluxes), 
+                                             fluxes.max(),
+                                             use_log=True)
+            # GP prediction
+            mu, _ = gp_model.predict(y, X_test=X_test, return_var=True)
+            # renormalise output
+            mu *= fluxes.max()
+            fit_phot[band] = mu
 
         fit_phot["phase"] = phases_pred
         fit_phot_df = pd.DataFrame(fit_phot)
