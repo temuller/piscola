@@ -22,6 +22,8 @@ from .filters_class import MultiFilters
 from .lightcurves_class import Lightcurves
 from .gaussian_process import prepare_gp_inputs, fit_gp_model
 
+import jax
+jax.config.update("jax_enable_x64", True)
 
 def call_sn(lc_file):
     """Loads a supernova from a file and initialises
@@ -101,8 +103,6 @@ class Supernova(object):
         self.z = z
         self.ra = ra
         self.dec = dec
-        self._init_fits = None
-        self._fit_results = None
 
         if not self.ra or not self.dec:
             print("Warning, RA and/or DEC not specified.")
@@ -166,6 +166,7 @@ class Supernova(object):
             use current directory. The file will be saved with
             the name ``<SN name>.pisco``.
         """
+        self.sed.data = None  # to save space
         if path is None:
             path = ""
 
@@ -202,6 +203,9 @@ class Supernova(object):
             )
             self.lcs[band].zp = new_zp
 
+    ####################
+    # Light-curve fits #
+    ####################
     def _stack_lcs(self, bands=None):
         """Stacks of light-curve properties
 
@@ -239,6 +243,42 @@ class Supernova(object):
         self._stacked_magnitudes = magnitudes
         self._stacked_mag_errors = mag_errors
 
+    def init_gp_predict(self, times_pred, wavelengths_pred, return_cov=True):
+        """Returns the Gaussian Process prediction of the initial light-curve fits.
+
+        Parameters
+        ----------
+        times_pred : ndarray
+            Time-axis grid.
+        wavelengths_pred : ndarray
+            Wavelength-axis grid.
+        return_cov : bool, optional
+            Whether to return the covariance or variance.
+
+        Returns
+        -------
+        mu: ndarray
+            Mean of the Gaussian Process.
+        var or cov: ndarray
+            Either the variance or covariance of the Gaussian Process.
+        """
+        X_test, y, _, y_norm = prepare_gp_inputs(times_pred, wavelengths_pred, 
+                                                self._stacked_fluxes, self._stacked_flux_errors, 
+                                                use_log=self.init_use_log)
+        # GP prediction
+        if return_cov is True:
+            mu, cov = self.init_gp_model.predict(y, X_test=X_test, return_cov=True)
+            # renormalise outputs
+            mu *= y_norm
+            cov *= y_norm ** 2
+            return mu, cov
+        else:
+            mu, var = self.init_gp_model.predict(y, X_test=X_test, return_var=True)
+            # renormalise outputs
+            mu *= y_norm
+            var *= y_norm ** 2
+            return mu, var
+        
     def fit_lcs(self, bands=None, k1='Matern52', use_log=True):
         """Fits the multi-colour observed light-curve data with Gaussian Process.
 
@@ -262,7 +302,7 @@ class Supernova(object):
         gp_model = fit_gp_model(self._stacked_times, self._stacked_wavelengths, 
                                 self._stacked_fluxes, self._stacked_flux_errors, k1=k1, use_log=use_log)
         self.init_gp_model = gp_model  # store GP model
-        self.init_y_norm = self._stacked_fluxes.max()  # store normalisation
+        self.init_use_log = use_log
 
         ########################
         # Estimate B-band Peak #
@@ -276,18 +316,13 @@ class Supernova(object):
         # store time array for the prediction in 'self.fit()'
         self.times_pred = times_pred
         wavelengths_pred = np.zeros_like(times_pred) + rest_eff_wave
-        # arrays for GP predictions
-        X_test, y, _ = prepare_gp_inputs(times_pred, wavelengths_pred, 
-                                         self._stacked_fluxes, self._stacked_flux_errors, 
-                                         self.init_y_norm,
-                                         use_log=use_log)
-        # GP prediction
-        mu, cov = gp_model.predict(y, X_test=X_test, return_cov=True)
+        mu, cov = self.init_gp_predict(times_pred, wavelengths_pred, return_cov=True)
 
         # monte-carlo sampling
-        mc_lcs = np.random.multivariate_normal(mu, cov, size=5000)
+        lcs_sample = np.random.multivariate_normal(mu, cov, size=5000)
         tmax_list = []
-        for lc in mc_lcs:
+        for lc in lcs_sample:
+            lc /= lc.max()
             peak_ids = peak.indexes(lc, thres=0.3, min_dist=len(times_pred) // 2)
             if len(peak_ids) == 0:
                 # if no peak is found, just use the maximum
@@ -296,8 +331,8 @@ class Supernova(object):
                 max_id = peak_ids[0]
             tmax_list.append(times_pred[max_id])
         # save time of maximum
-        self.init_tmax = np.nanmean(tmax_list)
-        self.init_tmax_err = np.nanstd(tmax_list)
+        self.init_tmax = np.round(np.nanmean(tmax_list), 3)
+        self.init_tmax_err = np.round(np.nanstd(tmax_list), 3)
 
         ###########################
         # Inital light-curve fits #
@@ -310,17 +345,8 @@ class Supernova(object):
         for band in fitting_bands:
             eff_wave = self.filters[band]["eff_wave"]
             wavelengths_pred = np.zeros_like(times_pred) + eff_wave
-            # arrays for GP predictions
-            X_test, y, _ = prepare_gp_inputs(times_pred, wavelengths_pred, 
-                                             self._stacked_fluxes, self._stacked_flux_errors, 
-                                             self.init_y_norm,
-                                             use_log=use_log)
-            # GP prediction
-            mu, var = gp_model.predict(y, X_test=X_test, return_var=True)
+            mu, var = self.init_gp_predict(times_pred, wavelengths_pred, return_cov=False)
             std = np.sqrt(var)
-            # renormalise outputs
-            mu *= self.init_y_norm
-            std *= self.init_y_norm
 
             # store light-curve fits
             fit_df = pd.DataFrame({"time": times_pred, "flux": mu, "flux_err": std})
@@ -331,8 +357,47 @@ class Supernova(object):
 
         self.init_lc_fits = Lightcurves(pd.concat(fits_df_list))
 
+    ########################
+    # Magnling surface fit #
+    ########################
+    def gp_predict(self, times_pred, wavelengths_pred, return_cov=True):
+        """Returns the Gaussian Process prediction of the magnling surface fit.
+
+        Parameters
+        ----------
+        times_pred : ndarray
+            Time-axis grid.
+        wavelengths_pred : ndarray
+            Wavelength-axis grid.
+        return_cov : bool, optional
+            Whether to return the covariance or variance.
+
+        Returns
+        -------
+        mu: ndarray
+            Mean of the Gaussian Process.
+        var or cov: ndarray
+            Either the variance or covariance of the Gaussian Process.
+        """
+        X_test, y, _, y_norm = prepare_gp_inputs(times_pred, wavelengths_pred, 
+                                                self.stacked_ratios, self.stacked_errors, 
+                                                use_log=self.use_log)
+        # GP prediction
+        if return_cov is True:
+            mu, cov = self.gp_model.predict(y, X_test=X_test, return_cov=True)
+            # renormalise outputs
+            mu *= y_norm
+            cov *= y_norm ** 2
+            return mu, cov
+        else:
+            mu, var = self.gp_model.predict(y, X_test=X_test, return_var=True)
+            # renormalise outputs
+            mu *= y_norm
+            var *= y_norm ** 2
+            return mu, var
+
     def fit(self, bands=None, k1='Matern52', use_log=True):
-        """Fits and corrects the multi-colour light curves.
+        """Fits and corrects the multi-colour light curves with an SED template.
 
         The corrections include Milky-Way dust extinction and mangling of the SED 
         (i.e. K-correction). Rest-frame light curves and parameters are calculated as end products.
@@ -362,7 +427,11 @@ class Supernova(object):
         min_phase, max_phase = np.min(rest_phases), np.max(rest_phases)
         self.sed.mask_sed(min_phase, max_phase)
 
-        # SED observer-frame light curves
+        # SED initial rest-frame light curves
+        self.sed.calculate_rest_lightcurves(self.filters)
+        self.sed.init_rest_lcs = self.sed.rest_lcs.copy()
+        self.sed.init_rest_lcs_fit = self.sed.rest_lcs_fit.copy()
+        # SED initial observer-frame light curves
         self.sed.calculate_obs_lightcurves(self.filters)
         # interpolated SED light curves to match the time of observations
         sed_lcs = self.sed.obs_lcs_fit  # this is a DataFrame
@@ -381,21 +450,15 @@ class Supernova(object):
             # this mask avoids observations beyond the SED template limits
             mask = self.lcs[band].times <= sed_times.max()
             self.lcs[band].mask_lc(mask, copy=True)
-            sed_flux = np.interp(
-                self.lcs[band].masked_times,
-                sed_times,
-                sed_lcs[band].values,
+            sed_flux = np.interp(self.lcs[band].masked_times, sed_times,sed_lcs[band].values,
             )
 
-            # prevents negative numbers
-            mask = sed_flux > 0  # not the best solution, but seems to work
-
-            times.append(self.lcs[band].masked_times[mask])
+            times.append(self.lcs[band].masked_times)
             wavelenths.append(
-                [self.filters[band].eff_wave] * len(self.lcs[band].masked_times[mask])
+                [self.filters[band].eff_wave] * len(self.lcs[band].masked_times)
             )
-            flux_ratios.append(self.lcs[band].masked_fluxes[mask] / sed_flux[mask])
-            flux_errors.append(self.lcs[band].masked_flux_errors[mask] / sed_flux[mask])
+            flux_ratios.append(self.lcs[band].masked_fluxes / sed_flux)
+            flux_errors.append(self.lcs[band].masked_flux_errors / sed_flux)
 
         # prepare data for 2D fit
         self.stacked_times = np.hstack(times)
@@ -409,30 +472,21 @@ class Supernova(object):
         gp_model = fit_gp_model(self.stacked_times, self.stacked_wavelengths, 
                                 self.stacked_ratios, self.stacked_errors, k1=k1, use_log=use_log)
         self.gp_model = gp_model  # store GP model
-        self.y_norm = self.stacked_ratios.max()  # store normalisation
 
+        # light-curve prediction for visualisation purposes
         fits_df_list = []
         for band in fitting_bands:
             eff_wave = self.filters[band]["eff_wave"]
             # 'self.times_pred' was stored from 'self.fit_lcs()'
             wavelengths_pred = np.zeros_like(self.times_pred) + eff_wave
-            # arrays for GP predictions
-            X_test, y, _ = prepare_gp_inputs(self.times_pred, wavelengths_pred, 
-                                             self.stacked_ratios, self.stacked_errors, 
-                                             self.y_norm,
-                                             use_log=use_log)
-            # GP prediction
-            mu, var = gp_model.predict(y, X_test=X_test, return_var=True)
+            mu, var = self.gp_predict(self.times_pred, wavelengths_pred, return_cov=False)
             std = np.sqrt(var)
-            # renormalise outputs
-            mu *= self.y_norm
-            std *= self.y_norm
 
-            # get SED light curve and mangle it
+            # get SED light curve, in the given band, and "mangle" it
             sed_flux = np.interp(
                 self.times_pred, sed_times, sed_lcs[band].values, left=0.0, right=0.0
             )
-            lc_fit = sed_flux * mu
+            lc_fit = sed_flux * mu  # mangling
             lc_std = sed_flux * std
 
             # store light-curve fits
@@ -462,26 +516,24 @@ class Supernova(object):
                                      )
         mangled_sed = {"flux": [], "flux_err": []}
         for phase in np.unique(self.sed.phase):
-            # SED at the given phase
+            ##########################
+            # SED at the given phase #
+            ##########################
             phase_mask = self.sed.phase == phase
             sed_wave = self.sed.wave[phase_mask]
             sed_flux = self.sed.flux[phase_mask]
 
-            # Mangling function - GP prediction from 'self.fit()'
+            #####################
+            # Mangling function #
+            #####################
             phases_pred = np.zeros_like(wavelengths_pred) + phase
             times_pred = phases_pred * (1 + self.z) + self.init_tmax
-            X_test, y, _ = prepare_gp_inputs(times_pred, wavelengths_pred, 
-                                             self.stacked_ratios, self.stacked_errors, 
-                                             self.y_norm,
-                                             use_log=self.use_log)
-            # GP prediction
-            mu, var = self.gp_model.predict(y, X_test=X_test, return_var=True)
+            mu, var = self.gp_predict(times_pred, wavelengths_pred, return_cov=False)
             std = np.sqrt(var)
-            # renormalise outputs
-            mu *= self.y_norm
-            std *= self.y_norm
 
-            # convolute SED with mangling function
+            ##########################################
+            # SED convolution with mangling function #
+            ##########################################
             mang_func = np.interp(sed_wave, wavelengths_pred, mu)
             mang_func_std = np.interp(sed_wave, wavelengths_pred, std)
             mangled_flux = mang_func * sed_flux
@@ -538,42 +590,58 @@ class Supernova(object):
         ########################
         # Estimate B-band Peak #
         ########################
+        # check largest delta wavelength
+        filter_wavelength = self.filters.Bessell_B.wavelength
+        filter_dw = np.diff(filter_wavelength).max()
+        sed_dw = np.diff(self.sed.wave).max()
+        
+        dw = np.max([filter_dw, sed_dw, 20])
+        wavelengths_array = np.arange(filter_wavelength.min(), filter_wavelength.max() + dw, dw)
+        mu_sample = []
+        for wave in wavelengths_array:
+            times_pred = self.rest_lcs.Bessell_B.times * (1 + self.z) + self.init_tmax
+            rest_wave = wave * (1 + self.z)
+            wavelengths_pred = np.zeros_like(times_pred) + rest_wave
+            mu, cov = self.gp_predict(times_pred, wavelengths_pred, return_cov=True)
+            mu_sample.append(np.random.multivariate_normal(mu, cov, size=5000))
+        mu_sample = np.array(mu_sample)
+        self.mu_sample = mu_sample
+        """
+        # The prediction arrays are in observer-frame as the GP fit
+        # was made in observer-frame
         times_pred = self.rest_lcs.Bessell_B.times * (1 + self.z) + self.init_tmax
         rest_eff_wave = self.filters.Bessell_B.eff_wave * (1 + self.z)
         wavelengths_pred = np.zeros_like(times_pred) + rest_eff_wave
-        # arrays for GP predictions
-        X_test, y, _ = prepare_gp_inputs(times_pred, wavelengths_pred, 
-                                         self.stacked_ratios, self.stacked_errors, 
-                                         self.y_norm,
-                                         use_log=self.use_log)
-        # GP prediction
-        mu, cov = self.gp_model.predict(y, X_test=X_test, return_cov=True)
-        # renormalise outputs
-        mu *= self.y_norm
-        cov *= self.y_norm ** 2
-        """
-        # I don't think this is correct
+        mu, cov = self.gp_predict(times_pred, wavelengths_pred, return_cov=True)
+
+        #div = (self.rest_lcs.Bessell_B.fluxes / self.sed.init_rest_lcs.Bessell_B.values) / mu
+        #mu = self.rest_lcs.Bessell_B.fluxes / self.sed.init_rest_lcs.Bessell_B.values
+        #cov *= np.dot(div, div)
+
+        #mu *= self.sed.init_rest_lcs.Bessell_B.values
+        cov *= np.outer(self.sed.init_rest_lcs.Bessell_B.values, self.sed.init_rest_lcs.Bessell_B.values)
+
+        self.rest_lcs.Bessell_B.cov = cov
+        self.rest_lcs.Bessell_B.mu = mu
+        #fluxes = self.sed.init_rest_lcs.Bessell_B.values
         fluxes = self.rest_lcs.Bessell_B.fluxes
-        flux_errors = self.rest_lcs.Bessell_B.flux_errors
-        norm = flux_errors ** 2  / np.diag(cov)
-        #cov *= norm
-
-
 
         # monte-carlo sampling
-        mc_lcs = np.random.multivariate_normal(fluxes, cov, size=5000)
+        mu_sample = np.random.multivariate_normal(fluxes, cov, size=5000)
         tmax_list = []
-        for lc in mc_lcs:
-            peak_ids = peak.indexes(lc, thres=0.3, min_dist=len(times_pred) // 2)
+        for mangling_function in mu_sample:
+            mangled_fluxes = mangling_function #* fluxes
+            peak_ids = peak.indexes(mangled_fluxes, thres=0.3, min_dist=len(times_pred) // 2)
             if len(peak_ids) == 0:
                 # if no peak is found, just use the maximum
-                max_id = np.argmax(lc)
+                max_id = np.argmax(mangled_fluxes)
+                print('WARNING: no optical peak found - using the maximum instead')
             else:
                 max_id = peak_ids[0]
             tmax_list.append(times_pred[max_id])
         # save time of maximum
-        self.tmax = np.nanmean(tmax_list)
-        self.tmax_err = np.nanstd(tmax_list)
+        self.tmax = np.round(np.nanmean(tmax_list), 3)
+        self.tmax_err = np.round(np.nanstd(tmax_list), 3)    
         """
     
     def _extract_lc_params2(self):
@@ -805,7 +873,7 @@ class Supernova(object):
                 mec="k",
             )
             fit_par = dict(ls="-", lw=2, zorder=16, color=colour)
-            fit_err_par = dict(alpha=0.5, color=colour)
+            fit_err_par = dict(alpha=0.3, color=colour)
 
             # light curves
             ax.errorbar(x, y, yerr, label=band, **data_par)

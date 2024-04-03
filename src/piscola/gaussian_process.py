@@ -4,7 +4,9 @@ import numpy as np
 import jax.numpy as jnp
 from tinygp import GaussianProcess, kernels, transforms
 
-def prepare_gp_inputs(times, wavelengths, fluxes, flux_errors, y_norm, use_log=True):
+jax.config.update("jax_enable_x64", True)
+
+def prepare_gp_inputs(times, wavelengths, fluxes, flux_errors, use_log=True):
     """Prepares the inputs for the Gaussian Process model fitting.
     
     Parameters
@@ -17,9 +19,6 @@ def prepare_gp_inputs(times, wavelengths, fluxes, flux_errors, y_norm, use_log=T
         Light-curve fluxes.
     flux_errors: ndarray 
         Light-curve flux errors.
-    y_norm: float
-        Normalisation used for the fluxes and errors. The maximum
-        of the fluxes is recommended.
     use_log: bool, default ``True``.
         Whether to use logarithmic (base 10) scale for the 
         wavelength axis.
@@ -32,15 +31,20 @@ def prepare_gp_inputs(times, wavelengths, fluxes, flux_errors, y_norm, use_log=T
         Y-axis array for the Gaussian Process model.
     yerr: ndarray
         Y-axis errors for the Gaussian Process model.
+    y_norm: float
+        Normalisation used for the fluxes and errors. The maximum
+        of the fluxes is used.
     """
     X = (times, wavelengths)
     if use_log is True:
         X = (times, jnp.log10(wavelengths))
-    # normalise fluxes
-    y = (fluxes / y_norm).copy()
+
+    # normalise fluxes - values have to be above zero
+    y_norm = np.copy(fluxes.max())
+    y = (fluxes / y_norm).copy() + 0.01
     yerr = (flux_errors / y_norm).copy()
 
-    return X, y, yerr
+    return X, y, yerr, y_norm
 
 def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', use_log=True):
     """Fits a Gaussian Process model to a SN multi-colour light curve.
@@ -93,10 +97,9 @@ def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', use_log
         """
         return -build_gp(params).condition(y).log_probability
     
-    y_norm = fluxes.max()  # for normalising the fluxes
-    X, y, yerr = prepare_gp_inputs(times, wavelengths, fluxes, 
-                                   flux_errors, y_norm, use_log=use_log)
-    
+    X, y, yerr, _ = prepare_gp_inputs(times, wavelengths, fluxes, 
+                                            flux_errors, use_log=use_log)
+
     # GP hyper-parameters
     time_scale = 10  # days
     wave_scale = 1000  # angstroms
