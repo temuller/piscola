@@ -2,7 +2,7 @@ import numpy as np
 from peakutils import peak
 import warnings
 
-from .utils import flux2mag
+from .utils import flux_to_mag
 
 
 class Lightcurve(object):
@@ -26,7 +26,7 @@ class Lightcurve(object):
         self.fluxes = data.flux.values
         self.flux_errors = data.flux_err.values
         self.zp = float(data.zp.unique()[0])
-        self.magnitudes, self.mag_errors = flux2mag(self.fluxes, self.zp, self.flux_errors)
+        self.magnitudes, self.mag_errors = flux_to_mag(self.fluxes, self.flux_errors, self.zp)
         self.mag_sys = data.mag_sys.unique()[0]
 
     def __repr__(self):

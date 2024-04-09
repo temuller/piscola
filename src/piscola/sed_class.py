@@ -48,12 +48,39 @@ class SEDTemplate(object):
         self._set_sed_template(template)
         self.redshifted = False
         self.extincted = False
+        self.mangled = False
 
     def __repr__(self):
         return f"name: {self.name}, z: {self.z:.5}, ra: {self.ra}, dec: {self.dec}"
 
     def __getitem__(self, item):
         return getattr(self, item)
+    
+    def _retrieve_template(self, template):
+        """Helper function for retrieving the SED template.
+
+        Useful for loading the initial SED again to save space when
+        saving an SN object.
+
+        Parameters
+        ----------
+        template : str
+            Template name. E.g., ``conley09f``, ``jla``, etc.
+        """
+        pisco_path = piscola.__path__[0]
+        sed_file = glob.glob(
+            os.path.join(pisco_path, "templates", template, "sed_template.*")
+        )[0]
+        self.data = pd.read_csv(
+            sed_file, delim_whitespace=True, names=["phase", "wave", "flux"]
+        )
+
+        readme_file = os.path.join(pisco_path, "templates", template, "README.txt")
+        if os.path.isfile(readme_file):
+            with open(readme_file, "r") as file:
+                self.comments = file.read()
+        else:
+            self.comments = ""
 
     def _set_sed_template(self, template):
         """Sets the SED template to be used for the mangling function.
@@ -63,26 +90,13 @@ class SEDTemplate(object):
         template : str
             Template name. E.g., ``conley09f``, ``jla``, etc.
         """
-        # This can be modified to accept other templates
-        pisco_path = piscola.__path__[0]
-        sed_file = glob.glob(
-            os.path.join(pisco_path, "templates", template, "sed_template.*")
-        )[0]
-        self.data = pd.read_csv(
-            sed_file, delim_whitespace=True, names=["phase", "wave", "flux"]
-        )
+        self._retrieve_template(template)
+
         self.phase = self.data.phase.values
         self.wave = self.data.wave.values
         self.flux = self.data.flux.values
         self.flux_err = np.zeros_like(self.flux)
         self.name = template
-
-        readme_file = os.path.join(pisco_path, "templates", template, "README.txt")
-        if os.path.isfile(readme_file):
-            with open(readme_file, "r") as file:
-                self.comments = file.read()
-        else:
-            self.comments = ""
 
     def mask_sed(self, min_phase=None, max_phase=None, min_wave=None, max_wave=None):
         """Masks the SED phase and wavelength coverage.
@@ -254,15 +268,17 @@ class SEDTemplate(object):
         plt.show()
 
     def calculate_obs_lightcurves(
-        self, filters, scaling=0.86, reddening_law="fitzpatrick99", r_v=3.1, ebv=None
+        self, filters, bands=None, scaling=0.86, reddening_law="fitzpatrick99", r_v=3.1, ebv=None
     ):
         """Calculates the multi-colour light curves of the SED as if
         it were observed by a telescope.
 
         Parameters
         ----------
-        filters: list-like
-            Filters used.
+        filters: ~piscola.filters_class.MultiFilters
+            Filters for integrating flux.
+        bands: list-like
+            Bands to use.
         scaling: float, default ``0.86``
             Calibration of the Milky Way dust maps. Either ``0.86``
             for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
@@ -281,37 +297,33 @@ class SEDTemplate(object):
         if not self.extincted:
             self.apply_extinction(scaling, reddening_law, r_v, ebv)
 
-        # observed light curves
-        photometry = {band: [] for band in filters.bands}
-        phases = np.unique(self.phase)
-        for band in filters.bands:
-            for phase in phases:
-                wave, flux = self.get_phase_data(phase)
-                obs_flux = filters[band].integrate_filter(wave, flux)
-                photometry[band].append(obs_flux)
+        if bands is None:
+            bands = filters.bands
 
-        photometry["phase"] = phases
+        # get observed phases and prediction array
+        photometry = {band: [] for band in bands}
+        phases = np.unique(self.phase)
+        dt = 0.1 * (1 + self.z)  # 0.1 days in rest-frame, moved to observer frame
+        phases_pred = np.arange(phases.min(), phases.max() + dt, dt)
+        for band in bands:
+            obs_fluxes = []
+            for phase in phases:
+                # calculate photometry
+                wave, flux = self.get_phase_data(phase)
+                obs_fluxes.append(filters[band].integrate_filter(wave, flux))
+            obs_fluxes = np.array(obs_fluxes)
+
+            # GP fit for interpolating the light curves
+            # assuming no errors in the observations or the fit
+            gp_model = fit_single_lightcurve(phases, obs_fluxes, np.array([0.0]))
+            y = obs_fluxes.copy() / obs_fluxes.max()
+            mu = gp_model.predict(y, X_test=phases_pred)
+            photometry[band] = mu * obs_fluxes.max()  # renormalise output
+
+        # store light curves
+        photometry["phase"] = phases_pred
         photometry_df = pd.DataFrame(photometry)
         self.obs_lcs = photometry_df
-
-        # GP fit for interpolating the light curves
-        dt = 0.05 * (1 + self.z)  # 0.05 days in rest-frame, moved to observer frame
-        phases_pred = np.arange(phases.min(), phases.max() + dt, dt)
-        fit_phot = {band: None for band in filters.bands}
-        for band in filters.bands:
-            fluxes = photometry_df[band].values
-            # assuming no errors in the observations or in the fit
-            gp_model = fit_single_lightcurve(phases, fluxes, np.array([0.0]))
-            y = fluxes.copy() / fluxes.max()
-            # prediction
-            mu, _ = gp_model.predict(y, X_test=phases_pred, return_var=True)
-            # renormalise output
-            mu *= fluxes.max()
-            fit_phot[band] = mu
-
-        fit_phot["phase"] = phases_pred
-        fit_phot_df = pd.DataFrame(fit_phot)
-        self.obs_lcs_fit = fit_phot_df
 
     def calculate_rest_lightcurves(self, filters):
         """Calculates rest-frame, corrected light curves of the SED.
@@ -326,53 +338,53 @@ class SEDTemplate(object):
         if self.redshifted:
             self.deredshift()
 
-        # restframe light curves
+        # get rest-frame phases and prediction array
         photometry = {band: [] for band in filters.bands}
         photometry.update({f"{band}_err": [] for band in filters.bands})
         phases = np.unique(self.phase)
+        dt = 0.1  # 0.1 days in rest-frame
+        phases_pred = np.arange(phases.min(), phases.max() + dt, dt)
         for band in filters.bands:
-            filt = filters[band]
+            rest_fluxes, rest_flux_errors = [], []
             for phase in phases:
+                # calculate photometry
                 wave, flux, flux_err = self.get_phase_data(phase, include_err=True)
                 try:
-                    rest_flux = filt.integrate_filter(wave, flux)
+                    rest_fluxes.append(filters[band].integrate_filter(wave, flux))
                 except:
                     # The SED has no coverage for this filter
                     continue
-                rest_flux_err = filt.integrate_filter(wave, flux_err)
-                photometry[band].append(rest_flux)
-                photometry[f"{band}_err"].append(rest_flux_err)
+                rest_flux_errors.append(filters[band].integrate_filter(wave, flux_err))
 
-            if len(photometry[band])==0:
+            # remove empty bands
+            if len(rest_fluxes) == 0:
                 photometry.pop(band)
                 photometry.pop(f"{band}_err")
+                continue
 
-        photometry["phase"] = phases
-        photometry_df = pd.DataFrame(photometry)
-
-        # GP fit for interpolation
-        bands = [band for band in filters.bands if band in photometry_df.columns]
-        fit_phot = {band: None for band in bands}
-        dt = 0.05  # 0.05 days in rest-frame
-        phases_pred = np.arange(phases.min(), phases.max() + dt, dt)
-        for band in bands:
-            fluxes = photometry_df[band].values
-            flux_errors = photometry_df[f"{band}_err"].values
-            # errors are underestimated as they are already correlated
-            gp_model = fit_single_lightcurve(phases, fluxes, flux_errors)
-            y = fluxes.copy() / fluxes.max()
-            # prediction
+            rest_fluxes = np.array(rest_fluxes)
+            rest_flux_errors = np.array(rest_flux_errors)
+            """
+            # GP fit for interpolating the light curves
+            # assuming no errors in the observations or the fit
+            gp_model = fit_single_lightcurve(phases, rest_fluxes, rest_flux_errors)
+            y = rest_fluxes.copy() / rest_fluxes.max()
             mu, var = gp_model.predict(y, X_test=phases_pred, return_var=True)
-            std = np.sqrt(var)
-            # renormalise outputs
-            mu *= fluxes.max()
-            std *= fluxes.max()
+            photometry[band] = mu * rest_fluxes.max()  # renormalise output
+            photometry[f"{band}_err"] = np.sqrt(var) * rest_fluxes.max()
+            """
+            # GP fit for interpolating the light curves
+            # assuming no errors in the observations or the fit
+            gp_model = fit_single_lightcurve(phases, rest_fluxes, np.zeros_like(rest_fluxes))
+            y = rest_fluxes.copy() / rest_fluxes.max()
+            mu = gp_model.predict(y, X_test=phases_pred)
+            photometry[band] = mu * rest_fluxes.max()  # renormalise output
+            # interpolate errors using S/N for smoother interpolation
+            #signal_to_noise = np.interp(phases_pred, phases, (rest_fluxes + rest_fluxes.min())/rest_flux_errors)
+            #photometry[f"{band}_err"] = np.abs((photometry[band] + rest_fluxes.min()) / signal_to_noise)
+            photometry[f"{band}_err"] = np.interp(phases_pred, phases, rest_flux_errors)
 
-            fit_phot[band] = mu
-            fit_phot[f"{band}_err"] = std
-
-        fit_phot["phase"] = phases_pred
-        fit_phot_df = pd.DataFrame(fit_phot)
-
+        # store light curves
+        photometry["phase"] = phases_pred
+        photometry_df = pd.DataFrame(photometry)
         self.rest_lcs = photometry_df
-        self.rest_lcs_fit = fit_phot_df

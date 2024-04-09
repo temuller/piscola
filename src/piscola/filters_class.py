@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 import piscola
 
-
 class SingleFilter(object):
     """Single filter class."""
 
@@ -138,6 +137,7 @@ class SingleFilter(object):
         flux_filter : float
             Flux density.
         """
+
         blue_edge_covered = sed_wave.min() <= self.wavelength.min()
         red_edge_covered = sed_wave.max() >= self.wavelength.max()
         err_message = f"The SED does not completely overlap with {self.name} filter."
