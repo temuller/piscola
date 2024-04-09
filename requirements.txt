@@ -9,5 +9,6 @@ astropy
 scipy
 jax
 jaxopt
+tinygp
 pickle5; python_version < '3.8'
 pytest

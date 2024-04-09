@@ -33,10 +33,10 @@ class TestPiscola(unittest.TestCase):
             warnings.filterwarnings("ignore", category=DeprecationWarning)
 
             sn = piscola.call_sn("data/03D1au.dat")
-            sn.save_sn()
+            sn.save()
 
             outfile = "03D1au.pisco"
-            new_sn = piscola.load_sn(outfile)
+            _ = piscola.load_sn(outfile)
             os.remove(outfile)  # clean directory
 
 if __name__ == "__main__":
