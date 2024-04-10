@@ -46,7 +46,7 @@ def call_sn(lc_file):
 
     converters = {"name": str, "z": float, "ra": float, "dec": float}
     name, z, ra, dec = pd.read_csv(
-        lc_file, nrows=1, delim_whitespace=True, converters=converters
+        lc_file, nrows=1, sep='\s+', converters=converters
     ).values[0]
 
     sn_obj = Supernova(name, z, ra, dec, lc_file)
@@ -111,7 +111,7 @@ class Supernova(object):
 
         # add light curves and filters
         if lc_file:
-            lcs_df = pd.read_csv(lc_file, delim_whitespace=True, skiprows=2)
+            lcs_df = pd.read_csv(lc_file, sep='\s+', skiprows=2)
             # saves original light curves untouched
             self.init_lcs = Lightcurves(lcs_df)
             # these are the light curves that will be used
@@ -859,11 +859,14 @@ class Supernova(object):
         data = self.lcs
         try:
             fits = self.lc_fits
+            tmax = self.tmax
         except:
             fits = self.init_lc_fits
+            tmax = self.init_tmax
         finally:
             if init_fits is True:
                 fits = self.init_lc_fits
+                tmax = self.init_tmax
 
         ZP = 27.5  # global zero-point for visualization
 
@@ -927,7 +930,7 @@ class Supernova(object):
 
             for axis in [ax, ax2]:
                 axis.axvline(
-                    x=self.init_tmax - t_offset, color="k", linestyle="--", alpha=0.4
+                    x=tmax - t_offset, color="k", linestyle="--", alpha=0.4
                 )
                 axis.xaxis.set_tick_params(labelsize=15)
                 axis.yaxis.set_tick_params(labelsize=15)

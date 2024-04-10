@@ -72,7 +72,7 @@ class SEDTemplate(object):
             os.path.join(pisco_path, "templates", template, "sed_template.*")
         )[0]
         self.data = pd.read_csv(
-            sed_file, delim_whitespace=True, names=["phase", "wave", "flux"]
+            sed_file, sep='\s+', names=["phase", "wave", "flux"]
         )
 
         readme_file = os.path.join(pisco_path, "templates", template, "README.txt")
