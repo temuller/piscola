@@ -212,7 +212,7 @@ def extinction_filter(
     r_v=3.1,
     ebv=None,
 ):
-    """Estimate the extinction for a given filter, given a right ascension and declination or :math:`E(B-V)`.
+    """Calculates the extinction for a given filter, given a right ascension and declination or :math:`E(B-V)`.
 
     Parameters
     ----------
