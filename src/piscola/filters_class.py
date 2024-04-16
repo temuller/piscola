@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import piscola
+from .extinction_correction import extinction_filter
 
 class SingleFilter(object):
     """Single filter class."""
@@ -215,7 +216,7 @@ class SingleFilter(object):
 
         return sed_mag
 
-    def calc_zp(self, mag_sys):
+    def calculate_zp(self, mag_sys):
         """Calculates the zero point in the ``AB``, ``Vega`` or ``BD17``
         magnitude systems.
 
@@ -244,6 +245,38 @@ class SingleFilter(object):
         zp = 2.5 * np.log10(f_sed) + m_sed
 
         return zp
+    
+    def calculate_extinction(ra, dec, scaling=0.86, reddening_law="fitzpatrick99", r_v=3.1, ebv=None):
+        """Calculates the extinction for a given filter, given a right ascension and declination or :math:`E(B-V)`.
+
+        Parameters
+        ----------
+        ra : float
+            Right ascension in degrees.
+        dec : float
+            Declination in degrees.
+        scaling: float, default ``0.86``
+            Calibration of the Milky Way dust maps. Either ``0.86``
+            for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
+            dust map of Schlegel, Fikbeiner & Davis (1998).
+        reddening_law: str, default ``fitzpatrick99``
+            Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
+            ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
+            :math:`R_V = 3.1`.)
+        r_v : float, default ``3.1``
+            Total-to-selective extinction ratio (:math:`R_V`)
+        ebv : float, default ``None``
+            Colour excess (:math:`E(B-V)`). If given, this is used instead of the dust map value.
+
+        Returns
+        -------
+        A : float
+            Extinction value in magnitudes.
+        """
+
+        A = extinction_filter(self.wavelength, self.transmission, ra, dec, 
+                              scaling=scaling, reddening_law=reddening_law, 
+                              r_v=r_v, ebv=ebv)
 
 
 class MultiFilters(object):
