@@ -7,7 +7,7 @@ sfdmap2
 extinction
 astropy
 scipy
-jax
+jax; 'linux' in sys.platform or 'win' in sys.platform
 jaxopt
 tinygp
 pickle5; python_version < '3.8'

@@ -1,4 +1,4 @@
-# PISCOLA: Python for Intelligent Supernova-COsmology Light-curve Analysis
+# PISCOLA
 
 **Supernova light-curve fitting code in python**
 
@@ -32,24 +32,17 @@ cd piscola
 pip install .
 ```
 
+If you are using a Mac with M1 or M2 chip and you encounter `RuntimeError: This version of jaxlib was built using AVX instructions, which your CPU and/or operating system do not support. You may be able work around this issue by building jaxlib from source.`, try installing jax from anaconda (as suggested [here](https://stackoverflow.com/questions/68327863/importing-jax-fails-on-mac-with-m1-chip)):
+
+```
+pip uninstall jax jaxlib
+conda install -c conda-forge jaxlib
+conda install -c conda-forge jax
+```
+
 ### Requirements
 
-PISCOLA has the following requirements:
-
-```
-numpy
-pandas
-matplotlib
-peakutils
-requests
-sfdmap
-extinction
-astropy
-scipy
-george
-pickle5
-pytest  (optional: for testing the code)
-```
+The requirements can be found in the `requirements.txt` file.
 
 ### Tests
 
@@ -73,7 +66,6 @@ The light-curve parameters are saved in a dictionary and can be accessed directl
 
 ```python
 sn.lc_parameters  # dictionary
-sn.dm15
 ```
 
 You can find an example of input file in the [data](https://github.com/temuller/piscola/tree/master/data) directory.
