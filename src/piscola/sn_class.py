@@ -199,7 +199,7 @@ class Supernova(object):
             mag_sys = self.lcs[band].mag_sys
             current_zp = self.lcs[band].zp
 
-            new_zp = self.filters[band].calc_zp(mag_sys)
+            new_zp = self.filters[band].calculate_zp(mag_sys)
 
             self.lcs[band].fluxes = change_zp(self.lcs[band].fluxes, current_zp, new_zp)
             self.lcs[band].flux_errors = change_zp(
@@ -351,6 +351,9 @@ class Supernova(object):
         self.init_tmax = np.round(np.nanmean(tmax_list), 3)
         self.init_tmax_err = np.round(np.nanstd(tmax_list), 3)
 
+        # get B-band parameters
+        self.get_init_rest_lightcurves()
+
         ###########################
         # Inital light-curve fits #
         ###########################
@@ -374,11 +377,119 @@ class Supernova(object):
 
         self.init_lc_fits = Lightcurves(pd.concat(fits_df_list))
 
+    def get_init_rest_lightcurves(self, bands=['Bessell_B']):
+        """Obtains the corrected rest-frame light curves from the initial
+        light-curve fits.
+
+        Returns
+        -------
+        bands : list-like, default ``['Bessell_B']``
+            Bands for which to extract the light curves.
+        """
+        # always add Bessell_B band
+        if 'Bessell_B' not in bands:
+            bands = ['Bessell_B'] + bands
+
+        rest_df_list = []
+        phases = (self.times_pred - self.init_tmax) / (1 + self.z)
+        for band in bands:
+            rest_eff_wave = self.filters[band].eff_wave * (1 + self.z)
+            wavelengths_pred = np.zeros_like(self.times_pred) + rest_eff_wave
+            mask = (-15 <= phases) & (phases <= 20)  # mask for quicker calculation
+            mu, cov = self.init_gp_predict(self.times_pred[mask], wavelengths_pred[mask], return_cov=True)
+
+            # correct for MW dust extinction and redshift 
+            A = self.filters[band].calculate_extinction(self.ra, self.dec)
+            correction = 10**(0.4*A) * (1 + self.z)
+            mu *= correction
+            cov *= correction ** 2
+            std = np.sqrt(np.diag(cov))
+
+            if band == 'Bessell_B':
+                self.init_lc_parameters = {}
+                # calculate light-curve parameters
+                _, _, _, fmax, fmax_err, df15, df15_err = self._calculate_lc_params(phases[mask], mu, cov)
+                # tmax - taken from the initial light-curve fit
+                self.init_lc_parameters['tmax'] = self.init_tmax.copy()
+                self.init_lc_parameters['tmax_err'] = self.init_tmax_err.copy()
+                # mmax
+                zp = self.filters[band].calculate_zp(self.filters[band].mag_sys)
+                mmax, mmax_err = flux_to_mag(fmax, fmax_err, zp)
+                self.init_lc_parameters['mmax'] = np.round(mmax, 3)
+                self.init_lc_parameters['mmax_err'] = np.round(mmax_err, 3)
+                # dm15 
+                dm15, dm15_err = flux_to_mag(df15, df15_err, 0.0)
+                self.init_lc_parameters['dm15'] = np.round(dm15, 3)
+                self.init_lc_parameters['dm15_err'] = np.round(dm15_err, 3)
+
+                # GP prediction
+                band2 = 'Bessell_V'  # for (B-V)
+                zp2 = self.filters[band2].calculate_zp(self.filters[band2].mag_sys)
+                rest_eff_wave2 = self.filters[band2].eff_wave * (1 + self.z)
+                wavelengths_pred = np.array([rest_eff_wave, rest_eff_wave2])
+                times_pred = np.zeros_like(wavelengths_pred) + self.init_tmax
+                mu2, cov2 = self.init_gp_predict(times_pred, wavelengths_pred, return_cov=True)
+
+                # propagate MW dust extinction correction and redshift
+                A2 = self.filters[band2].calculate_extinction(self.ra, self.dec)
+                corr_array = np.array([10 ** (0.4 * A), 10 ** (0.4 * A2)]) * (1 + self.z)
+                mu2 *= corr_array
+                cov2 *= np.outer(corr_array, corr_array)
+                std2 = np.sqrt(np.diag(cov2))
+
+                # calculate colour
+                flux_ratio = mu2[0] / mu2[1]
+                flux_ratio_error = np.abs(flux_ratio) * np.sqrt((std2[0] / mu2[0]) ** 2 + (std2[1] / mu2[1]) ** 2 - 2 * (cov2[0][1] / (mu2[0] * mu2[1])))
+                colour, colour_err = flux_to_mag(flux_ratio, flux_ratio_error, zp=(zp-zp2))
+                self.init_lc_parameters['colour'] = np.round(colour, 3)
+                self.init_lc_parameters['colour_err'] = np.round(colour_err, 3)
+
+            # store rest-frame light-curves
+            rest_df = pd.DataFrame({"time": self.times_pred[mask], "flux": mu, "flux_err": std})
+            rest_df["zp"] = zp
+            rest_df["band"] = band
+            rest_df["mag_sys"] = self.filters[band].mag_sys
+            rest_df_list.append(rest_df)
+
+        self.init_rest_lcs = Lightcurves(pd.concat(rest_df_list))
+
+    def get_obs_params(self, bands=None):
+        """Obtains the time and magnitude of maximum for the observed light curves.
+
+        No corrections are applied at all.
+
+        Returns
+        -------
+        bands : list-like, default ``None``
+            Bands for which to extract the parameters.
+        """
+        if bands is None:
+            bands = self.bands
+
+        phases = (self.times_pred - self.init_tmax) / (1 + self.z)
+        self.obs_parameters = {band:{} for band in bands}
+        for band in bands:
+            obs_eff_wave = self.filters[band].eff_wave
+            wavelengths_pred = np.zeros_like(self.times_pred) + obs_eff_wave
+            mask = (-15 <= phases) & (phases <= 10)  # mask for quicker calculation
+            mu, cov = self.init_gp_predict(self.times_pred[mask], wavelengths_pred[mask], return_cov=True)
+
+            # calculate light-curve parameters
+            _, tmax, tmax_err, fmax, fmax_err, _, _ = self._calculate_lc_params(self.times_pred[mask], mu, cov)
+            # tmax - taken from the initial light-curve fit
+            self.obs_parameters[band]['tmax'] = np.round(tmax, 3)
+            self.obs_parameters[band]['tmax_err'] = np.round(tmax_err, 3)
+            # mmax
+            zp = self.filters[band].calculate_zp(self.filters[band].mag_sys)
+            mmax, mmax_err = flux_to_mag(fmax, fmax_err, zp)
+            self.obs_parameters[band]['mmax'] = np.round(mmax, 3)
+            self.obs_parameters[band]['mmax_err'] = np.round(mmax_err, 3)
+
     ########################
     # Magnling surface fit #
     ########################
     def gp_predict(self, times_pred, wavelengths_pred, return_cov=True):
-        """Returns the Gaussian Process prediction of the magnling surface fit.
+        """Returns the Gaussian Process prediction of the mangling surface fit.
 
         Parameters
         ----------
@@ -575,7 +686,7 @@ class Supernova(object):
                 # the SED does not cover this band -> skip it
                 continue
             mag_sys = self.filters[band].mag_sys
-            zp = self.filters[band].calc_zp(mag_sys)
+            zp = self.filters[band].calculate_zp(mag_sys)
 
             # rest-frame light curve
             lc = self.sed.rest_lcs
@@ -592,6 +703,58 @@ class Supernova(object):
             lcs_df_list.append(lc_df)
 
         self.rest_lcs = Lightcurves(pd.concat(lcs_df_list))
+
+    def _calculate_lc_params(self, times_pred, mu, cov):
+
+        ######################
+        # Estimate peak time #
+        ######################
+        # get epoch at maximum - monte-carlo sampling
+        lc_sample = np.random.multivariate_normal(mu, cov, size=5000)
+        tmax_list = []
+        for mangled_fluxes in lc_sample:
+            peak_ids = peak.indexes(mangled_fluxes, thres=0.3, min_dist=len(times_pred) // 2)
+            if len(peak_ids) == 0:
+                # if no peak is found, just use the maximum
+                max_id = np.argmax(mangled_fluxes)
+            else:
+                max_id = peak_ids[0]
+            tmax_list.append(times_pred[max_id])
+        # store time of maximum
+        tmax = np.nanmean(tmax_list)
+        tmax = np.round(tmax, 3)
+        # add uncertainty floor (time step of 0.1 days)
+        tmax_err = np.sqrt(np.nanstd(tmax_list) ** 2 + 0.1 ** 2)
+        tmax_err = np.round(tmax_err, 3) 
+        
+        ######################
+        # Estimate peak flux #
+        ######################
+        peak_ids = peak.indexes(mu, thres=0.3, min_dist=len(times_pred) // 2)
+        if len(peak_ids) == 0:
+            # if no peak is found, just use the maximum
+            max_id = np.nanmax(mu)
+            print('WARNING: no optical peak found - using the maximum instead')
+        else:
+            max_id = peak_ids[0]
+        # store flux at maximum
+        fmax = mu[max_id]
+        std = np.sqrt(np.diag(cov))
+        fmax_err = std[max_id]
+
+        ####################
+        # Estimate Stretch #
+        ####################
+        t15 = times_pred[max_id] + 15
+        ind15 = np.argmin(np.abs(times_pred - t15))
+        f15 = mu[ind15]
+        f15_err = std[ind15]
+        df15 = f15/fmax
+        # error propagation
+        f15_cov = cov[max_id][ind15]  # covariance, in flux, at peak and 15 days
+        df15_err = np.abs(df15) * np.sqrt((f15_err / f15) ** 2 + (fmax_err / fmax) ** 2 - 2 * (f15_cov / (f15 * fmax)))
+
+        return max_id, tmax, tmax_err, fmax, fmax_err, df15, df15_err
 
     def _extract_lc_params(self):
         #####################
@@ -614,77 +777,39 @@ class Supernova(object):
         cov *= np.outer(norm, norm)
         fluxes = self.rest_lcs[band].fluxes[mask]
 
-        ########################
-        # Estimate B-band peak #
-        ########################
-        # get epoch at maximum - monte-carlo sampling
-        lc_sample = np.random.multivariate_normal(fluxes, cov, size=5000)
-        tmax_list, fmax_list = [], []
-        for mangled_fluxes in lc_sample:
-            peak_ids = peak.indexes(mangled_fluxes, thres=0.3, min_dist=len(times_pred) // 2)
-            if len(peak_ids) == 0:
-                # if no peak is found, just use the maximum
-                max_id = np.argmax(mangled_fluxes)
-            else:
-                max_id = peak_ids[0]
-            tmax_list.append(times_pred[max_id])
-            fmax_list.append(mangled_fluxes[max_id])
-        # store time of maximum
-        tmax = np.nanmean(tmax_list)
+        # calculate light-curve parameters
+        max_id, tmax, tmax_err, fmax, fmax_err, df15, df15_err = self._calculate_lc_params(times_pred, fluxes, cov)
+        # tmax
         self.tmax = np.round(tmax, 3)
-        # add uncertainty floor (time step of 0.1 days)
-        tmax_err = np.sqrt(np.nanstd(tmax_list) ** 2 + 0.1 ** 2)
-        self.tmax_err = np.round(tmax_err, 3) 
-        
-        # get magnitude at maximum
-        peak_ids = peak.indexes(fluxes, thres=0.3, min_dist=len(times_pred) // 2)
-        if len(peak_ids) == 0:
-            # if no peak is found, just use the maximum
-            max_id = np.argmax(fluxes)
-            print('WARNING: no optical peak found - using the maximum instead')
-        else:
-            max_id = peak_ids[0]
-        # store magnitude at maximum
-        mags = self.rest_lcs[band].magnitudes[mask]
-        mags_err = self.rest_lcs[band].mag_errors[mask]
-        mmax = mags[max_id]
+        self.tmax_err = np.round(np.sqrt(tmax_err ** 2 + 0.1 ** 2), 3)
+        # mmax
+        mmax, mmax_err = flux_to_mag(fmax, fmax_err, self.rest_lcs[band].zp)
         self.mmax = np.round(mmax, 3)
         # add uncertainty floor (0.01 mag)
-        mmax_err = np.sqrt(mags_err[max_id] ** 2 + 0.01 ** 2)
-        self.mmax_err = np.round(mmax_err, 3) 
+        self.mmax_err = np.round(np.sqrt(mmax_err ** 2 + 0.01 ** 2), 3)
+        # dm15
+        dm15, dm15_err = flux_to_mag(df15, df15_err, 0.0)
+        self.dm15 = np.round(dm15, 3)
+        # add uncertainty floor (0.01 mag)
+        self.dm15_err = np.round(np.sqrt(dm15_err ** 2 + 0.01 ** 2), 3)
 
-        ####################
-        # Estimate Stretch #
-        ####################
-        t15 = times_pred[max_id] + 15
-        ind15 = np.argmin(np.abs(times_pred - t15))
-        m15 = mags[ind15]
-        self.dm15 = np.round(m15 - self.mmax, 3)
-        # error propagation
-        m15_err = mags_err[ind15]
-        f15_cov = cov[max_id][ind15]  # covariance, in flux, at peak and 15 days
-        # propagate covariance from flux to magnitude
-        fmax, _ = mag_to_flux(mmax, zp=self.rest_lcs[band].zp)
-        f15, _ = mag_to_flux(m15, zp=self.rest_lcs[band].zp)
-        m15_cov = ((2.5 ** 2) * f15_cov) / (np.log(10) ** 2 * fmax * f15)
-
-        dm15_err = np.sqrt(mmax_err ** 2 + m15_err ** 2 - 2 * m15_cov)
-        self.dm15_err = np.round(dm15_err, 3)
-        
         ###################
         # Estimate Colour #
         ###################
+        # get GP prediction
         band2 = 'Bessell_V'  # for (B-V)
         rest_eff_wave2 = self.filters[band2].eff_wave * (1 + self.z)
         wavelengths_pred = np.array([rest_eff_wave, rest_eff_wave2])
         times_pred = np.zeros_like(wavelengths_pred) + tmax
         _, cov = self.gp_predict(times_pred, wavelengths_pred, return_cov=True)
 
+        # scale the covariance (2 x 2 matrix) to match the light-curve uncertainties
         errors = np.array([self.rest_lcs[band].flux_errors[mask][max_id], 
                            self.rest_lcs[band2].flux_errors[mask][max_id]])
         norm = errors / np.sqrt(np.diag(cov))
         cov *= np.outer(norm, norm)
-        
+
+        # calculate colour
         mB = self.rest_lcs[band].magnitudes[mask][max_id]
         mV = self.rest_lcs[band2].magnitudes[mask][max_id]
         colour = (mB - mV)
