@@ -246,7 +246,7 @@ class SingleFilter(object):
 
         return zp
     
-    def calculate_extinction(ra, dec, scaling=0.86, reddening_law="fitzpatrick99", r_v=3.1, ebv=None):
+    def calculate_extinction(self, ra, dec, scaling=0.86, reddening_law="fitzpatrick99", r_v=3.1, ebv=None):
         """Calculates the extinction for a given filter, given a right ascension and declination or :math:`E(B-V)`.
 
         Parameters
@@ -277,6 +277,8 @@ class SingleFilter(object):
         A = extinction_filter(self.wavelength, self.transmission, ra, dec, 
                               scaling=scaling, reddening_law=reddening_law, 
                               r_v=r_v, ebv=ebv)
+        
+        return A
 
 
 class MultiFilters(object):
