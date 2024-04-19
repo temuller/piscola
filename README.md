@@ -18,7 +18,7 @@ Read the full documentation at: [piscola.readthedocs.io](http://piscola.readthed
 ___
 ## Installation
 
-PISCOLA can be installed in the usual ways, via pip:
+PISCOLA can be installed in the usual way, via pip:
 
 ```
 pip install piscola
@@ -32,7 +32,7 @@ cd piscola
 pip install .
 ```
 
-If you are using a Mac with M1 or M2 chip and you encounter `RuntimeError: This version of jaxlib was built using AVX instructions, which your CPU and/or operating system do not support. You may be able work around this issue by building jaxlib from source.`, try installing jax from anaconda (as suggested [here](https://stackoverflow.com/questions/68327863/importing-jax-fails-on-mac-with-m1-chip)):
+If you are using a Mac with M1 or M2 chip and you encounter `RuntimeError: This version of jaxlib was built using AVX instructions, which your CPU and/or operating system do not support. You may be able work around this issue by building jaxlib from source.`, try installing `jax` from anaconda (as suggested [here](https://stackoverflow.com/questions/68327863/importing-jax-fails-on-mac-with-m1-chip)):
 
 ```
 pip uninstall jax jaxlib
