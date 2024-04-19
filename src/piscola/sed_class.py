@@ -27,7 +27,7 @@ class SEDTemplate(object):
     This is used for correcting a supernova's multi-colout light curves.
     """
 
-    def __init__(self, z=0.0, ra=None, dec=None, template="conley09f"):
+    def __init__(self, z=0.0, ra=None, dec=None, template="csp"):
         """
         Parameters
         ----------
@@ -37,9 +37,9 @@ class SEDTemplate(object):
             Right ascension.
         dec: float, default ``None``
             Declination.
-        template: str, default ``conley09f``
+        template: str, default ``csp``
             Name of the spectral energy distribution (SED) template.
-            E.g., ``conley09f``, ``jla``, etc.
+            E.g., ``csp``, ``hsiao``, ``salt2``, ``salt3``, etc.
         """
         self.z = z
         self.ra = ra
@@ -65,7 +65,7 @@ class SEDTemplate(object):
         Parameters
         ----------
         template : str
-            Template name. E.g., ``conley09f``, ``jla``, etc.
+            Template name. E.g., ``csp``, ``hsiao``, ``salt2``, ``salt3``, etc.
         """
         pisco_path = piscola.__path__[0]
         sed_file = glob.glob(
@@ -173,7 +173,7 @@ class SEDTemplate(object):
         """
 
         message = "The SED template is already extincted."
-        assert not self.extincted, message
+        assert self.extincted is False, message
 
         for phase in np.unique(self.phase):
             mask = self.phase == phase
@@ -194,7 +194,7 @@ class SEDTemplate(object):
         self.scaling = 0.86
         self.reddening_law = reddening_law
         self.r_v = r_v
-        self.extinction_corrected = True
+        self.extincted = True
 
     def correct_extinction(self):
         """Corrects for Milky-Way extinction to the SED template if not already corrected.
@@ -202,7 +202,7 @@ class SEDTemplate(object):
         The same parameters used to apply extinction are used to correct it.
         """
         message = "The SED template is not extincted."
-        assert self.extinction_corrected, message
+        assert self.extincted is True, message
 
         for phase in np.unique(self.phase):
             mask = self.phase == phase
@@ -216,7 +216,7 @@ class SEDTemplate(object):
                 r_v=self.r_v,
                 ebv=self.ebv,
             )
-        self.extinction_corrected = False
+        self.extincted = False
 
     def get_phase_data(self, phase, include_err=False):
         """Extracts the SED data for a given phase.
@@ -292,9 +292,10 @@ class SEDTemplate(object):
         ebv : float, default ``None``
             Colour excess (:math:`E(B-V)`). If given, this is used instead of the dust map value.
         """
-        if not self.redshifted:
+        # apply time dilation and extinction
+        if self.redshifted is False:
             self.redshift()
-        if not self.extincted:
+        if self.extincted is False:
             self.apply_extinction(scaling, reddening_law, r_v, ebv)
 
         if bands is None:
@@ -333,9 +334,10 @@ class SEDTemplate(object):
         filters: list-like
             Filters to use.
         """
-        if self.extincted:
+        # correct for extinction and time dilation
+        if self.extincted is True:
             self.correct_extinction()
-        if self.redshifted:
+        if self.redshifted is True:
             self.deredshift()
 
         # get rest-frame phases and prediction array

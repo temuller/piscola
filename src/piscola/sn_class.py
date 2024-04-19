@@ -82,7 +82,7 @@ class Supernova(object):
     """Class representing a supernova object."""
 
     def __init__(
-        self, name, z=0.0, ra=None, dec=None, lc_file=None, template="conley09f"
+        self, name, z=0.0, ra=None, dec=None, lc_file=None, template="csp"
     ):
         """
         Parameters
@@ -97,9 +97,9 @@ class Supernova(object):
             Declination of the supernova.
         lc_file: str, default ``None``
             File with the supernova light-curve data.
-        template: str, default ``conley09f``
+        template: str, default ``csp``
             Name of the spectral energy distribution (SED) template.
-            E.g., ``conley09f``, ``jla``, etc.
+            E.g., ``csp``, ``hsiao``, ``salt2``, ``salt3``, etc.
         """
         self.name = name
         self.z = z
@@ -185,7 +185,7 @@ class Supernova(object):
         Parameters
         ----------
         template : str
-            Template name. E.g., ``conley09f``, ``jla``, etc.
+            Template name. E.g., ``csp``, ``hsiao``, ``salt2``, ``salt3``, etc.
         """
         self.sed._set_sed_template(template)
 
@@ -573,9 +573,10 @@ class Supernova(object):
         # SED initial rest-frame light curves
         self.sed.calculate_rest_lightcurves(self.filters)
         self.sed.init_rest_lcs = self.sed.rest_lcs.copy()
-        # SED initial observer-frame light curves
+        # SED is moved to observer frame and extinction is applied
+        # getting initial observer-frame light curves
         self.sed.calculate_obs_lightcurves(self.filters, self.bands)
-        # interpolated SED light curves to match the time of observations
+        # use the interpolated SED light curves to match the time of observations
         sed_lcs = self.sed.obs_lcs.copy()  # this is a DataFrame
         sed_times = sed_lcs.phase.values * (1 + self.z) + self.init_tmax
 
@@ -733,8 +734,8 @@ class Supernova(object):
         peak_ids = peak.indexes(mu, thres=0.3, min_dist=len(times_pred) // 2)
         if len(peak_ids) == 0:
             # if no peak is found, just use the maximum
-            max_id = np.nanmax(mu)
-            print('WARNING: no optical peak found - using the maximum instead')
+            max_id = np.argmax(mu)
+            print('WARNING: no peak found - using the maximum instead')
         else:
             max_id = peak_ids[0]
         # store flux at maximum
