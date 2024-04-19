@@ -591,9 +591,9 @@ class Supernova(object):
         flux_ratios, flux_errors = [], []
         for band in fitting_bands:
             # this mask avoids observations beyond the SED template limits
-            mask = self.lcs[band].times <= sed_times.max()
+            mask = (self.lcs[band].times >= sed_times.min()) & (self.lcs[band].times <= sed_times.max())
             self.lcs[band].mask_lc(mask, copy=True)
-            sed_flux = np.interp(self.lcs[band].masked_times, sed_times,sed_lcs[band].values,
+            sed_flux = np.interp(self.lcs[band].masked_times, sed_times, sed_lcs[band].values,
             )
 
             times.append(self.lcs[band].masked_times)
@@ -613,7 +613,7 @@ class Supernova(object):
         # Mangling surface fitting #
         ############################
         gp_model = fit_gp_model(self.stacked_times, self.stacked_wavelengths, 
-                                self.stacked_ratios, self.stacked_errors, k1=k1, fit_log=False,
+                                self.stacked_ratios, self.stacked_errors, k1=k1, fit_mean=True, fit_log=False,
                                 wave_log=wave_log)
         self.gp_model = gp_model  # store GP model
 
