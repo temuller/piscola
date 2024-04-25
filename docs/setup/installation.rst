@@ -53,19 +53,4 @@ There are different packages to test the installation, but the recommended one i
 Requirements
 ############
 
-PISCOLA has the following requirements:
-
-.. code::
-
-	numpy
-	pandas
-	matplotlib
-	peakutils
-	requests
-	sfdmap
-	extinction
-	astropy
-	scipy
-	george
-	pickle5
-	pytest  (optional: for testing the code)
+PISCOLA requirements can be found in the `requirements.txt` file in the repository.

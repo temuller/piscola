@@ -18,7 +18,7 @@ The file should contain the following information:
 	* Bands (``band``)
 	* Magnitude systems (``mag_sys``). 
 	
-The units of ``time``, ``flux`` and ``flux_err`` do not matter as long as they are consistent (e.g. using the appropiate ``zp``). The name of the band needs to match the name of one of the files containing the transmission functions under the ``piscola/filters`` `directory <https://github.com/temuller/piscola/tree/main/src/piscola/filters>`_. The magnitude system should be one between ``AB``, ``BD17`` or ``Vega``.
+The units of ``time``, ``flux`` and ``flux_err`` do not matter as long as they are consistent (e.g. using the appropriate ``zp``). The name of the band needs to match the name of one of the files containing the transmission functions under the ``piscola/filters`` `directory <https://github.com/temuller/piscola/tree/main/src/piscola/filters>`_. The magnitude system should be one between ``AB``, ``BD17`` or ``Vega``.
 
 The file shown below can be found in the Github repository `here <https://github.com/temuller/piscola/tree/master/data>`_:
 
