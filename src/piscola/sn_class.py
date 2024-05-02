@@ -352,7 +352,7 @@ class Supernova(object):
         self.init_tmax_err = np.round(np.nanstd(tmax_list), 3)
 
         # get B-band parameters
-        self.get_init_rest_lightcurves()
+        self._get_init_rest_lightcurves()
 
         ###########################
         # Inital light-curve fits #
@@ -377,18 +377,25 @@ class Supernova(object):
 
         self.init_lc_fits = Lightcurves(pd.concat(fits_df_list))
 
-    def get_init_rest_lightcurves(self, bands=['Bessell_B']):
+    def _get_init_rest_lightcurves(self, bands=None):
         """Obtains the corrected rest-frame light curves from the initial
         light-curve fits.
 
         Returns
         -------
-        bands : list-like, default ``['Bessell_B']``
-            Bands for which to extract the light curves.
+        bands : list-like, default ``None``
+            Bands for which to extract the light curves. All bands are used by default.
         """
         # always add Bessell_B band
+        if bands is None:
+            bands = self.lcs.bands
         if 'Bessell_B' not in bands:
             bands = ['Bessell_B'] + bands
+        self.init_lc_parameters = {'tmax':None, 'tmax_err':None, 
+                                   'mmax':None, 'mmax_err':None, 
+                                   'dm15':None, 'dm15_err':None, 
+                                   'colour':None, 'colour_err':None, 
+                                   }
 
         rest_df_list = []
         phases = (self.times_pred - self.init_tmax) / (1 + self.z)
@@ -405,22 +412,32 @@ class Supernova(object):
             cov *= correction ** 2
             std = np.sqrt(np.diag(cov))
 
+            self.init_lc_parameters.update({band:{}})
+            # calculate light-curve parameters
+            _, tmax, tmax_err, fmax, fmax_err, df15, df15_err = self._calculate_lc_params(phases[mask], mu, cov)
+            # tmax - this is actually phase so the inital tmax is added
+            self.init_lc_parameters[band]['tmax'] = np.round(tmax + self.init_tmax, 3)
+            self.init_lc_parameters[band]['tmax_err'] = np.round(tmax_err, 3)
+            # mmax
+            zp = self.filters[band].calculate_zp(self.filters[band].mag_sys)
+            mmax, mmax_err = flux_to_mag(fmax, fmax_err, zp)
+            self.init_lc_parameters[band]['mmax'] = np.round(mmax, 3)
+            self.init_lc_parameters[band]['mmax_err'] = np.round(mmax_err, 3)
+            # dm15 
+            dm15, dm15_err = flux_to_mag(df15, df15_err, 0.0)
+            self.init_lc_parameters[band]['dm15'] = np.round(dm15, 3)
+            self.init_lc_parameters[band]['dm15_err'] = np.round(dm15_err, 3)
+
             if band == 'Bessell_B':
-                self.init_lc_parameters = {}
-                # calculate light-curve parameters
-                _, _, _, fmax, fmax_err, df15, df15_err = self._calculate_lc_params(phases[mask], mu, cov)
                 # tmax - taken from the initial light-curve fit
                 self.init_lc_parameters['tmax'] = self.init_tmax.copy()
                 self.init_lc_parameters['tmax_err'] = self.init_tmax_err.copy()
-                # mmax
-                zp = self.filters[band].calculate_zp(self.filters[band].mag_sys)
-                mmax, mmax_err = flux_to_mag(fmax, fmax_err, zp)
-                self.init_lc_parameters['mmax'] = np.round(mmax, 3)
-                self.init_lc_parameters['mmax_err'] = np.round(mmax_err, 3)
-                # dm15 
-                dm15, dm15_err = flux_to_mag(df15, df15_err, 0.0)
-                self.init_lc_parameters['dm15'] = np.round(dm15, 3)
-                self.init_lc_parameters['dm15_err'] = np.round(dm15_err, 3)
+                self.init_lc_parameters[band]['tmax'] = self.init_tmax.copy()
+                self.init_lc_parameters[band]['tmax_err'] = self.init_tmax_err.copy()
+                self.init_lc_parameters['mmax'] = self.init_lc_parameters[band]['mmax']
+                self.init_lc_parameters['mmax_err'] = self.init_lc_parameters[band]['mmax_err']
+                self.init_lc_parameters['dm15'] = self.init_lc_parameters[band]['dm15']
+                self.init_lc_parameters['dm15_err'] = self.init_lc_parameters[band]['dm15_err']
 
                 # GP prediction
                 band2 = 'Bessell_V'  # for (B-V)
