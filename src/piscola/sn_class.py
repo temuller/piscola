@@ -275,9 +275,11 @@ class Supernova(object):
             mu, cov = self.init_gp_model.predict(y, X_test=X_test, return_cov=True)
             # renormalise outputs
             if self.init_fit_log is False:
+                # flux space
                 mu *= y_norm
                 cov *= y_norm ** 2
             else:
+                # convert logarithmic to flux space
                 mu = 10 ** (mu - y_norm)
                 cov *= np.abs(np.outer(mu, mu)) * np.log(10) ** 2
             return mu, cov
@@ -285,14 +287,16 @@ class Supernova(object):
             mu, var = self.init_gp_model.predict(y, X_test=X_test, return_var=True)
             # renormalise outputs
             if self.init_fit_log is False:
+                # flux space
                 mu *= y_norm
                 var *= y_norm ** 2
             else:
+                # convert logarithmic to flux space
                 mu = 10 ** (mu - y_norm)
                 var *= np.abs(mu) ** 2 * np.log(10) ** 2
             return mu, var
         
-    def fit_lcs(self, bands=None, k1='Matern52', fit_log=False, wave_log=True):
+    def fit_lcs(self, bands=None, k1='Matern52', fit_log=False, wave_log=False):
         """Fits the multi-colour observed light-curve data with Gaussian Process.
 
         The time of rest-frame B-band peak luminosity is estimated by finding where the derivative is equal to zero.
@@ -306,7 +310,7 @@ class Supernova(object):
             ``Matern32`` or ``ExpSquared``.
         fit_log: bool, default ``False``.
             Whether to fit the light curves in logarithmic (base 10) scale.
-        wave_log: bool, default ``True``.
+        wave_log: bool, default ``False``.
             Whether to use logarithmic (base 10) scale for the 
             wavelength axis.
         """
@@ -542,7 +546,7 @@ class Supernova(object):
             var *= y_norm ** 2
             return mu, var
 
-    def fit(self, bands=None, k1='Matern52', fit_log=False, wave_log=True, skip_lcs_fit=False):
+    def fit(self, bands=None, k1='Matern52', fit_log=False, wave_log=False, skip_lcs_fit=False):
         """Fits and corrects the multi-colour light curves with an SED template.
 
         The corrections include Milky-Way dust extinction and mangling of the SED 
@@ -558,7 +562,7 @@ class Supernova(object):
         fit_log: bool, default ``False``.
             Whether to initiallly fit the light curves in logarithmic (base 10) scale.
             The mangling is always done in flux space.
-        wave_log: bool, default ``True``.
+        wave_log: bool, default ``False``.
             Whether to use logarithmic (base 10) scale for the 
             wavelength axis.
         skip_lcs_fit: bool, default ``False``.

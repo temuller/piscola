@@ -61,7 +61,7 @@ def prepare_gp_inputs(times, wavelengths, fluxes, flux_errors, fit_log, wave_log
 
     return X, y, yerr, y_norm
 
-def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mean=False, fit_log=False, wave_log=True):
+def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mean=False, fit_log=False, wave_log=False):
     """Fits a Gaussian Process model to a SN multi-colour light curve.
     
     All input arrays MUST have the same length.
@@ -81,7 +81,7 @@ def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mea
         ``Matern32`` or ``ExpSquared``.
     fit_log: bool, default ``False``.
         Whether to fit the light curves in logarithmic (base 10) scale.
-    wave_log: bool, default ``True``.
+    wave_log: bool, default ``False``.
         Whether to use logarithmic (base 10) scale for the 
         wavelength axis.
         
