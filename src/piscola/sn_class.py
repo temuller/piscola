@@ -403,10 +403,10 @@ class Supernova(object):
 
         rest_df_list = []
         phases = (self.times_pred - self.init_tmax) / (1 + self.z)
+        mask = (-50 <= phases) & (phases <= 50)  # mask for quicker calculation
         for band in bands:
             rest_eff_wave = self.filters[band].eff_wave * (1 + self.z)
-            wavelengths_pred = np.zeros_like(self.times_pred) + rest_eff_wave
-            mask = (-15 <= phases) & (phases <= 20)  # mask for quicker calculation
+            wavelengths_pred = np.zeros_like(self.times_pred) + rest_eff_wave            
             mu, cov = self.init_gp_predict(self.times_pred[mask], wavelengths_pred[mask], return_cov=True)
 
             # correct for MW dust extinction and redshift 
