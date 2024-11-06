@@ -1,1 +1,0 @@
-1991bg-like SN Ia template taken from SNooPy (Nugent 91bg template).
