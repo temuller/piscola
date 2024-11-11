@@ -241,27 +241,15 @@ class Supernova(object):
         -------
         mu: ndarray
             Mean of the Gaussian Process.
-        var or cov: ndarray
+        cov: ndarray
             Either the variance or covariance of the Gaussian Process.
         """
         X_test, y, _, y_norm = prepare_gp_inputs(times_pred, wavelengths_pred, 
                                                 self._stacked_fluxes, self._stacked_flux_errors, 
                                                 fit_type=self.fit_type,
                                                 wave_log=self.wave_log)
-        
-        def jacobian_inverse_log10(x):
-            # Calculate each derivative: 10^x_i * ln(10)
-            derivatives = (10 ** x) * np.log(10)
-            # Create a diagonal Jacobian matrix with these derivatives
-            jacobian_matrix = np.diag(derivatives)
-            return jacobian_matrix
-        
-        def jacobian_inverse_arcsinh(x):
-            # Initialize a diagonal Jacobian matrix
-            jacobian_matrix = np.diag(1 / np.sqrt(x**2 + 1))
-            return jacobian_matrix
 
-        # Function to propagate the covariance matrix through the nonlinear function
+        # Function to propagate the covariance matrix through nonlinear functions
         def transform_covariance(cov_matrix, x, fit_type):
             # Compute the Jacobian at point x
             if fit_type == "log":
@@ -274,37 +262,29 @@ class Supernova(object):
 
         # GP prediction
         if return_cov is True:
-            if self.fit_type == "flux":
-                mu, cov = self.gp_model.predict(y, X_test=X_test, return_cov=True)
-            elif self.fit_type == "log":
-                log_mu, log_cov = self.gp_model.predict(y, X_test=X_test, return_cov=True)
-                mu = 10 ** log_mu
-                cov = transform_covariance(log_cov, log_mu, self.fit_type)
-            elif self.fit_type == "arcsinh":
-                arcsinh_mu, arcsinh_cov = self.gp_model.predict(y, X_test=X_test, return_cov=True)
-                mu = np.sinh(arcsinh_mu)
-                cov = transform_covariance(arcsinh_cov, arcsinh_mu, self.fit_type)
-            # renormalise outputs
-            mu *= y_norm
-            cov *= y_norm ** 2
-            return mu, cov
+            return_var = False
         else:
-            if self.fit_type == "flux":
-                mu, var = self.gp_model.predict(y, X_test=X_test, return_var=True)
-            elif self.fit_type == "log":
-                log_mu, log_var = self.gp_model.predict(y, X_test=X_test, return_var=True)
-                mu = 10 ** log_mu
-                var = transform_covariance(log_var, log_mu, self.fit_type)
-            elif self.fit_type == "arcsinh":
-                arcsinh_mu, arcsinh_var = self.gp_model.predict(y, X_test=X_test, return_var=True)
-                mu = np.sinh(arcsinh_mu)
-                var = transform_covariance(arcsinh_var, arcsinh_mu, self.fit_type)
-            # renormalise outputs
-            mu *= y_norm
-            var *= y_norm ** 2
-            return mu, var
+            return_var = True
+
+        # if return_cov and return_var are both True, the covariance flag is ignored
+        if self.fit_type == "flux":
+            mu, cov = self.gp_model.predict(y, X_test=X_test, return_var=return_var, return_cov=True)
+        elif self.fit_type == "log":
+            log_mu, log_cov = self.gp_model.predict(y, X_test=X_test, return_var=return_var, return_cov=True)
+            mu = 10 ** log_mu
+            cov = transform_covariance(log_cov, log_mu, self.fit_type)
+        elif self.fit_type == "arcsinh":
+            arcsinh_mu, arcsinh_cov = self.gp_model.predict(y, X_test=X_test, return_var=return_var, return_cov=True)
+            mu = np.sinh(arcsinh_mu)
+            cov = transform_covariance(arcsinh_cov, arcsinh_mu, self.fit_type)
+
+        # renormalise outputs
+        mu *= y_norm
+        cov *= y_norm ** 2
+
+        return mu, cov
         
-    def fit(self, bands=None, k1='Matern52', fit_type='flux', wave_log=True):
+    def fit(self, bands=None, k1='Matern52', fit_type='flux', wave_log=True, time_scale=None, wave_scale=None):
         """Fits the observed multi-colour light-curve data with Gaussian Process.
 
         The time of rest-frame B-band peak luminosity is estimated by finding where the derivative is equal to zero.
@@ -321,6 +301,11 @@ class Supernova(object):
         wave_log: bool, default ``True``.
             Whether to use logarithmic (base 10) scale for the 
             wavelength axis.
+        time_scale: float, default ``None``
+            If given, the time scale is fixed using this value, in units of days.
+        wave_scale: float, default ``None``
+            If given, the wavelength scale is fixed using this value, in units of angstroms.
+            Note that if 'wave_log=True', the logarithm base 10 of this value is used.
         """
         ##########
         # GP fit #
@@ -328,7 +313,8 @@ class Supernova(object):
         self._stack_lcs(bands)
         gp_model = fit_gp_model(self._stacked_times, self._stacked_wavelengths, 
                                 self._stacked_fluxes, self._stacked_flux_errors, k1=k1, 
-                                fit_type=fit_type, wave_log=wave_log)
+                                fit_type=fit_type, wave_log=wave_log, time_scale=time_scale, 
+                                wave_scale=wave_scale)
         self.gp_model = gp_model  # store GP model
         self.k1 = k1
         self.fit_type = fit_type
