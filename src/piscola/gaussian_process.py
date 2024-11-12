@@ -67,7 +67,8 @@ def prepare_gp_inputs(times, wavelengths, fluxes, flux_errors, fit_type, wave_lo
 
     return X, y, yerr, y_norm
 
-def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mean=False, fit_type='flux', wave_log=True, time_scale=None, wave_scale=None):
+def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mean=False, 
+                 fit_type='flux', wave_log=True, time_scale=None, wave_scale=None, add_noise=True):
     """Fits a Gaussian Process model to a SN multi-colour light curve.
     
     All input arrays MUST have the same length.
@@ -95,6 +96,8 @@ def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mea
     wave_scale: float, default ``None``
         If given, the wavelength scale is fixed using this value, in units of angstroms.
         Note that if 'wave_log=True', the logarithm base 10 of this value is used.
+    add_noise: bool, default ``True``
+        Whether to add a white-noise component to the GP model. This "inflates" the errors.
         
     Returns
     -------
@@ -105,7 +108,7 @@ def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mea
     def build_gp(params):
         """Creates a Gaussian Process model.
         """
-        nonlocal time_scale, wave_scale
+        nonlocal time_scale, wave_scale, add_noise  # import from main function
         if time_scale is None:
             log_time_scale = params["log_scale"][0]
         else:
@@ -114,6 +117,10 @@ def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mea
             log_wave_scale = params["log_scale"][-1]
         else:
             log_wave_scale = np.log(wave_scale)
+        if add_noise is True:
+            noise = jnp.exp(2 * params["log_noise"])
+        else:
+            noise = 0.0
 
         # select time-axis kernel
         if k1 == 'Matern52':
@@ -124,11 +131,12 @@ def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mea
             kernel1 = transforms.Subspace(0, kernels.ExpSquared(scale=jnp.exp(log_time_scale)))
         # wavelength-axis kernel
         kernel2 = transforms.Subspace(1, kernels.ExpSquared(scale=jnp.exp(log_wave_scale)))
-        kernel = jnp.exp(params["log_amp"]) * kernel1 * kernel2
-        diag = yerr ** 2 + jnp.exp(2 * params["log_noise"])
         
+        kernel = jnp.exp(params["log_amp"]) * kernel1 * kernel2
+        diag = yerr ** 2 + noise
         #ids = np.hstack([np.zeros_like(X[1][X[1] == wave]).astype(int) + i for i, wave in enumerate(np.unique(X[1]))])
         #diag = yerr ** 2 + jnp.exp(2 * params["log_jitter"][ids])
+        
         if fit_mean is True:
             mean = jnp.exp(params["log_mean"])
         elif fit_type == "log":
@@ -149,14 +157,15 @@ def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mea
                                             wave_log=wave_log)
 
     # GP hyper-parameters
-    scales = np.array([30, 2000]) # days, angstroms
+    scales = np.array([30, 2000]) # units: days, angstroms
     if wave_log is True:
-        scales = np.array([30, np.log10(1000)]) # days, log10(angstroms)
+        # the approx range from opt to NIR is 1 in log space
+        scales = np.array([30, 0.5]) # units: days, log10(angstroms)
     
     params = {
         "log_amp": jnp.log(y.var()),
         "log_scale": jnp.log(scales),
-        "log_noise": jnp.log(np.max(yerr)),
+        "log_noise": jnp.log(np.mean(yerr)),
         #"log_jitter": np.zeros_like(np.unique(X[1])),
     }
     if fit_mean is True:
