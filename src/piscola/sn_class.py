@@ -278,13 +278,13 @@ class Supernova(object):
             mu = np.sinh(arcsinh_mu)
             cov = transform_covariance(arcsinh_cov, arcsinh_mu, self.fit_type)
 
-        # renormalise outputs
-        mu *= y_norm
-        cov *= y_norm ** 2
+        # renormalise outputs and convert jax-Array to numpy-array
+        mu = np.array(mu) * y_norm
+        cov = np.array(cov) * y_norm ** 2
 
         return mu, cov
         
-    def fit(self, bands=None, k1='Matern52', fit_type='flux', wave_log=True, time_scale=None, wave_scale=None):
+    def fit(self, bands=None, k1='Matern52', fit_type='flux', wave_log=True, time_scale=None, wave_scale=None, add_noise=True):
         """Fits the observed multi-colour light-curve data with Gaussian Process.
 
         The time of rest-frame B-band peak luminosity is estimated by finding where the derivative is equal to zero.
@@ -306,6 +306,8 @@ class Supernova(object):
         wave_scale: float, default ``None``
             If given, the wavelength scale is fixed using this value, in units of angstroms.
             Note that if 'wave_log=True', the logarithm base 10 of this value is used.
+        add_noise: bool, default ``True``
+            Whether to add a white-noise component to the GP model. This "inflates" the errors.
         """
         ##########
         # GP fit #
@@ -314,11 +316,15 @@ class Supernova(object):
         gp_model = fit_gp_model(self._stacked_times, self._stacked_wavelengths, 
                                 self._stacked_fluxes, self._stacked_flux_errors, k1=k1, 
                                 fit_type=fit_type, wave_log=wave_log, time_scale=time_scale, 
-                                wave_scale=wave_scale)
-        self.gp_model = gp_model  # store GP model
+                                wave_scale=wave_scale, add_noise=add_noise)
+        # store GP model and input parameters
+        self.gp_model = gp_model
         self.k1 = k1
         self.fit_type = fit_type
         self.wave_log = wave_log
+        self.time_scale = time_scale
+        self.wave_scale = wave_scale
+        self.add_noise = add_noise
 
         ########################
         # Estimate B-band Peak #
@@ -395,12 +401,18 @@ class Supernova(object):
 
         rest_df_list = []
         phases = (self.times_pred - self.tmax) / (1 + self.z)
-        mask = (-50 <= phases) & (phases <= 50)  # mask for quicker calculation
-        phases = phases[mask]
+        if self.tmax_err <= 3:
+            # mask for quicker calculation if B-band max is well estimated
+            mask = (-20 <= phases) & (phases <= 50)
+            phases = phases[mask]
+            times_pred = self.times_pred[mask]
+        else:
+            times_pred = self.times_pred
+
         for band in bands:
             rest_eff_wave = self.filters[band].eff_wave * (1 + self.z)
-            wavelengths_pred = np.zeros_like(self.times_pred) + rest_eff_wave            
-            mu, cov = self.gp_predict(self.times_pred[mask], wavelengths_pred[mask], return_cov=True)
+            wavelengths_pred = np.zeros_like(times_pred) + rest_eff_wave            
+            mu, cov = self.gp_predict(times_pred, wavelengths_pred, return_cov=True)
 
             # correct for MW dust extinction and redshift 
             A = self.filters[band].calculate_extinction(self.ra, self.dec)
@@ -446,8 +458,8 @@ class Supernova(object):
                 zp2 = self.filters[band2].calculate_zp(self.filters[band2].mag_sys)
                 rest_eff_wave2 = self.filters[band2].eff_wave * (1 + self.z)
                 wavelengths_pred = np.array([rest_eff_wave, rest_eff_wave2])
-                times_pred = np.zeros_like(wavelengths_pred) + self.tmax
-                mu2, cov2 = self.gp_predict(times_pred, wavelengths_pred, return_cov=True)
+                times_pred_V = np.zeros_like(wavelengths_pred) + self.tmax
+                mu2, cov2 = self.gp_predict(times_pred_V, wavelengths_pred, return_cov=True)
 
                 # propagate MW dust extinction correction and redshift
                 A2 = self.filters[band2].calculate_extinction(self.ra, self.dec)
@@ -464,7 +476,7 @@ class Supernova(object):
                 self.lc_parameters['colour_err'] = np.round(colour_err, 3)
 
             # store rest-frame light-curves
-            rest_df = pd.DataFrame({"time": self.times_pred[mask], "flux": mu, "flux_err": std})
+            rest_df = pd.DataFrame({"time": times_pred, "flux": mu, "flux_err": std})
             rest_df["zp"] = zp
             rest_df["band"] = band
             rest_df["mag_sys"] = self.filters[band].mag_sys
@@ -480,7 +492,7 @@ class Supernova(object):
         lcs_sample = np.random.multivariate_normal(mu, cov, size=5000)
         tmax_list = []
         for lc in lcs_sample:
-            peak_ids = peak.indexes(lc, thres=0.3, min_dist=len(times_pred) // 2)
+            peak_ids = peak.indexes(lc, thres=0.3, min_dist=len(times_pred) // 4)
             if len(peak_ids) == 0:
                 # if no peak is found, just use the maximum
                 max_id = np.argmax(lc)
@@ -496,7 +508,7 @@ class Supernova(object):
         ######################
         # Estimate peak flux #
         ######################
-        peak_ids = peak.indexes(mu, thres=0.3, min_dist=len(times_pred) // 2)
+        peak_ids = peak.indexes(mu, thres=0.3, min_dist=len(times_pred) // 4)
         if len(peak_ids) == 0:
             # if no peak is found, just use the maximum
             max_id = np.argmax(mu)
@@ -669,7 +681,7 @@ class Supernova(object):
 
         plt.show()
 
-    def plot_fits(self, plot_mag=False, fits=False, fig_name=None):
+    def plot_fits(self, plot_mag=False, fig_name=None):
         """Plots the light-curves fits results.
 
         Plots the observed data for each band together with the gaussian process fits.
@@ -679,8 +691,6 @@ class Supernova(object):
         ----------
         plot_mag : bool, default ``False``
             If ``True``, plots the bands in magnitude space.
-        fits: bool, default ``False``
-            If ``True``, plots the initial light-curve fits.
         fig_name : str, default ``None``
             If  given, name of the output plot.
         """
@@ -699,16 +709,8 @@ class Supernova(object):
 
         # data and fits
         data = self.lcs
-        try:
-            fits = self.lc_fits
-            tmax = self.tmax
-        except:
-            fits = self.lc_fits
-            tmax = self.tmax
-        finally:
-            if fits is True:
-                fits = self.lc_fits
-                tmax = self.tmax
+        fits = self.lc_fits
+        tmax = self.tmax
 
         ZP = 27.5  # global zero-point for visualization
 
