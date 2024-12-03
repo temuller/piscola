@@ -28,9 +28,9 @@ def _download_dustmaps():
         os.path.join(dustmaps_dir, f"SFD_mask_4096_{sky}gp.fits") for sky in ["n", "s"]
     ]
     maps_files = dust_files + mask_files
-    existing_files = [os.path.isfile(file) for file in mask_files]
+    existing_files = [os.path.isfile(file) for file in maps_files]
 
-    if not all(existing_files) == True:
+    if all(existing_files) != True:
         # download dust maps
         sfdmaps_url = "https://github.com/kbarbary/sfddata/archive/master.tar.gz"
         response = requests.get(sfdmaps_url)
@@ -250,6 +250,50 @@ def extinction_filter(
     f1 = _integrate_filter(filter_wave, flux, filter_wave, filter_response)
     f2 = _integrate_filter(filter_wave, deredden_flux, filter_wave, filter_response)
     A = -2.5 * np.log10(f1 / f2)
+
+    return A
+
+def extinction_at_wavelength(
+    wave,
+    ra,
+    dec,
+    scaling=0.86,
+    reddening_law="fitzpatrick99",
+    r_v=3.1,
+    ebv=None,
+):
+    """Calculates the extinction at a given wavelength, given a right ascension and declination or :math:`E(B-V)`.
+
+    Parameters
+    ----------
+    wave : float
+        Wavelength in agnstroms.
+    ra : float
+        Right ascension in degrees.
+    dec : float
+        Declination in degrees.
+    scaling: float, default ``0.86``
+        Calibration of the Milky Way dust maps. Either ``0.86``
+        for the Schlafly & Finkbeiner (2011) recalibration or ``1.0`` for the original
+        dust map of Schlegel, Fikbeiner & Davis (1998).
+    reddening_law: str, default ``fitzpatrick99``
+        Reddening law. The options are: ``ccm89`` (Cardelli, Clayton & Mathis 1989), ``odonnell94`` (O’Donnell 1994),
+        ``fitzpatrick99`` (Fitzpatrick 1999), ``calzetti00`` (Calzetti 2000) and ``fm07`` (Fitzpatrick & Massa 2007 with
+        :math:`R_V = 3.1`.)
+    r_v : float, default ``3.1``
+        Total-to-selective extinction ratio (:math:`R_V`)
+    ebv : float, default ``None``
+        Colour excess (:math:`E(B-V)`). If given, this is used instead of the dust map value.
+
+    Returns
+    -------
+    A : float
+        Extinction value in magnitudes.
+    """
+    wave_array = np.array([wave - 1, wave, wave + 1])
+    resp_array = np.array([1.0, 1.0, 1.0])
+    A = extinction_filter(wave_array, resp_array, ra, dec, 
+                          scaling, reddening_law, r_v, ebv)
 
     return A
 
