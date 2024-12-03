@@ -4,9 +4,11 @@ import os
 import bz2
 import sys
 import math
+import statistics
 import numpy as np
 import pandas as pd
 from peakutils import peak
+
 if sys.version_info.minor < 8:
     import pickle5 as pickle
 else:
@@ -16,9 +18,10 @@ else:
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from .utils import change_zp, flux_to_mag, mag_to_flux
+from .utils import change_zp, flux_to_mag, calculate_robust_stats
 from .filters_class import MultiFilters
 from .lightcurves_class import Lightcurves
+from .extinction_correction import extinction_at_wavelength
 from .gaussian_process import prepare_gp_inputs, fit_gp_model
 
 import jax
@@ -326,37 +329,16 @@ class Supernova(object):
         self.wave_scale = wave_scale
         self.add_noise = add_noise
 
-        ########################
-        # Estimate B-band Peak #
-        ########################
-        obs_eff_wave = self.filters.Bessell_B.eff_wave * (1 + self.z)
+        ############################
+        # Light-curves predictions #
+        ############################
         dt = 0.1 * (1 + self.z)  # 0.1 days in rest-frame, moved to observer frame
         times_pred = np.arange(self._stacked_times.min() - 5, 
                                self._stacked_times.max() + 5,
                                dt
                                )
         self.times_pred = times_pred
-        wavelengths_pred = np.zeros_like(times_pred) + obs_eff_wave
-        mu, cov = self.gp_predict(times_pred, wavelengths_pred, return_cov=True)
 
-        # monte-carlo sampling
-        lcs_sample = np.random.multivariate_normal(mu, cov, size=5000)
-        tmax_list = []
-        for lc in lcs_sample:
-            peak_ids = peak.indexes(lc, thres=0.3, min_dist=len(times_pred) // 2)
-            if len(peak_ids) == 0:
-                # if no peak is found, just use the maximum
-                max_id = np.argmax(lc)
-            else:
-                max_id = peak_ids[0]
-            tmax_list.append(times_pred[max_id])
-        # save time of maximum
-        self.tmax = np.round(np.nanmean(tmax_list), 3)
-        self.tmax_err = np.round(np.nanstd(tmax_list), 3)
-
-        ############################
-        # Light-curves predictions #
-        ############################
         fitting_bands = bands
         if bands is None:
             fitting_bands = self.bands
@@ -400,22 +382,15 @@ class Supernova(object):
                                 }
 
         rest_df_list = []
-        phases = (self.times_pred - self.tmax) / (1 + self.z)
-        if self.tmax_err <= 3:
-            # mask for quicker calculation if B-band max is well estimated
-            mask = (-20 <= phases) & (phases <= 50)
-            phases = phases[mask]
-            times_pred = self.times_pred[mask]
-        else:
-            times_pred = self.times_pred
+        rest_times = self.times_pred / (1 + self.z)
 
         for band in bands:
             rest_eff_wave = self.filters[band].eff_wave * (1 + self.z)
-            wavelengths_pred = np.zeros_like(times_pred) + rest_eff_wave            
-            mu, cov = self.gp_predict(times_pred, wavelengths_pred, return_cov=True)
+            wavelengths_pred = np.zeros_like(self.times_pred) + rest_eff_wave            
+            mu, cov = self.gp_predict(self.times_pred, wavelengths_pred, return_cov=True)
 
             # correct for MW dust extinction and redshift 
-            A = self.filters[band].calculate_extinction(self.ra, self.dec)
+            A = extinction_at_wavelength(rest_eff_wave, self.ra, self.dec)
             correction = 10**(0.4*A) * (1 + self.z)
             mu *= correction
             cov *= correction ** 2
@@ -423,10 +398,12 @@ class Supernova(object):
 
             self.lc_parameters.update({band:{}})
             try:
-                # calculate light-curve parameters
-                _, tmax, tmax_err, fmax, fmax_err, df15, df15_err = self._calculate_lc_params(phases, mu, cov)
-                # tmax - this is actually phase so the inital tmax is added
-                self.lc_parameters[band]['tmax'] = np.round(tmax + self.tmax, 3)
+                # calculate light-curve parameters using restframe epochs
+                _, tmax, tmax_err, fmax, fmax_err, df15, df15_err = self._calculate_lc_params(rest_times, mu, cov)
+                # tmax - this actually needs to be corrected for redshift
+                tmax *= (1 + self.z)
+                tmax_err *= (1 + self.z)
+                self.lc_parameters[band]['tmax'] = np.round(tmax, 3)
                 self.lc_parameters[band]['tmax_err'] = np.round(tmax_err, 3)
                 # mmax
                 zp = self.filters[band].calculate_zp(self.filters[band].mag_sys)
@@ -443,16 +420,14 @@ class Supernova(object):
                 self.lc_parameters[band]['dm15'] = self.lc_parameters[band]['dm15_err'] = np.nan
 
             if band == 'Bessell_B':
-                # tmax - taken from the initial light-curve fit
-                self.lc_parameters['tmax'] = self.tmax.copy()
-                self.lc_parameters['tmax_err'] = self.tmax_err.copy()
-                self.lc_parameters[band]['tmax'] = self.tmax.copy()
-                self.lc_parameters[band]['tmax_err'] = self.tmax_err.copy()
-                self.lc_parameters['mmax'] = self.lc_parameters[band]['mmax']
-                self.lc_parameters['mmax_err'] = self.lc_parameters[band]['mmax_err']
-                self.lc_parameters['dm15'] = self.lc_parameters[band]['dm15']
-                self.lc_parameters['dm15_err'] = self.lc_parameters[band]['dm15_err']
-
+                # store B-band parameters in an "upper level"
+                for key, val in self.lc_parameters[band].items():
+                    self.lc_parameters[key] = val
+                self.tmax = self.lc_parameters['tmax']
+                self.tmax_err = self.lc_parameters['tmax_err']
+                ######################
+                # Colour Calculation #
+                ######################
                 # GP prediction
                 band2 = 'Bessell_V'  # for (B-V)
                 zp2 = self.filters[band2].calculate_zp(self.filters[band2].mag_sys)
@@ -462,7 +437,7 @@ class Supernova(object):
                 mu2, cov2 = self.gp_predict(times_pred_V, wavelengths_pred, return_cov=True)
 
                 # propagate MW dust extinction correction and redshift
-                A2 = self.filters[band2].calculate_extinction(self.ra, self.dec)
+                A2 = extinction_at_wavelength(rest_eff_wave2, self.ra, self.dec)
                 corr_array = np.array([10 ** (0.4 * A), 10 ** (0.4 * A2)]) * (1 + self.z)
                 mu2 *= corr_array
                 cov2 *= np.outer(corr_array, corr_array)
@@ -476,7 +451,7 @@ class Supernova(object):
                 self.lc_parameters['colour_err'] = np.round(colour_err, 3)
 
             # store rest-frame light-curves
-            rest_df = pd.DataFrame({"time": times_pred, "flux": mu, "flux_err": std})
+            rest_df = pd.DataFrame({"time": self.times_pred, "flux": mu, "flux_err": std})
             rest_df["zp"] = zp
             rest_df["band"] = band
             rest_df["mag_sys"] = self.filters[band].mag_sys
@@ -484,36 +459,33 @@ class Supernova(object):
 
         self.rest_lcs = Lightcurves(pd.concat(rest_df_list))
 
-    def _calculate_lc_params(self, times_pred, mu, cov):
-        ######################
-        # Estimate peak time #
-        ######################
-        # get epoch at maximum - monte-carlo sampling
-        lcs_sample = np.random.multivariate_normal(mu, cov, size=5000)
-        tmax_list = []
-        for lc in lcs_sample:
-            peak_ids = peak.indexes(lc, thres=0.3, min_dist=len(times_pred) // 4)
-            if len(peak_ids) == 0:
-                # if no peak is found, just use the maximum
-                max_id = np.argmax(lc)
-            else:
-                max_id = peak_ids[0]
-            tmax_list.append(times_pred[max_id])
-        # store time of maximum
-        tmax = np.nanmean(tmax_list)
-        tmax = np.round(tmax, 3)
-        tmax_err = np.sqrt(np.nanstd(tmax_list) ** 2)
-        tmax_err = np.round(tmax_err, 3) 
-        
-        ######################
-        # Estimate peak flux #
-        ######################
-        peak_ids = peak.indexes(mu, thres=0.3, min_dist=len(times_pred) // 4)
+    def _calculate_lc_params(self, rest_times, mu, cov):
+        """Calculate rest-frame light-curve parameters."""
+        ###############################
+        # Estimate peak time and flux #
+        ###############################
+        # in the NIR, the SNe Ia peaks should be at least separated by around 10 days
+        dt = (rest_times.max() - rest_times.min()) / 10
+        min_dist = np.argmin(np.abs(rest_times - (rest_times.min() + dt)))
+        peak_ids = peak.indexes(mu, thres=0.3, min_dist=min_dist)
         if len(peak_ids) == 0:
             # if no peak is found, just use the maximum
             max_id = np.argmax(mu)
         else:
             max_id = peak_ids[0]
+        # get error on epoch at maximum by monte-carlo sampling
+        lcs_sample = np.random.multivariate_normal(mu, cov, size=6000)
+        tmax_list = []
+        for lc in lcs_sample:
+            peak_ids = peak.indexes(lc, thres=0.3, min_dist=min_dist)
+            if len(peak_ids) == 0:
+                peak_id = np.argmax(lc)
+            else:
+                peak_id = peak_ids[0]
+            tmax_list.append(rest_times[peak_id])
+        # store peak time
+        tmax = rest_times[max_id]
+        _, tmax_err, _ = calculate_robust_stats(tmax_list, sigma=5)
         # store flux at maximum
         fmax = mu[max_id]
         std = np.sqrt(np.diag(cov))
@@ -522,14 +494,48 @@ class Supernova(object):
         ####################
         # Estimate Stretch #
         ####################
-        t15 = times_pred[max_id] + 15
-        ind15 = np.argmin(np.abs(times_pred - t15))
+        t15 = rest_times[max_id] + 15
+        ind15 = np.argmin(np.abs(rest_times - t15))
         f15 = mu[ind15]
         f15_err = std[ind15]
         df15 = f15 / fmax
         # error propagation
         f15_cov = cov[max_id][ind15]  # covariance, in flux, at peak and 15 days
         df15_err = np.abs(df15) * np.sqrt((f15_err / f15) ** 2 + (fmax_err / fmax) ** 2 - 2 * (f15_cov / (f15 * fmax)))
+
+        return max_id, tmax, tmax_err, fmax, fmax_err, df15, df15_err
+    
+    def _calculate_lc_params2(self, rest_times, mu, cov):
+        """Calculate light-curve parameters with the time in restframe."""
+        # THIS PROBABLY NEEDS TO RETURN JUST THE PEAK INDECES
+        # Calculate values by monte-carlo sampling
+        lcs_sample = np.random.multivariate_normal(mu, cov, size=6000)
+        tmax_list, fmax_list, df15_list = [], [], []
+        maxid_list = []
+        # in the NIR, the SNe Ia peaks should be at least separated by around 10 days
+        dt = (rest_times.max() - rest_times.min()) / 10
+        min_dist = np.argmin(np.abs(rest_times - (rest_times.min() + dt)))
+        for fluxes in lcs_sample:
+            peak_ids = peak.indexes(fluxes, thres=0.3, min_dist=min_dist)
+            if len(peak_ids) == 0:
+                # if no peak is found, just use the maximum
+                max_id = np.argmax(fluxes)
+            else:
+                max_id = peak_ids[0]
+            maxid_list.append(max_id)
+            tmax_list.append(rest_times[max_id])
+            fmax_list.append(fluxes[max_id])
+            f15_id = np.argmin(np.abs(rest_times - (rest_times[max_id] + 15)))
+            df15_list.append(fluxes[f15_id] / fluxes[max_id])
+        # lists to arrays
+        tmax_array = np.array(tmax_list)
+        fmax_array = np.array(fmax_list)
+        df15_array = np.array(df15_list)
+        # obtain values
+        max_id = statistics.mode(maxid_list)
+        tmax, tmax_err, robust_mask = calculate_robust_stats(tmax_array, sigma=5)
+        fmax, fmax_err = np.nanmean(fmax_array[robust_mask]), np.nanstd(fmax_array[robust_mask])
+        df15, df15_err = np.nanmean(df15_array[robust_mask]), np.nanstd(df15_array[robust_mask])
 
         return max_id, tmax, tmax_err, fmax, fmax_err, df15, df15_err
 
@@ -800,6 +806,131 @@ class Supernova(object):
 
             ax.set_xlim(x_fit.min(), x_fit.max())
             ax2.set_xlim(x_fit.min(), x_fit.max())
+
+        fig.text(
+            0.5,
+            0.92,
+            f"{self.name} (z = {self.z:.5})",
+            ha="center",
+            fontsize=20,
+            family="serif",
+        )
+        fig.text(
+            0.5,
+            0.05,
+            f"Time - {t_offset} [days]",
+            ha="center",
+            fontsize=18,
+            family="serif",
+        )
+        if not plot_mag:
+            fig.text(
+                0.05,
+                0.5,
+                f"Flux (ZP = {ZP})",
+                va="center",
+                rotation="vertical",
+                fontsize=18,
+                family="serif",
+            )
+        else:
+            fig.text(
+                0.05,
+                0.5,
+                r"Apparent Magnitude",
+                va="center",
+                rotation="vertical",
+                fontsize=18,
+                family="serif",
+            )
+
+        if fig_name is not None:
+            plt.savefig(fig_name)
+
+        plt.show()
+
+    def plot_rest_fits(self, plot_mag=False, fig_name=None):
+        """Plots the rest-frame light-curves fits results.
+
+        Plots the observed data for each band together with the gaussian process fits.
+        The time of :math:`B`-band peak is shown as a vertical dashed line.
+
+        Parameters
+        ----------
+        plot_mag : bool, default ``False``
+            If ``True``, plots the bands in magnitude space.
+        fig_name : str, default ``None``
+            If  given, name of the output plot.
+        """
+        palette1 = [plt.get_cmap("Dark2")(i) for i in np.arange(8)]
+        palette2 = [plt.get_cmap("Set1")(i) for i in np.arange(9)]
+        palette3 = [plt.get_cmap("Pastel2")(i) for i in np.arange(8)]
+        colours = palette1 + palette2 + palette3 + palette1 + palette2
+
+        # shift in time for visualization purposes
+        try:
+            tmax_str = str(self.tmax.astype(int))
+        except:
+            tmax_str = str(self.tmax.astype(int))
+        zeros = "0" * len(tmax_str[2:])
+        t_offset = int(tmax_str[:2] + zeros)
+
+        data = self.rest_lcs
+        ZP = 27.5  # global zero-point for visualization
+
+        h = 3  # columns
+        v = math.ceil(len(data.bands) / h)  # rows
+
+        fig = plt.figure(figsize=(15, 5 * v))
+        gs = gridspec.GridSpec(v, h)
+
+        for i, band in enumerate(data.bands):
+            j = math.ceil(i % h)
+            k = i // h
+            ax = plt.subplot(gs[k, j])
+
+            x = data[band].times - t_offset
+            if plot_mag is False:
+                y_norm = change_zp(1.0, data[band].zp, ZP)
+                y = data[band].fluxes * y_norm
+                yerr = data[band].flux_errors * y_norm
+            else:
+                y = data[band].magnitudes
+                yerr = data[band].mag_errors
+                
+            colour = colours[i]
+            fit_par = dict(ls="-", lw=2, zorder=16, color=colour)
+            fit_err_par = dict(alpha=0.3, color=colour)
+
+            # light curves
+            ax.plot(x, y, label=band, **fit_par)
+            ax.fill_between(x, y - yerr, y + yerr, **fit_err_par)
+            ymin, ymax = y.min(), y.max()
+            ax.set_ylim(ymin, ymax)  # fits can sometimes explode
+            if plot_mag is True:
+                ax.invert_yaxis()
+
+            ax.xaxis.set_tick_params(labelsize=15)
+            ax.yaxis.set_tick_params(labelsize=15)
+            ax.minorticks_on()
+            ax.tick_params(
+                which="major",
+                length=6,
+                width=1,
+                direction="in",
+                top=True,
+                right=True,
+            )
+            ax.tick_params(
+                which="minor",
+                length=3,
+                width=1,
+                direction="in",
+                top=True,
+                right=True,
+            )
+            ax.legend(fontsize=16)
+            ax.set_xlim(x.min(), x.max())
 
         fig.text(
             0.5,
