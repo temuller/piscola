@@ -117,8 +117,8 @@ class SingleFilter(object):
             transmission /= self.wavelength
 
         transmission = np.interp(sed_wave, self.wavelength, transmission, left=0.0, right=0.0)
-        I1 = np.trapz((sed_wave**2) * transmission * sed_flux, sed_wave)
-        I2 = np.trapz(sed_wave * transmission * sed_flux, sed_wave)
+        I1 = np.trapezoid((sed_wave**2) * transmission * sed_flux, sed_wave)
+        I2 = np.trapezoid(sed_wave * transmission * sed_flux, sed_wave)
         eff_wave = I1 / I2
 
         return eff_wave
@@ -150,8 +150,8 @@ class SingleFilter(object):
             transmission /= self.wavelength
 
         transmission = np.interp(sed_wave, self.wavelength, transmission, left=0.0, right=0.0)
-        I1 = np.trapz(sed_flux * transmission * sed_wave, sed_wave)
-        I2 = np.trapz(self.transmission * self.wavelength, self.wavelength)
+        I1 = np.trapezoid(sed_flux * transmission * sed_wave, sed_wave)
+        I2 = np.trapezoid(self.transmission * self.wavelength, self.wavelength)
         flux_filter = I1 / I2
 
         return flux_filter
