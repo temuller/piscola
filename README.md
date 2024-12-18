@@ -1,9 +1,5 @@
 # PISCOLA
 
-<p align="center">
-	<img src="docs/piscola_logo.png" alt="drawing" width="300"/>
-</p>
-
 **Supernova light-curve fitting code in python**
 
 Although the main purpose of PISCOLA is to fit type Ia supernovae, it can be used to fit other types of supernovae or even other transients.
