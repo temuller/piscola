@@ -6,9 +6,9 @@
 Welcome to PISCOLA's documentation!
 ===================================
 
-.. image:: piscola_logo.png
-   :scale: 50 %
-   :align: center
+#.. image:: piscola_logo.png
+#   :scale: 50 %
+#   :align: center
    
 PISCOLA is being actively developed in `a public repository on GitHub
 <https://github.com/temuller/piscola>`_ so if you have any trouble, `open an issue
