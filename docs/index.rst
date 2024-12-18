@@ -51,7 +51,6 @@ PISCOLA is being actively developed in `a public repository on GitHub
    
    further_information/filters.rst
    further_information/lightcurves.rst
-   further_information/sed.rst
    further_information/gaussian_process.rst
    further_information/extinction_correction.rst
    further_information/calibration.rst  
@@ -64,7 +63,6 @@ PISCOLA is being actively developed in `a public repository on GitHub
    user/sn_class.rst
    user/filters_class.rst
    user/lightcurves_class.rst
-   user/sed_class.rst
    user/gaussian_process.rst
    user/extinction_correction.rst
    user/utils.rst
