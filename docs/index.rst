@@ -18,8 +18,8 @@ PISCOLA is being actively developed in `a public repository on GitHub
     :target: https://github.com/temuller/piscola/blob/master/LICENSE
 .. image:: https://github.com/temuller/piscola/actions/workflows/main.yml/badge.svg
     :target: https://github.com/temuller/piscola/actions/workflows/main.yml
-.. image:: https://img.shields.io/badge/Python-3.8%2B-blue.svg
-    :target: https://img.shields.io/badge/Python-3.8%2B-blue.svg   
+.. image:: https://img.shields.io/badge/Python-3.10%2B-blue.svg
+    :target: https://img.shields.io/badge/Python-3.10%2B-blue.svg   
 .. image:: https://img.shields.io/pypi/v/piscola?label=PyPI&logo=pypi&logoColor=white
     :target: https://pypi.org/project/piscola/
 .. image:: https://img.shields.io/badge/ADS-_2022MNRAS.512.3266M_-2ea44f.svg

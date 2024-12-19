@@ -9,7 +9,7 @@ Although the main purpose of PISCOLA is to fit type Ia supernovae, it can be use
 [![license](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/temuller/piscola/blob/master/LICENSE)
 [![Build and Tests](https://github.com/temuller/piscola/actions/workflows/main.yml/badge.svg)](https://github.com/temuller/piscola/actions/workflows/main.yml)
 [![Coverage](https://raw.githubusercontent.com/temuller/piscola/master/coverage.svg)](https://raw.githubusercontent.com/temuller/piscola/master/coverage.svg)
-![Python Version](https://img.shields.io/badge/Python-3.8%2B-blue)
+![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue)
 [![PyPI](https://img.shields.io/pypi/v/piscola?label=PyPI&logo=pypi&logoColor=white)](https://pypi.org/project/piscola/)
 [![ADS -  2022MNRAS.512.3266M ](https://img.shields.io/badge/ADS-_2022MNRAS.512.3266M_-2ea44f)](https://ui.adsabs.harvard.edu/abs/2022MNRAS.512.3266M/abstract)
 
