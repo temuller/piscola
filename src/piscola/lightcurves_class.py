@@ -16,7 +16,7 @@ class Lightcurve(object):
         band: str
             Light-curve filter/band name.
         lcs_df: Dataframe
-            Light-curve data: `time`, `flux`, `error`, `zero-point`
+            Light-curve data: `times`, `fluxes`, `flux_errors`, `magnitudes`, `mag_errors`
             and `magnitude system`.
         """
         self.band = band
@@ -31,7 +31,7 @@ class Lightcurve(object):
 
     def __repr__(self):
         return (f"band: {self.band}, zp: {self.zp:.5}, mag_sys: {self.mag_sys}"
-                "\nother attributes: time, flux, flux_err, mag, mag_err")
+                "\nother attributes: times, fluxes, flux_errors, magnitudes, mag_errors")
 
     def __getitem__(self, item):
         return getattr(self, item)

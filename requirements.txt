@@ -1,14 +1,12 @@
-numpy
+numpy >= 2.0.0
 pandas
 matplotlib
 peakutils
 requests
 sfdmap2
-extinction
+extinction >= 0.4.7
 astropy
 scipy
 jax; 'linux' in sys.platform or 'win' in sys.platform
 jaxopt
 tinygp
-pickle5; python_version < '3.8'
-pytest

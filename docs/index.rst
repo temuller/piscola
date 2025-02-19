@@ -5,7 +5,7 @@
 
 Welcome to PISCOLA's documentation!
 ===================================
-
+   
 PISCOLA is being actively developed in `a public repository on GitHub
 <https://github.com/temuller/piscola>`_ so if you have any trouble, `open an issue
 <https://github.com/temuller/piscola/issues>`_ there.
@@ -18,8 +18,8 @@ PISCOLA is being actively developed in `a public repository on GitHub
     :target: https://github.com/temuller/piscola/blob/master/LICENSE
 .. image:: https://github.com/temuller/piscola/actions/workflows/main.yml/badge.svg
     :target: https://github.com/temuller/piscola/actions/workflows/main.yml
-.. image:: https://img.shields.io/badge/Python-3.8%2B-blue.svg
-    :target: https://img.shields.io/badge/Python-3.8%2B-blue.svg   
+.. image:: https://img.shields.io/badge/Python-3.10%2B-blue.svg
+    :target: https://img.shields.io/badge/Python-3.10%2B-blue.svg   
 .. image:: https://img.shields.io/pypi/v/piscola?label=PyPI&logo=pypi&logoColor=white
     :target: https://pypi.org/project/piscola/
 .. image:: https://img.shields.io/badge/ADS-_2022MNRAS.512.3266M_-2ea44f.svg
@@ -47,7 +47,6 @@ PISCOLA is being actively developed in `a public repository on GitHub
    
    further_information/filters.rst
    further_information/lightcurves.rst
-   further_information/sed.rst
    further_information/gaussian_process.rst
    further_information/extinction_correction.rst
    further_information/calibration.rst  
@@ -60,7 +59,6 @@ PISCOLA is being actively developed in `a public repository on GitHub
    user/sn_class.rst
    user/filters_class.rst
    user/lightcurves_class.rst
-   user/sed_class.rst
    user/gaussian_process.rst
    user/extinction_correction.rst
    user/utils.rst

@@ -1,4 +1,5 @@
 import numpy as np
+from astropy.stats import mad_std, sigma_clip
 
 def flux_to_mag(flux, flux_err=np.array([0.0]), zp=0.0):
     """Converts fluxes to magnitudes, propagating errors if given.
@@ -66,6 +67,33 @@ def mag_to_flux(mag, mag_err=np.array([0.0]), zp=0.0):
     flux_err = np.abs(flux * 0.4 * np.log(10) * mag_err_)
 
     return flux, flux_err
+
+def calculate_robust_stats(values, sigma=5):
+    """Calculates a robust mean and standard deviation not sensitive to outliers.
+
+    Parameters
+    ----------
+    values : array
+        Array of values.
+    sigma : float, default ``5``
+        Number of sigmas used for sigma clipping.
+
+    Returns
+    -------
+    robust_mean : float
+        Robust mean.
+    robust_std : float
+        Robust standard deviation.
+    robust_mask: bool array
+        Mask with valid values as ``True``.
+    """
+    std = mad_std(values, ignore_nan=True)    # MAD std that "avoids" outliers    
+    robust_values = sigma_clip(values, sigma=sigma, sigma_lower=std, sigma_upper=std, maxiters=1)
+    robust_mean = np.mean(robust_values)
+    robust_std = np.std(robust_values)
+    robust_mask = ~robust_values.mask
+
+    return robust_mean, robust_std, robust_mask
 
 
 def change_zp(flux, zp, new_zp):

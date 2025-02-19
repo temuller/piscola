@@ -3,6 +3,7 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 
+import warnings
 import piscola
 from .extinction_correction import extinction_filter
 
@@ -56,7 +57,9 @@ class SingleFilter(object):
         filt_file = filt_file[0]
         self.filt_file = filt_file
 
-        wavelength, transmission = np.loadtxt(filt_file).T
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            wavelength, transmission = np.loadtxt(filt_file).T
         # remove long tails of zero values on both edges
         imin, imax = trim_filters(transmission)
         self.wavelength = wavelength[imin:imax]
@@ -117,8 +120,8 @@ class SingleFilter(object):
             transmission /= self.wavelength
 
         transmission = np.interp(sed_wave, self.wavelength, transmission, left=0.0, right=0.0)
-        I1 = np.trapz((sed_wave**2) * transmission * sed_flux, sed_wave)
-        I2 = np.trapz(sed_wave * transmission * sed_flux, sed_wave)
+        I1 = np.trapezoid((sed_wave**2) * transmission * sed_flux, sed_wave)
+        I2 = np.trapezoid(sed_wave * transmission * sed_flux, sed_wave)
         eff_wave = I1 / I2
 
         return eff_wave
@@ -150,8 +153,8 @@ class SingleFilter(object):
             transmission /= self.wavelength
 
         transmission = np.interp(sed_wave, self.wavelength, transmission, left=0.0, right=0.0)
-        I1 = np.trapz(sed_flux * transmission * sed_wave, sed_wave)
-        I2 = np.trapz(self.transmission * self.wavelength, self.wavelength)
+        I1 = np.trapezoid(sed_flux * transmission * sed_wave, sed_wave)
+        I2 = np.trapezoid(self.transmission * self.wavelength, self.wavelength)
         flux_filter = I1 / I2
 
         return flux_filter
@@ -189,7 +192,9 @@ class SingleFilter(object):
             sed_flux = 3631e-23 * c / sed_wave**2  # in [erg s^-1 cm^-2 Å^-1]
         else:
             sed_file = os.path.join(pisco_path, "standards", standard_sed)
-            sed_wave, sed_flux = np.loadtxt(sed_file).T
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                sed_wave, sed_flux = np.loadtxt(sed_file).T
         f_sed = self.integrate_filter(sed_wave, sed_flux)
 
         return f_sed
@@ -207,7 +212,9 @@ class SingleFilter(object):
         sed_mag: float
             Tabulated standard magnitude.
         """
-        filt_names, mags = np.loadtxt(mag_sys_file, dtype=str).T
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            filt_names, mags = np.loadtxt(mag_sys_file, dtype=str).T
         err_message = f"{self.name} not in {mag_sys_file}"
         assert self.name in filt_names, err_message
 
@@ -233,7 +240,9 @@ class SingleFilter(object):
         pisco_path = piscola.__path__[0]
         mag_sys_file_path = os.path.join(pisco_path, "mag_sys", "magnitude_systems.txt")
 
-        mag_sys_names, mag_sys_files = np.loadtxt(mag_sys_file_path, dtype=str).T
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            mag_sys_names, mag_sys_files = np.loadtxt(mag_sys_file_path, dtype=str).T
         err_message = f"mag. system {mag_sys} not found in {mag_sys_file_path}"
         assert mag_sys in mag_sys_names, err_message
 
