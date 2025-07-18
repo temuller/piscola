@@ -134,8 +134,6 @@ def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mea
         
         kernel = jnp.exp(params["log_amp"]) * kernel1 * kernel2
         diag = yerr ** 2 + noise
-        #ids = np.hstack([np.zeros_like(X[1][X[1] == wave]).astype(int) + i for i, wave in enumerate(np.unique(X[1]))])
-        #diag = yerr ** 2 + jnp.exp(2 * params["log_jitter"][ids])
         
         if fit_mean is True:
             mean = jnp.exp(params["log_mean"])
@@ -153,21 +151,26 @@ def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mea
         return -build_gp(params).condition(y).log_probability
     
     X, y, yerr, _ = prepare_gp_inputs(times, wavelengths, fluxes, 
-                                            flux_errors, fit_type=fit_type, 
-                                            wave_log=wave_log)
+                                      flux_errors, fit_type=fit_type, 
+                                      wave_log=wave_log)
 
     # GP hyper-parameters
     scales = np.array([30, 2000]) # units: days, angstroms
     if wave_log is True:
         # the approx range from opt to NIR is 1 in log space
         scales = np.array([30, 0.5]) # units: days, log10(angstroms)
+    if time_scale is not None:
+        scales = np.delete(scales, 0)
+    if wave_scale is not None:
+        scales = np.delete(scales, -1)
     
+    # create parameters object
     params = {
         "log_amp": jnp.log(y.var()),
-        "log_scale": jnp.log(scales),
         "log_noise": jnp.log(np.mean(yerr)),
-        #"log_jitter": np.zeros_like(np.unique(X[1])),
     }
+    if len(scales) != 0:
+        params.update({"log_scale": jnp.log(scales)})
     if fit_mean is True:
         params.update({"log_mean": jnp.log(np.average(y, weights=1/yerr**2))})
     elif fit_type == "log":
@@ -178,6 +181,9 @@ def fit_gp_model(times, wavelengths, fluxes, flux_errors, k1='Matern52', fit_mea
     solver = jaxopt.ScipyMinimize(fun=loss)
     soln = solver.run(params)
     gp_model = build_gp(soln.params)
+    # store initial and optimised parameters
+    gp_model.__dict__["init_params"] = params
+    gp_model.__dict__["params"] = soln.params
     
     return gp_model
 
